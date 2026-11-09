@@ -265,10 +265,10 @@ export function makeFx(L, rnd, img) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  let fxq = 1; // quality scale for counts
+  let fxq = 1, share = 1; // quality scale for counts; share < 1 is the lite picture: fewer city effects and no per-pane clip
   return {
     rebuild,
-    setQuality(q) { fxq = q; },
+    setQuality(q, s = 1) { fxq = q; share = s; },
     // static bloom on every lit window, baked into the cached base (plate coords)
     bake(g, env) {
       g.globalCompositeOperation = 'lighter';
@@ -277,9 +277,9 @@ export function makeFx(L, rnd, img) {
     },
     // far layer: under the skyline mask
     far(ctx, t, dt, env) {
-      ctx.save(); ctx.clip(glass);
+      ctx.save(); if (share === 1) ctx.clip(glass);
       // drifting painted cloud layers (behind the skyline: the sky overlay is drawn after this layer)
-      const ncl = Math.round(clouds.length * (0.45 + 0.55 * fxq));
+      const ncl = Math.max(2, Math.round(clouds.length * (0.45 + 0.55 * fxq) * share));
       for (let i = 0; i < ncl; i++) {
         const c = clouds[i], sp = T.clouds[c.k], w = sp.width * c.s, h = sp.height * c.s * 0.8;
         c.x += c.v * dt * (0.6 + 0.4 * c.s); if (c.x > WX1 + w / 2) { c.x = WX0 - w / 2; c.y = 46 + rnd() * 150; }
@@ -288,7 +288,7 @@ export function makeFx(L, rnd, img) {
       }
       ctx.globalCompositeOperation = 'lighter';
       if (env.stars > 0.02) {
-        for (let i = 0; i < starPts.length; i++) {
+        for (let i = 0; i < starPts.length; i += share < 1 ? 4 : 1) {
           const s = starPts[i], tw = Math.sin(t * s.sp + s.ph); if (tw < 0.2) continue;
           ctx.globalAlpha = env.stars * 0.55 * (tw - 0.2); ctx.drawImage(strobe, s.x - s.r / 2, s.y - s.r / 2, s.r, s.r);
         }
@@ -319,9 +319,9 @@ export function makeFx(L, rnd, img) {
     },
     // near layer: under the window-frame / vine mask
     near(ctx, t, dt, env) {
-      ctx.save(); ctx.clip(glass);
+      ctx.save(); if (share === 1) ctx.clip(glass);
       // switching windows: a lit window goes dark (painted with its own wall colour) or lights up, with a soft fade
-      const nt = Math.round(toggles.length * (0.35 + 0.65 * fxq));
+      const nt = Math.round(toggles.length * (0.35 + 0.65 * fxq) * share);
       for (let i = 0; i < nt; i++) {
         const o = toggles[i], l = o.l;
         if ((o.t -= dt) <= 0) { const f = 0.25 + 0.65 * env.dark; o.on = rnd() < f ? 1 : 0; o.t = o.on ? 12 + rnd() * 50 : 6 + rnd() * 30; if (o.on && rnd() < 0.5) o.l = lights[(rnd() * lights.length) | 0]; }
@@ -349,7 +349,7 @@ export function makeFx(L, rnd, img) {
       // sea glints (sun / city light on the swell)
       const [a0, b0, b1, a1] = sea;
       ctx.globalCompositeOperation = 'lighter';
-      const ng = Math.round(glints.length * (0.4 + 0.6 * fxq));
+      const ng = Math.round(glints.length * (0.4 + 0.6 * fxq) * share);
       for (let i = 0; i < ng; i++) {
         const g = glints[i], y = a0[1] + (a1[1] - a0[1]) * g.v, xl = a0[0] + (a1[0] - a0[0]) * g.v, xr = b0[0] + (b1[0] - b0[0]) * g.v;
         const x = xl + (xr - xl) * ((g.u + t * 0.006) % 1), w = g.w * (0.6 + g.v), s = Math.sin(t * 1.8 + g.ph);
@@ -383,7 +383,7 @@ export function makeFx(L, rnd, img) {
         }
       }
       // bridge traffic: paired head/tail lights with streak trails over a faint dark body; reflections over the water
-      const nc = Math.round(cars.length * (0.45 + 0.55 * fxq));
+      const nc = Math.round(cars.length * (0.45 + 0.55 * fxq) * share);
       const hl = env.headlights;
       for (let i = 0; i < nc; i++) {
         const c = cars[i], ln = lanes[c.lane];
@@ -398,7 +398,8 @@ export function makeFx(L, rnd, img) {
         // taillight trail (behind) and headlight beam (ahead)
         const tl = (6 + 12 * near) * (c.v / 25);
         ctx.globalAlpha = 0.5 * hl * hl * fade;
-        if (c.dir > 0) { ctx.save(); ctx.translate(back, y); ctx.scale(-1, 1); ctx.drawImage(trailR, 0, -sz * 0.35, tl, sz * 0.7); ctx.restore(); ctx.drawImage(trailW, front, y - sz * 0.4, tl * 0.7, sz * 0.8); }
+        if (share < 1) { /* lite: lights only, no trails */ }
+        else if (c.dir > 0) { ctx.save(); ctx.translate(back, y); ctx.scale(-1, 1); ctx.drawImage(trailR, 0, -sz * 0.35, tl, sz * 0.7); ctx.restore(); ctx.drawImage(trailW, front, y - sz * 0.4, tl * 0.7, sz * 0.8); }
         else { ctx.drawImage(trailR, back, y - sz * 0.35, tl, sz * 0.7); ctx.save(); ctx.translate(front, y); ctx.scale(-1, 1); ctx.drawImage(trailW, 0, -sz * 0.4, tl * 0.7, sz * 0.8); ctx.restore(); }
         ctx.globalAlpha = (0.55 + 0.45 * hl) * fade;
         ctx.drawImage(head, front - sz, y - sz, sz * 2, sz * 2);
@@ -433,7 +434,7 @@ export function makeFx(L, rnd, img) {
       }
       // shimmering vertical reflections of the city lights (stronger at night)
       g.globalCompositeOperation = 'lighter';
-      const nr = Math.round(refl.length * (0.5 + 0.5 * fxq));
+      const nr = Math.round(refl.length * (0.5 + 0.5 * fxq) * share);
       for (let i = 0; i < nr; i++) {
         const r = refl[i], sh = Math.sin(t * 2.3 + r.ph), wob = Math.sin(t * 3.1 + r.ph * 2) * 0.8;
         g.globalAlpha = (0.12 + 0.55 * env.lights) * (0.65 + 0.35 * sh);

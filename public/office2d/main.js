@@ -7,6 +7,7 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
+import { BOTS, behaviorOf, DOG_MOODS, PROPS, QUALITY, LITE } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
 const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=20'; // V: busts the 1 h asset cache when the art set changes
@@ -18,7 +19,6 @@ const rnd = () => ((seedN = Math.imul(seedN, 1664525) + 1013904223 >>> 0) / 4294
 
 const cv = document.getElementById('office'), ctx = cv.getContext('2d', { alpha: false });
 const tagsEl = document.getElementById('tags'), fpsEl = document.getElementById('fps');
-const QUALITY = [{ level: 0, scale: 1, fx: 1 }, { level: 1, scale: 1, fx: 0.6 }, { level: 2, scale: 0.8, fx: 0.5 }, { level: 3, scale: 0.66, fx: 0.35 }];
 const D = window.__office2d = { workers: [], ready: false, frames: 0, fps: 0, loaded: false, walking: 0, interactions: 0, quality: QUALITY[0], turned: 0, corgi: null, corgi2: null, wall: {}, labels: [], plates: 'lo', glassClip: null, ambient: { away: [], lounge: [] }, assets: {} };
 
 const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('asset ' + src)); i.src = A + src + V; });
@@ -70,6 +70,7 @@ async function load() {
   initDog();
   standing = L.standing.map((s, i) => ({ x: s.x * PW, top: s.top * PH, h: s.h * PH, clip: (s.top + s.h * 0.92) * PH, chair: null, desk: { id: 'standing', label: 'Standing', accent: '#da92d4' }, idx: i, stand: true, bot: null, node: 0, feet: nav[0] }));
   D.screens = monitors.map(m => m.kind);
+  propImgs = await Promise.all(PROPS.map(p => img(p.file)));
   buildStatic();
   D.loaded = true; maybeHi();
   document.getElementById('loading').remove();
@@ -83,7 +84,11 @@ function buildStatic() {
 }
 
 // ---------- viewport + cached plate (re-composited only when the time-of-day bucket, size or quality changes) ----------
-let dpr = 1, k = 1, offX = 0, offY = 0, base = mk(1, 1), baseKey = '', qual = QUALITY[+q.get('q') || 0] || QUALITY[0];
+for (const kv of (q.get('lite') || '').split(',')) { const [a, b] = kv.split(':'); if (a in LITE && b !== undefined && !isNaN(+b)) LITE[a] = +b; } // tuning aid, e.g. ?q=4&lite=cityEvery:2,maxWidth:960
+const LITE_KEY = 'ac_lite', remembered = () => { try { return localStorage.getItem(LITE_KEY) === '1'; } catch { return false; } }, remember = on => { try { if (on) localStorage.setItem(LITE_KEY, '1'); else localStorage.removeItem(LITE_KEY); } catch {} };
+if (q.has('q') && +q.get('q') !== 4) remember(false);
+const startLevel = q.has('q') ? +q.get('q') || 0 : LITE.tvBrowsers.test(navigator.userAgent) || remembered() ? 4 : 0;
+let dpr = 1, k = 1, offX = 0, offY = 0, base = mk(1, 1), baseKey = '', qual = QUALITY[startLevel] || QUALITY[0], fullPaint = true, propImgs = [];
 // plate sets: 2560x1440 for normal canvases, 3840x2160 (loaded lazily) once the canvas itself is bigger than that
 let hiLoading = false;
 function wantHi() { return cv.width > 2600 || cv.height > 1460; }
@@ -94,6 +99,8 @@ function maybeHi() {
 }
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (qual.lite) qual.scale = Math.min(1, LITE.maxWidth / (innerWidth * dpr));
+  document.body.classList.toggle('lite', !!qual.lite);
   const s = dpr * qual.scale;
   cv.width = Math.round(innerWidth * s); cv.height = Math.round(innerHeight * s);
   k = Math.max(cv.width / PW, cv.height / PH); offX = (cv.width - PW * k) / 2; offY = (cv.height - PH * k) / 2;
@@ -142,11 +149,12 @@ function paintBase(g, n, G, nc) { // the plate + grade + bloom pipeline; nc = al
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 function rebuildBase(h) {
-  const sky = skyAt(h), key = `${sky.key}|${cv.width}x${cv.height}|${plates.hi ? 1 : 0}`;
-  if (key === baseKey) return; baseKey = key;
+  const sky = skyAt(h), key = `${qual.lite ? sky.key.split('.')[0] : sky.key}|${cv.width}x${cv.height}|${plates.hi ? 1 : 0}`; // lite skips the 30 s repaints of a sky fade
+  if (key === baseKey) return; baseKey = key; fullPaint = true;
   env = sky.env; D.sky = { bucket: sky.bucket, f: sky.f, n: env.n }; const n = env.n, G = env.grade;
   if (base.width !== cv.width || base.height !== cv.height) base = mk(cv.width, cv.height);
   paintBase(base.getContext('2d'), n, G, false);
+  if (qual.lite) { const g = base.getContext('2d'); g.setTransform(k, 0, 0, k, offX, offY); fx.lamps(g, 0, env, lampTint); g.setTransform(1, 0, 0, 1, 0, 0); } // lite: lamp glow is baked in once
   fx.rebuild(env);
   for (const kk in over) over[kk] = cutMasked(kk);
   for (const o of occluders) o.patch = cutMasked(o.mask);
@@ -164,7 +172,7 @@ const blit = p => ctx.drawImage(p.c, p.x, p.y);
 
 // ---------- data: seats, sprites, workers ----------
 let S = null;
-const GROK_SPRITE = 1, STONKS_SPRITE = 7, PINNED = { 5: 8, 7: 3, 8: 4 }, workers = new Map(), wl = []; // bot id -> worker; wl = the same workers as an array (no per-frame iterators)
+const workers = new Map(), wl = []; // bot id -> worker; wl = the same workers as an array (no per-frame iterators)
 function demoize(bots) {
   return bots.map(b => b.num === 1 ? { ...b, status: 'working', task: 'routing a request' } : b.num === 3 ? { ...b, status: 'working', task: 'triaging inbox' } : b.num === 9 ? { ...b, status: 'error', error: 'heartbeat stale' } : b.num === 2 ? { ...b, status: 'working', task: 'market-desk brief' } : b.num === 14 ? { ...b, status: 'working', task: 'charting usage' } : b); // preview only
 }
@@ -184,9 +192,9 @@ function assign(bots) {
     const s = seats.find(s => !s.bot && !s.spare && !reserved(s)) || seats.find(s => !s.bot && !reserved(s)) || standing.find(s => !s.bot);
     if (s) s.bot = b; else { const i = standing.length; standing.push({ ...standing[i % 4], x: standing[i % 4].x + 40 * Math.floor(i / 4), idx: i, bot: b }); }
   }
-  const used = new Set([GROK_SPRITE, STONKS_SPRITE, ...Object.values(PINNED)]), spriteOf = new Map(); // row 1 (slick hair, square glasses) is Grok's, row 7 (brown hair, round glasses) $tonks's, rows 8, 3 and 4 (hatless) Media's, LF's and Archives' for good, whatever the seed says
+  const pins = BOTS.spriteByNum, used = new Set(Object.values(pins)), spriteOf = new Map(); // pinned rows are kept for good, whatever the seed says
   const nBase = L.baseSprites; // Dashboards has her own art (the last sprite), everyone else draws from the base set
-  for (const b of live) { if (isDash(b)) { spriteOf.set(b.id, nBase); continue; } if (b.num === 1) { spriteOf.set(b.id, GROK_SPRITE); continue; } if (b.num === 2) { spriteOf.set(b.id, STONKS_SPRITE); continue; } if (PINNED[b.num] != null) { spriteOf.set(b.id, PINNED[b.num]); continue; } let i = (b.sprite_seed >>> 0) % nBase, n = 0; while (used.has(i) && n++ < nBase) i = (i + 1) % nBase; used.add(i); spriteOf.set(b.id, i); }
+  for (const b of live) { if (isDash(b)) { spriteOf.set(b.id, nBase); continue; } if (pins[b.num] != null) { spriteOf.set(b.id, pins[b.num]); continue; } let i = (b.sprite_seed >>> 0) % nBase, n = 0; while (used.has(i) && n++ < nBase) i = (i + 1) % nBase; used.add(i); spriteOf.set(b.id, i); }
   const all = [...seats, ...standing].filter(s => s.bot);
   for (const [id, w] of workers) if (!all.some(s => s.bot.id === id)) { w.tag.remove(); workers.delete(id); }
   for (const s of all) {
@@ -196,6 +204,7 @@ function assign(bots) {
     w.bot = s.bot; w.seat = s; w.sprite = spriteOf.get(s.bot.id); w.label = labelText(s.bot);
   }
   wl.length = 0; for (const w of workers.values()) wl.push(w);
+  labelMax = maxUsage();
   buildItems(); refreshOccupants();
 }
 function newWorker(b) {
@@ -203,14 +212,14 @@ function newWorker(b) {
   el.innerHTML = '<div class="tag"><span></span></div>';
   el.querySelector('.tag').onclick = ev => { ev.stopPropagation(); showCard(S, b.id, [ev.clientX, ev.clientY], deskInfo); };
   tagsEl.appendChild(el);
-  return { bot: b, tag: el, box: [0, 0, 0, 0], ph: rnd() * 7, tilt: 0, tiltT: 3 + rnd() * 10, tiltDir: 1, tiltA: 9, look: 0, walk: null, key: 0, lx: 0, ly: 0, lw: 0, lh: 0, bh: 0, hx: 0, hy: 0,
+  return { bot: b, b: behaviorOf(b.num), tag: el, box: [0, 0, 0, 0], ph: rnd() * 7, tilt: 0, tiltT: 3 + rnd() * 10, tiltDir: 1, tiltA: 9, look: 0, walk: null, key: 0, lx: 0, ly: 0, lw: 0, lh: 0, bh: 0, hx: 0, hy: 0,
     pose: { b: 0, hb: 0, from: 0, to: 0, t: 0, dur: 0, p: 0, dir: 1, a: 0, hold: 0, after: null, done: null, chat: 0, chatTo: 0, nod: 0 }, turnT: DEMO ? 1 + rnd() * 4.5 : 10 + rnd() * 50, label: labelText(b),
     fid: null, fidT: 4 + rnd() * 18, fr: 0, fx: 0, fsy: 1, tripT: isDash(b) ? 8 + rnd() * 18 : 40 + rnd() * 200, sayNow: null, sayOff: 0, chatting: null };
 }
 // ---------- last-active suffix on the name tags: `Grok · 1d`, `2h`, `15m`, `now`, `—` (from bot.last_active; whole numbers only) ----------
 // display-only: bots hidden from the office by id (bot itself untouched). bot11 Notes removed from the office v8.
-const HIDDEN_IDS = new Set(['a80017dc-128b-4534-8cde-674d5b094b4f']);
-const isDash = b => String(b.id).startsWith('fa5eb849-'); // bot14 Dashboards lives in the lounge
+const HIDDEN_IDS = new Set(BOTS.hiddenIds);
+const isDash = b => String(b.id).startsWith(BOTS.loungeBotIdPrefix); // bot14 Dashboards lives in the lounge
 // counters refresh once an hour (zero tokens: the server only stats files, and caches those reads for the hour too); labelClock holds the time of the last refresh
 const LABEL_EVERY = 3600; let labelClock = Date.now();
 // tag time colour: 0 d = green -> yellow/orange -> red at 7+ d; unknown = neutral grey
@@ -228,7 +237,7 @@ function agoStr(ms) {
 const pctStr = v => v == null ? '' : ` · ${Math.round(v)}%`;
 const labelText = b => `${b.name} · ${agoStr(b.last_active)}${pctStr(b.usage_pct)}`;
 function refreshLabels() {
-  labelClock = Date.now();
+  labelClock = Date.now(); labelMax = maxUsage();
   let changed = false;
   for (let i = 0; i < wl.length; i++) { const w = wl[i], t = labelText(w.bot); if (t !== w.label) { w.label = t; changed = true; } }
   D.labels = wl.map(w => w.label);
@@ -256,7 +265,7 @@ function startTurn(w, hold, dir) {
 function stepPose(w, dt) {
   const P = w.pose, g = w.walk, s = w.seat;
   if (s.bag || s.stand) return;
-  if (!g && P.b === 0 && P.dur === 0 && !w.chatting && (w.turnT -= dt) <= 0) { w.turnT = DEMO ? 6 + rnd() * 9 : 30 + rnd() * 60; if (!busy(w)) startTurn(w); }
+  if (!g && P.b === 0 && P.dur === 0 && !w.chatting && (w.turnT -= dt) <= 0) { w.turnT = DEMO ? 6 + rnd() * 9 : span(...w.b.turnEvery); if (!busy(w)) startTurn(w); }
   const manual = g && (g.phase === 'stand' || g.phase === 'sit');
   if (!manual) {
     const on = P.dur > 0 || P.b > 1e-3 || P.hold > 0 || !!w.chatting || (g && (g.phase === 'rise' || g.phase === 'settle'));
@@ -275,7 +284,6 @@ function stepPose(w, dt) {
 D.turn = i => startTurn(typeof i === 'number' ? wl[i] : findWorker(i), 4);
 
 // ---------- neighbour chat: two idle desk neighbours face each other for a moment. Cosmetic: never written to the interactions feed ----------
-const NCHAT = ['…', 'haha', '👍', 'lunch?', '😂', 'nice', '👀', 'really?', '🙂', 'ok!', '☕?', 'hmm'];
 let nchat = null, nchatT = DEMO ? 2 : 14 + rnd() * 30;
 const freeSeated = w => w && !w.walk && !busy(w) && !w.chatting && w.pose.b === 0 && w.pose.dur === 0 && !w.seat.bag && !w.seat.stand;
 function startChat(a, b) {
@@ -309,7 +317,7 @@ function stepChat(dt) {
   if (C.next <= 0) { // alternate: the speaker turns a bit to the viewer and gestures, the other one listens and nods
     C.talk ^= 1; C.next = 1.8 + rnd() * 1.4; const sp = C.talk ? b : a, li = C.talk ? a : b;
     sp.pose.chatTo = 1; li.pose.chatTo = 0; sp.pose.nod = 0; li.pose.nod = 1;
-    sp.sayNow = NCHAT[(rnd() * NCHAT.length) | 0]; sp.sayOff = 1.5; layoutDirty = true;
+    sp.sayNow = pick(sp.b.deskChat); sp.sayOff = 1.5; layoutDirty = true;
   }
 }
 D.neighbourChat = i => { const w = typeof i === 'number' ? wl[i] : findWorker(i), p = w && seats.filter(s => s.desk === w.seat.desk && s.bot); return !!(p && p.length === 2 && startChat(workers.get(p[0].bot.id), workers.get(p[1].bot.id))); };
@@ -510,7 +518,7 @@ function stepWalk(w, dt) {
 const FADE = 0.16, endIf = w => { if (w.chatting) endChat(w.chatting); };
 
 // ---------- ambient idle life: purely cosmetic and client-side, never an interaction (no feed, no API, no handoff labels) ----------
-const CHAT = ['…', 'haha', '😂', '👍', '🙂', 'nice', '👀', '☕?'], SNACK = ['☕', '🍪', '☕', '🍩', '🍎'];
+const pick = list => list[(rnd() * list.length) | 0];
 const busy = w => w.bot.status === 'working' || w.bot.status === 'error';
 function initLounge() {
   const O = L.lounge, P2 = p => [p[0] * PW, p[1] * PH];
@@ -572,7 +580,7 @@ function startTrip(w, force) {
   const spot = pickSpot(w); if (!spot) return false;
   const pts = pathPts([w.seat.feet, ...navPath(w.seat.node, spot.node).map(n => nav[n]), [spot.x, spot.y]]), len = [];
   for (let i = 1; i < pts.length; i++) len.push(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  w.walk = { to: null, pts, len, i: 0, front: true, f: 0, dir: 1, phase: 'rise', t: 0, x: pts[0][0], y: pts[0][1], stride: 0, v: 0, face: 1, legs: 'side', prev: null, fade: 0, note: '', demo: false, say: null, sayT: 1 + rnd() * 2, sayOff: 0, stayT: 22 + rnd() * 40, pet: false, petted: false, sitK: 0, leaving: false,
+  w.walk = { to: null, pts, len, i: 0, front: true, f: 0, dir: 1, phase: 'rise', t: 0, x: pts[0][0], y: pts[0][1], stride: 0, v: 0, face: 1, legs: 'side', prev: null, fade: 0, note: '', demo: false, say: null, sayT: 1 + rnd() * 2, sayOff: 0, stayT: span(...w.b.tripStay), pet: false, petted: false, sitK: 0, leaving: false,
     force: !!force && busy(w), trip: { spot } }; // a forced trip by a busy bot (debug hook) is not recalled at once
   leave(w, w.walk); layoutDirty = true; return true;
 }
@@ -601,12 +609,12 @@ function stepHang(w, g, dt) {
   g.sayT = 4 + rnd() * 5;
   const others = wl.filter(o => o !== w && o.walk && o.walk.phase === 'hang'), r = rnd();
   if (others.length && r < 0.55) { // alternating small talk
-    say(g, CHAT[(rnd() * CHAT.length) | 0], 2);
+    say(g, pick(w.b.loungeChat), 2);
     const o = others[(rnd() * others.length) | 0]; if (o.walk.sayT > 2.4) o.walk.sayT = 2.2 + rnd() * 0.5;
   } else if (!g.petted && !sp.bag && r > 0.6 && (g.petDog = dogNear(g))) { // walk over and pet the dog (the way home retraces this leg)
     const pd = g.petDog, dx = pd.x > g.x ? -1 : 1, tx = pd.x + dx * 36, ty = pd.y + 3;
     g.petted = g.pet = true; g.pts.push([tx, ty]); g.len.push(Math.hypot(tx - g.x, ty - g.y)); g.i = g.len.length - 1; g.f = 0; g.dir = 1; g.phase = 'go'; g.t = 0; g.say = null;
-  } else say(g, SNACK[(rnd() * SNACK.length) | 0], 2.2);
+  } else say(g, pick(w.b.snacks), 2.2);
 }
 const dogNear = g => dogs.filter(d => d.y > 590 && d.x > 60 && d.x < 480).sort((a, b) => Math.hypot(a.x - g.x, a.y - g.y) - Math.hypot(b.x - g.x, b.y - g.y))[0];
 let ambT = 0;
@@ -627,8 +635,8 @@ function stepAmbient(dt) {
     const w = wl[i], dash = isDash(w.bot);
     if (w.walk || w.seat.stand || w.chatting) continue;
     if (busy(w) && !dash) continue; // only Dashboards wanders while working
-    if ((w.tripT -= dt) > 0) continue;
-    w.tripT = dash ? 28 + rnd() * 55 : 120 + rnd() * 240;
+    if (!w.b.wanders || (w.tripT -= dt) > 0) continue;
+    w.tripT = span(...w.b.tripEvery);
     if (!(w.pose.b === 0 && w.pose.dur === 0 && !visiting(w))) continue;
     if (dash) {
       if (rnd() < 0.4 ? dashVisit(w) : startTrip(w) || dashVisit(w)) {}
@@ -649,7 +657,7 @@ function stepFidget(w, dt) {
   if (!w.fid) {
     if ((w.fidT -= dt) > 0) return;
     const [kind, a, b] = FIDGETS[(rnd() * FIDGETS.length) | 0];
-    w.fid = { kind, d: a + rnd() * (b - a), t: 0, dir: rnd() < 0.5 ? -1 : 1 }; w.fidT = 6 + rnd() * 20;
+    w.fid = { kind, d: a + rnd() * (b - a), t: 0, dir: rnd() < 0.5 ? -1 : 1 }; w.fidT = span(...w.b.fidgetEvery);
   }
   const F = w.fid, p = (F.t += dt) / F.d; if (p >= 1) { w.fid = null; return; }
   const e = Math.sin(Math.PI * p), s2 = F.dir;
@@ -721,7 +729,7 @@ function dogMood(m, w) {
   }
 }
 function dogNext() {
-  const kb = loungeBots().length, W = [['wander', 34], ['affection', DEMO ? 34 : 16], ['belly', 6], ['nap', 14], ['rest', 12], ['beg', kb ? 40 : 6], ['zoomies', 5]];
+  const kb = loungeBots().length, M = DOG_MOODS, W = [['wander', M.wander], ['affection', DEMO ? 34 : M.affection], ['belly', M.belly], ['nap', M.nap], ['rest', M.rest], ['beg', kb ? M.begWithVisitors : M.beg], ['zoomies', M.zoomies]];
   let r = rnd() * W.reduce((a, b) => a + b[1], 0);
   for (const [m, wt] of W) if ((r -= wt) <= 0) return dogMood(m);
   dogMood('wander');
@@ -804,6 +812,8 @@ function buildItems() {
   items.push({ k: 9997, t: 8, r: 'steam' }, { k: 9998, t: 4, r: 'room-l' }, { k: 9999, t: 4, r: 'room-r' });
   items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
   for (const d of dogs) items.push({ k: 0, t: 5, r: d });
+  PROPS.forEach((p, i) => items.push({ k: p.depth, t: 9, r: { ...p, im: propImgs[i] } })); // extra pictures from config.js
+  fullPaint = true;
 }
 const byKey = (a, b) => a.k - b.k;
 
@@ -951,10 +961,10 @@ function buildMonitors() {
 }
 const lerp2 = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u], STRIPS = 12;
 function warpMonitor(m, t, working, error) {
-  const G = m.wg, [TL, TR, BR, BL] = m.dq, W = m.wc.width, H = m.wc.height, sh = m.c.height, sw = m.c.width / STRIPS;
+  const G = m.wg, [TL, TR, BR, BL] = m.dq, W = m.wc.width, H = m.wc.height, strips = qual.lite ? LITE.monitorStrips : STRIPS, sh = m.c.height, sw = m.c.width / strips;
   G.setTransform(1, 0, 0, 1, 0, 0); G.globalCompositeOperation = 'source-over'; G.globalAlpha = m.desk.id === 'boss' ? 0.92 : m.occ || m.wall ? 0.98 : 0.8; G.clearRect(0, 0, W, H);
-  for (let i = 0; i < STRIPS; i++) {
-    const a = lerp2(TL, TR, i / STRIPS), b = lerp2(TL, TR, (i + 1) / STRIPS), c = lerp2(BL, BR, i / STRIPS), sx = i * sw;
+  for (let i = 0; i < strips; i++) {
+    const a = lerp2(TL, TR, i / strips), b = lerp2(TL, TR, (i + 1) / strips), c = lerp2(BL, BR, i / strips), sx = i * sw;
     G.setTransform((b[0] - a[0]) / sw, (b[1] - a[1]) / sw, (c[0] - a[0]) / sh, (c[1] - a[1]) / sh, a[0] - sx * (b[0] - a[0]) / sw, a[1] - sx * (b[1] - a[1]) / sw);
     G.drawImage(m.c, sx, 0, sw + 0.7, sh, sx, 0, sw + 0.7, sh);
   }
@@ -991,14 +1001,15 @@ function refreshOccupants() {
 }
 
 // ---------- labels + bubbles: cached bitmaps drawn on the canvas; transparent DOM pills stay as click targets ----------
-let labelFont = 0, labelCache = new Map(), bubbleCache = new Map();
+let labelFont = 0, labelMax = 0, labelCache = new Map(), bubbleCache = new Map();
+const maxUsage = () => wl.reduce((a, v) => Math.max(a, Math.round(v.bot.usage_pct || 0)), 0);
 function fontSize() {
   const vs = Math.min(innerWidth / 1280, innerHeight / 800);
   return EMBED ? Math.max(11, Math.min(20, 12 * vs)) : Math.max(13, Math.min(26, 15.5 * vs));
 }
 const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 function labelBitmap(w) {
-  const b = w.bot, acc = w.seat.desk.accent, mx = wl.reduce((a, v) => Math.max(a, Math.round(v.bot.usage_pct || 0)), 0), key = `${w.label}|${b.status}|${acc}|${mx}`;
+  const b = w.bot, acc = w.seat.desk.accent, mx = labelMax, key = `${w.label}|${b.status}|${acc}|${mx}`;
   let c = labelCache.get(key); if (c) return c;
   // two rows: name on top, `1.4d · 18%` underneath in a smaller font (about half the width of one row)
   const f = labelFont, S2 = dpr * qual.scale, fp = f * S2, fs = fp * 0.7, pad = fp * 0.55, dot = fp * 0.42, r1 = fp * 1.12, r2 = fs * 1.2, hgt = Math.round(r1 + r2 + fp * 0.28);
@@ -1080,39 +1091,29 @@ function layoutLabels() {
     }
   }
 }
+function drawLabel(w) {
+  const bm = labelBitmap(w);
+  ctx.drawImage(bm, Math.round(w.lx - bm.pad), Math.round(w.ly - bm.pad));
+  const text = bubbleText(w);
+  if (text) { const bb = bubbleBitmap(text, !!w.walk || !!w.sayNow), bx = Math.max(0, Math.min(cv.width - bb.width, w.lx + w.lw / 2 - bb.width / 2)); ctx.drawImage(bb, Math.round(bx), Math.round(w.ly - bb.height + bb.pad * 0.6)); }
+}
+function syncTag(w) { // DOM hit target follows the bitmap (only touched when it moves)
+  const css = 1 / (dpr * qual.scale), X = (w.lx * css).toFixed(1), Y = (w.ly * css).toFixed(1);
+  if (w._x !== X || w._y !== Y || w._w !== w.lw) {
+    w._x = X; w._y = Y; w._w = w.lw;
+    w.tag.style.transform = `translate(${X}px,${Y}px)`;
+    const t = w.tag.firstChild; t.style.width = (w.lw * css).toFixed(1) + 'px'; t.style.height = (w.lh * css).toFixed(1) + 'px';
+  }
+  const tk = `${w.label}|${w.bot.status}`;
+  if (w.tag._k !== tk) { w.tag._k = tk; w.tag.firstChild.firstChild.textContent = w.label; w.tag.firstChild.className = 'tag ' + w.bot.status; }
+}
 function drawLabels() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const css = 1 / (dpr * qual.scale);
-  for (let i = 0; i < order.length; i++) {
-    const w = order[i], bm = labelBitmap(w);
-    ctx.drawImage(bm, Math.round(w.lx - bm.pad), Math.round(w.ly - bm.pad));
-    const text = bubbleText(w);
-    if (text) { const bb = bubbleBitmap(text, !!w.walk || !!w.sayNow), bx = Math.max(0, Math.min(cv.width - bb.width, w.lx + w.lw / 2 - bb.width / 2)); ctx.drawImage(bb, Math.round(bx), Math.round(w.ly - bb.height + bb.pad * 0.6)); }
-    // DOM hit target follows the bitmap (only touched when it moves)
-    const X = (w.lx * css).toFixed(1), Y = (w.ly * css).toFixed(1);
-    if (w._x !== X || w._y !== Y || w._w !== w.lw) {
-      w._x = X; w._y = Y; w._w = w.lw;
-      w.tag.style.transform = `translate(${X}px,${Y}px)`;
-      const t = w.tag.firstChild; t.style.width = (w.lw * css).toFixed(1) + 'px'; t.style.height = (w.lh * css).toFixed(1) + 'px';
-    }
-    const tk = `${w.label}|${w.bot.status}`;
-    if (w.tag._k !== tk) { w.tag._k = tk; w.tag.firstChild.firstChild.textContent = w.label; w.tag.firstChild.className = 'tag ' + w.bot.status; }
-  }
+  for (let i = 0; i < order.length; i++) { drawLabel(order[i]); syncTag(order[i]); }
 }
 const lampTint = l => { if (!l.desk) return null; const s = seats.find(s => s.desk.id === l.desk && s.bot); return s && s.bot.status === 'error' ? redGlow : null; };
 
-let screenT = 0;
-function render(t, dt) {
-  rebuildBase(bkkHour());
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  ctx.drawImage(base, 0, 0);
-  // city: far FX -> skyline from the plate -> near FX -> window frame + vines from the plate
-  P(); fx.far(ctx, t, dt, env);
-  ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.sky);
-  P(); fx.near(ctx, t, dt, env);
-  ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.fg);
-  // painter's order by plate depth
-  const redraw = (screenT -= dt) <= 0; if (redraw) screenT = 0.12;
+function sortItems() { // painter's order by plate depth; returns how many are on the move
   let walking = 0;
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
@@ -1131,31 +1132,170 @@ function render(t, dt) {
   D.walking = walking;
   for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(items[i].r.x, items[i].r.y);
   items.sort(byKey);
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    switch (it.t) {
-      case 0: drawMonitor(it.r, t, redraw); break;
-      case 1: ctx.setTransform(1, 0, 0, 1, 0, 0); blit(it.r.patch); break;
-      case 2: if (!it.r.self) { ctx.setTransform(1, 0, 0, 1, 0, 0); blit(it.r.patch); } break;
-      case 3: drawWorker(it.r, t); break;
-      case 4: ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over[it.r]); break;
-      case 5: drawDog(it.r, t); break;
-      case 6: drawBossFx(t); break;
-      case 7: drawLounge(t); break;
-      case 8: drawSteam(t); break;
-    }
+  return walking;
+}
+function drawItem(it, t, redraw) {
+  switch (it.t) {
+    case 0: drawMonitor(it.r, t, redraw); break;
+    case 1: ctx.setTransform(1, 0, 0, 1, 0, 0); blit(it.r.patch); break;
+    case 2: if (!it.r.self) { ctx.setTransform(1, 0, 0, 1, 0, 0); blit(it.r.patch); } break;
+    case 3: drawWorker(it.r, t); break;
+    case 4: ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over[it.r]); break;
+    case 5: drawDog(it.r, t); break;
+    case 6: drawBossFx(t); break;
+    case 7: drawLounge(t); break;
+    case 8: drawSteam(t); break;
+    case 9: { const p = it.r; P(); ctx.drawImage(p.im, p.x, p.y, p.w, p.h); break; }
   }
+}
+function drawErrorGlows(t, R) {
   P();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < wl.length; i++) { const w = wl[i]; if (w.bot.status !== 'error' || w.walk) continue;
     const s = w.seat, r = s.h * (0.55 + 0.08 * Math.sin(t * 3));
+    if (R && !overlap(glowBox(s), R)) continue;
     ctx.globalAlpha = 0.55; ctx.drawImage(redGlow, s.x + s.h * 0.35 - r, s.top + s.h * 0.35 - r, r * 2, r * 2);
   }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+let screenT = 0;
+function render(t, dt) {
+  rebuildBase(bkkHour());
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(base, 0, 0);
+  // city: far FX -> skyline from the plate -> near FX -> window frame + vines from the plate
+  P(); fx.far(ctx, t, dt, env);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.sky);
+  P(); fx.near(ctx, t, dt, env);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.fg);
+  const redraw = (screenT -= dt) <= 0; if (redraw) screenT = 0.12;
+  const walking = sortItems();
+  for (let i = 0; i < items.length; i++) drawItem(items[i], t, redraw);
+  drawErrorGlows(t);
   fx.lamps(ctx, t, env, lampTint);
   fx.motes(ctx, t, dt, env);
   if (layoutDirty || walking) { layoutLabels(); layoutDirty = false; }
   if (!NOTAGS) drawLabels();
+}
+
+// ---------- lite: the same scene for weak devices (smart TVs). A frame repaints only the rectangles that changed, using the same drawing
+// code, depth order and labels as the full picture. The city is drawn to its own cached canvas every LITE.cityEvery seconds, and one patch
+// of the room is refreshed per frame, so seated bots and monitors update a few times a second while walkers stay smooth. ----------
+let cityC = null, cityG = null, cityBox = null, cityT = 0, cityDt = 0, slices = [], sliceI = 0, sliceT = 0;
+const dirty = [], FULL = [0, 0, 0, 0];
+const dev = (x0, y0, x1, y1) => [offX + x0 * k, offY + y0 * k, offX + x1 * k, offY + y1 * k];
+const overlap = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+const union = (a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+const clampBox = b => { const x0 = Math.max(0, Math.floor(b[0])), y0 = Math.max(0, Math.floor(b[1])), x1 = Math.min(cv.width, Math.ceil(b[2])), y1 = Math.min(cv.height, Math.ceil(b[3])); return x1 > x0 && y1 > y0 ? [x0, y0, x1, y1] : null; };
+const patchBox = p => [p.x, p.y, p.x + p.c.width, p.y + p.c.height];
+const glowBox = s => { const r = s.h * 0.64, x = s.x + s.h * 0.35, y = s.top + s.h * 0.35; return dev(x - r, y - r, x + r, y + r); };
+function staticBox(it) {
+  const r = it.r;
+  switch (it.t) {
+    case 0: return [r.bx, r.by, r.bx + r.wc.width, r.by + r.wc.height];
+    case 1: case 2: return r.patch ? patchBox(r.patch) : null;
+    case 4: return patchBox(over[r]);
+    case 7: return dev(CK.x - 30, CK.y - 30, CK.x + CK.w + 30, CK.y + CK.h + 30);
+    case 9: return dev(r.x, r.y, r.x + r.w, r.y + r.h);
+    default: return null; // steam and monitor shimmer are left out of lite
+  }
+}
+function workerBox(w) { const b = w.box, a = dev(b[0] - 14, b[1] - 14, b[2] + 14, b[3] + 14); return w.bot.status === 'error' && !w.walk ? union(a, glowBox(w.seat)) : a; }
+function moverBox(w) { // generous box round a bot that is turning or walking, computed before it is drawn
+  const g = w.walk, s = w.seat, half = s.ts ? L.turn.cell[0] * s.ts * 0.56 : s.h * 0.8, seat = dev(s.x - half, s.top - s.h * 0.5, s.x + half, s.base + 12);
+  if (!g || g.phase === 'rise' || g.phase === 'settle') return seat;
+  const hu = hAt(g.y), body = dev(g.x - hu * 0.7, g.y - hu * 1.5, g.x + hu * 0.7, g.y + hu * 0.14), bag = g.trip?.spot?.bag ? g.trip.spot : null;
+  if (bag) return union(body, dev(bag.sit[0] - hu * 0.8, bag.sit[1] - hu * 1.2, bag.sit[0] + hu * 0.8, bag.sit[1] + hu * 0.4));
+  return g.phase === 'stand' || g.phase === 'sit' ? union(body, seat) : body;
+}
+// only things really in motion repaint every frame; a bot standing in the lounge or holding a pose is refreshed with its patch of the room
+const STILL_WALK = { hang: 1, talk: 1, petting: 1 };
+const moving = w => { const g = w.walk, P = w.pose; if (g) return !STILL_WALK[g.phase] || (g.sitK > 0 && g.sitK < 1); return P.dur > 0 || (P.a > 0 && P.a < 1); };
+const dogMoving = d => d.pose === 'walk' || d.pose === 'happy';
+function mergeDirty(list) { // overlapping or neighbouring rectangles become one, so nothing is painted twice
+  const size = b => (b[2] - b[0]) * (b[3] - b[1]);
+  for (let i = 0; i < list.length; i++) for (let j = list.length - 1; j > i; j--) {
+    const u = union(list[i], list[j]);
+    if (size(u) <= (size(list[i]) + size(list[j])) * 1.25) { list[i] = u; list.splice(j, 1); j = list.length; }
+  }
+}
+function dogBox(d) { const C = L.corgi, hu = hAt(d.y), W = 0.507 * hu / C.bodyW, H = W * C.cell[1] / C.cell[0]; return dev(d.x - W * 1.1, d.y - H * 1.6, d.x + W * 1.1, d.y + H * 0.25); }
+function labelBox(w) {
+  const bm = labelBitmap(w), x = Math.round(w.lx - bm.pad), y = Math.round(w.ly - bm.pad); let b = [x - 1, y - 1, x + bm.width + 1, y + bm.height + 1];
+  const text = bubbleText(w);
+  if (text) { const bb = bubbleBitmap(text, !!w.walk || !!w.sayNow), bx = Math.round(Math.max(0, Math.min(cv.width - bb.width, w.lx + w.lw / 2 - bb.width / 2))), by = Math.round(w.ly - bb.height + bb.pad * 0.6); b = union(b, [bx - 1, by - 1, bx + bb.width + 1, by + bb.height + 1]); }
+  w.lt = text; return b;
+}
+function buildLite() {
+  const [x0, y0, x1, y1] = L.masks.fg;
+  cityBox = clampBox(dev(x0 * PW, y0 * PH, x1 * PW, y1 * PH));
+  const W = cityBox[2] - cityBox[0], H = cityBox[3] - cityBox[1];
+  if (!cityC || cityC.width !== W || cityC.height !== H) { cityC = mk(W, H); cityG = cityC.getContext('2d', { alpha: false }); }
+  slices = [];
+  const cols = LITE.sliceCols, rows = LITE.sliceRows, sw = cv.width / cols, sh = cv.height / rows;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const s = clampBox([c * sw, r * sh, (c + 1) * sw, (r + 1) * sh]); if (s[0] < cityBox[0] || s[1] < cityBox[1] || s[2] > cityBox[2] || s[3] > cityBox[3]) slices.push(s); }
+  for (const it of items) if (it.t !== 3 && it.t !== 5) it.b = staticBox(it);
+  for (const w of wl) { w.db = null; w.lb = null; }
+  cityT = 0;
+}
+function renderCity(t, dt) {
+  const g = cityG, [bx, by, bx1, by1] = cityBox, W = bx1 - bx, H = by1 - by;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.drawImage(base, bx, by, W, H, 0, 0, W, H);
+  g.setTransform(k, 0, 0, k, offX - bx, offY - by); fx.far(g, t, dt, env);
+  g.setTransform(1, 0, 0, 1, -bx, -by); g.drawImage(over.sky.c, over.sky.x, over.sky.y);
+  g.setTransform(k, 0, 0, k, offX - bx, offY - by); fx.near(g, t, dt, env);
+  g.setTransform(1, 0, 0, 1, -bx, -by); g.globalAlpha = 1; g.drawImage(over.fg.c, over.fg.x, over.fg.y);
+}
+function paintRect(R, all, t) {
+  const [x, y, x1, y1] = R, w = x1 - x, h = y1 - y, c = cityBox;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.drawImage(base, x, y, w, h, x, y, w, h);
+  if (overlap(c, R)) { const ix = Math.max(x, c[0]), iy = Math.max(y, c[1]), iw = Math.min(x1, c[2]) - ix, ih = Math.min(y1, c[3]) - iy; ctx.drawImage(cityC, ix - c[0], iy - c[1], iw, ih, ix, iy, iw, ih); }
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i], b = it.t === 3 ? workerBox(it.r) : it.t === 5 ? dogBox(it.r) : it.b;
+    if (!b || !(all || overlap(b, R))) continue;
+    if (it.t === 7) drawClock(t); else { drawItem(it, t, it.t === 0 && it.r.due); if (it.t === 0) it.r.due = false; }
+  }
+  drawErrorGlows(t, all ? null : R);
+  if (!NOTAGS) { ctx.setTransform(1, 0, 0, 1, 0, 0); for (let i = 0; i < order.length; i++) { const o = order[i]; if (o.lb && (all || overlap(o.lb, R))) drawLabel(o); } }
+  ctx.restore();
+}
+function renderLite(t, dt) {
+  rebuildBase(bkkHour());
+  sortItems(); const full = fullPaint;
+  if (full) { buildLite(); layoutDirty = true; }
+  dirty.length = 0;
+  let movers = 0;
+  for (let i = 0; i < wl.length; i++) {
+    const w = wl[i];
+    if (moving(w)) { const b = moverBox(w); dirty.push(w.db ? union(w.db, b) : b); w.db = b; movers++; }
+    else if (w.db) { dirty.push(w.db); w.db = null; }
+  }
+  for (const d of dogs) {
+    if (dogMoving(d)) { const b = dogBox(d); dirty.push(d.db ? union(d.db, b) : b); d.db = b; }
+    else if (d.db) { dirty.push(d.db, dogBox(d)); d.db = null; }
+  }
+  cityDt += dt;
+  if ((cityT -= dt) <= 0) { cityT = LITE.cityEvery; renderCity(t, cityDt); cityDt = 0; dirty.push(cityBox); }
+  if ((sliceT -= dt) <= 0 && slices.length) {
+    sliceT = LITE.sliceEvery;
+    const s = slices[sliceI++ % slices.length];
+    for (const m of monitors) if (m.bx + m.wc.width / 2 >= s[0] && m.bx + m.wc.width / 2 < s[2] && m.by + m.wc.height / 2 >= s[1] && m.by + m.wc.height / 2 < s[3]) m.due = true;
+    dirty.push(s);
+  }
+  if (layoutDirty || movers) {
+    layoutLabels(); layoutDirty = false;
+    for (let i = 0; i < wl.length; i++) {
+      const w = wl[i], b = labelBox(w);
+      if (!w.lb || b[0] !== w.lb[0] || b[1] !== w.lb[1] || b[2] !== w.lb[2] || b[3] !== w.lb[3] || w.lt !== w.lt0) { dirty.push(w.lb ? union(w.lb, b) : b); w.lb = b; w.lt0 = w.lt; syncTag(w); }
+    }
+  }
+  if (full) { fullPaint = false; paintRect([0, 0, cv.width, cv.height], true, t); layoutDirty = true; return; } // labels sit on the bots, which have only just been drawn
+  let area = 0;
+  mergeDirty(dirty);
+  for (let i = 0; i < dirty.length; i++) { const c = clampBox(dirty[i]); if (c) { paintRect(c, false, t); area += (c[2] - c[0]) * (c[3] - c[1]); } }
+  D.liteStats = { rects: dirty.length, screens: +(area / (cv.width * cv.height)).toFixed(2) }; // screens: how many screenfuls were repainted this frame
 }
 
 // ---------- input ----------
@@ -1167,13 +1307,15 @@ const mb = document.getElementById('music');
 mb.onclick = () => { const on = window.AC.music.toggle(); mb.setAttribute('aria-pressed', on); mb.textContent = on ? '♪ lofi on' : '♪ lofi off'; };
 
 // ---------- loop: one rAF, delta time, display rate, adaptive quality, paused while hidden ----------
-let labelT = LABEL_EVERY, raf = 0, last = 0, fpsN = 0, fpsT = 0, t = 0, lowFor = 0, highFor = 0, lastQChange = 0;
+let booted = false, rescued = false, labelT = LABEL_EVERY, raf = 0, last = 0, fpsN = 0, fpsT = 0, t = 0, lowFor = 0, highFor = 0, slowFor = 0, lastQChange = 0;
+const STATS = q.has('stats'); fpsEl.hidden = !STATS; // ?stats=1 shows the speed on screen, for checking a real TV
+const applyFx = () => fx.setQuality(qual.fx, qual.lite ? LITE.cityShare : 1);
 function setQuality(lv, now) {
-  qual = QUALITY[lv]; D.quality = qual; fx.setQuality(qual.fx); lastQChange = now; resize();
+  qual = QUALITY[lv]; D.quality = qual; applyFx(); lastQChange = now; resize();
 }
 function frame(now) {
   raf = requestAnimationFrame(frame);
-  const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now; t += dt;
+  const dt = Math.min(qual.lite ? LITE.maxStep : 0.1, (now - (last || now)) / 1000); last = now; t += dt;
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i];
     if (w.walk) stepWalk(w, dt);
@@ -1185,16 +1327,26 @@ function frame(now) {
   stepChat(dt); stepAmbient(dt);
   if (dogs.length) { for (const d of dogs) { dog = d; stepDog(dt); } dog = dogs[0]; }
   if ((labelT -= dt) <= 0) { labelT = LABEL_EVERY; refreshLabels(); }
-  render(t, dt);
+  if (qual.lite) renderLite(t, dt); else render(t, dt);
   fpsN++; D.frames++;
   if (now - fpsT >= 1000) {
     const fps = fpsN * 1000 / (now - fpsT);
     D.turned = wl.filter(w => w.pose.b > 1).length;
-    D.fps = window.__fps = Math.round(fps); fpsEl.textContent = D.fps + ' fps'; fpsN = 0; fpsT = now;
+    D.fps = window.__fps = Math.round(fps); fpsEl.textContent = STATS ? `${D.fps} fps · ${qual.lite ? 'lite' : 'full ' + qual.level} · ${cv.width}x${cv.height}` : D.fps + ' fps'; fpsN = 0; fpsT = now;
+    // a clearly weak device goes straight to lite, with no long wait; very slow ones are remembered so the next visit starts there
+    if (!q.has('q') && !qual.lite) {
+      slowFor = fps < LITE.enterFps || (qual.level === 3 && fps < 50) ? slowFor + 1 : 0; // also leave the lowest full level if it is not smooth
+      if (slowFor >= LITE.enterSeconds) { if (fps < LITE.rememberFps) remember(true); slowFor = 0; setQuality(QUALITY.findIndex(l => l.lite), now); }
+    }
+    // lite still too slow on this device: one last step down
+    if (!q.has('q') && qual.lite && !rescued) {
+      lowFor = fps < LITE.rescueFps ? lowFor + 1 : 0;
+      if (lowFor >= LITE.rescueSeconds) { rescued = true; lowFor = 0; LITE.sliceEvery *= 2; LITE.cityEvery *= 2; LITE.maxWidth = LITE.rescueWidth; resize(); }
+    }
     // adaptive quality: < 50 fps for 2 s steps down (fewer FX, then lower internal resolution); recovers slowly
-    if (D.frames > 90 && !q.get('q')) {
+    if (D.frames > 90 && !q.get('q') && !qual.lite) {
       lowFor = fps < 50 ? lowFor + 1 : 0; highFor = fps >= 58 ? highFor + 1 : 0;
-      if (lowFor >= 2 && qual.level < QUALITY.length - 1 && now - lastQChange > 2500) { setQuality(qual.level + 1, now); lowFor = 0; }
+      if (lowFor >= 2 && qual.level < 3 && now - lastQChange > 2500) { setQuality(qual.level + 1, now); lowFor = 0; }
       else if (highFor >= 20 && qual.level > 0 && now - lastQChange > 30000) { setQuality(qual.level - 1, now); highFor = 0; }
     }
   }
@@ -1202,11 +1354,11 @@ function frame(now) {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
-  else if (!raf) { last = 0; fpsN = 0; fpsT = performance.now(); raf = requestAnimationFrame(frame); }
+  else if (booted && !raf) { last = 0; fpsN = 0; fpsT = performance.now(); raf = requestAnimationFrame(frame); } // booted: never start frame before load() has finished
 });
 
 resize();
 load().then(() => fetch(stateUrl(), { credentials: 'same-origin' }))
   .then(r => r.status === 401 ? (location.href = '/login') : r.json())
-  .then(s => { if (!s) return; apply(s); connect(); fx.setQuality(qual.fx); D.quality = qual; fpsT = performance.now(); raf = requestAnimationFrame(frame); })
+  .then(s => { if (!s) return; apply(s); connect(); applyFx(); D.quality = qual; fpsT = performance.now(); booted = true; raf = requestAnimationFrame(frame); })
   .catch(e => { console.error(e); setTimeout(() => location.reload(), 15000); });
