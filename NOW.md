@@ -9,4 +9,3 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
-- Claude (DPro) · characters, kitchen loitering, walk depth, stars, clock, boats, monitor screens, memory · public/office2d/*, assets/layout.json · 2026-11-09 18:16

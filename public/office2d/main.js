@@ -156,7 +156,7 @@ function rebuildBase(h) {
   if (base.width !== cv.width || base.height !== cv.height) base = mk(cv.width, cv.height);
   paintBase(base.getContext('2d'), n, G, false);
   if (qual.lite) { const g = base.getContext('2d'); g.setTransform(k, 0, 0, k, offX, offY); fx.lamps(g, 0, env, lampTint); g.setTransform(1, 0, 0, 1, 0, 0); } // lite: lamp glow is baked in once
-  fx.rebuild(env);
+  fx.rebuild(env, k);
   for (const kk in over) over[kk] = cutMasked(kk);
   for (const o of occluders) o.patch = cutMasked(o.mask);
   for (const s of seats) if (s.chair) s.patch = cutPoly(s.chair);
@@ -577,24 +577,39 @@ function drawSteam(t) {
   P(); for (const c of L.steam) curl(c.x * PW, c.y * PH, c.s, c.ph, t);
   for (let i = 0; i < wl.length; i++) { const g = wl[i].walk; if (g && g.trip && g.trip.spot.id === 'coffee' && (g.phase === 'hang' || g.phase === 'petting')) curl(g.x + 9 * (g.face || 1), g.y - hAt(g.y) * 0.62, 0.8, wl[i].ph, t); } // the cup they just poured
 }
-// left-wall clock, top left on the painted wall beside the window: a dark panel with the warm digits and am/pm centred as one group, Bangkok time, repainted once a minute
-const CK = { x: 3, y: 42, w: 77, h: 44, c: null, m: -1, glow: glowSprite('255,190,120') };
+// left-wall clock, top left on the painted wall beside the window: a small analog wall clock (brass rim, cream face, serif numerals) to
+// match the painted room. Bangkok time, repainted once a minute; dimmed at night, with a little warm lamp light on it.
+const CK = { x: 13, y: 34, w: 58, h: 58, c: null, m: -1, glow: glowSprite('255,200,140') };
+const SERIF = getComputedStyle(document.documentElement).getPropertyValue('--serif').trim() || 'Georgia, serif';
 function drawClock(t) {
   const h = bkkHour(), m = Math.floor(h * 60);
   if (m !== CK.m) {
-    CK.m = m; const c = CK.c || (CK.c = mk(308, 176)), g = c.getContext('2d'), h12 = Math.floor(m / 60) % 12 || 12, mm = String(m % 60).padStart(2, '0'), pm = m >= 720 ? 'pm' : 'am';
-    g.clearRect(0, 0, 308, 176); g.fillStyle = 'rgba(16,11,16,.9)'; g.beginPath(); g.roundRect(3, 3, 302, 170, 12); g.fill(); g.strokeStyle = 'rgba(255,190,130,.3)'; g.lineWidth = 2; g.stroke();
-    const big = '600 118px ui-monospace, "DejaVu Sans Mono", Menlo, monospace', small = '600 34px ui-monospace, "DejaVu Sans Mono", Menlo, monospace', SX = 0.72, SY = 1.42, GAP = 8, txt = `${h12}:${mm}`; // tall digits, centred on their inked box, not on the font's line box
-    g.textBaseline = 'alphabetic'; g.textAlign = 'left'; g.font = small; const a = g.measureText('a'), p2 = g.measureText(pm[1]), pa = g.measureText(pm[0]), pw = Math.max(pa.actualBoundingBoxRight + pa.actualBoundingBoxLeft, p2.actualBoundingBoxRight + p2.actualBoundingBoxLeft);
-    g.font = big; const m0 = g.measureText(txt), dw = (m0.actualBoundingBoxRight + m0.actualBoundingBoxLeft) * SX, dh = (m0.actualBoundingBoxAscent + m0.actualBoundingBoxDescent) * SY, x0 = 154 - (dw + GAP + pw) / 2, y0 = 88 + dh / 2;
-    g.fillStyle = '#ffd9a4'; g.shadowColor = '#ff9c50'; g.shadowBlur = 16; g.save(); g.translate(x0 + m0.actualBoundingBoxLeft * SX, y0 - m0.actualBoundingBoxDescent * SY); g.scale(SX, SY); g.fillText(txt, 0, 0); g.restore();
-    g.font = small; g.shadowBlur = 8; g.textAlign = 'center'; g.fillStyle = 'rgba(255,217,164,.85)'; const cx = x0 + dw + GAP + pw / 2, ah = a.actualBoundingBoxAscent; g.fillText(pm[0], cx, 88 - 7); g.fillText(pm[1], cx, 88 + 7 + ah); g.shadowBlur = 0; // a/p above the centre line, m below it
-    D.clockBox = { l: x0, r: 308 - (x0 + dw + GAP + pw), t: y0 - dh, b: 176 - y0 };
-    D.clock = `${h12}:${mm}${pm}`;
+    CK.m = m; const S = 232, c = CK.c || (CK.c = mk(S, S)), g = c.getContext('2d'), R = S / 2, cx = R, cy = R; // drawn at 4x for big screens
+    g.clearRect(0, 0, S, S);
+    const rim = g.createLinearGradient(0, 0, S, S); rim.addColorStop(0, '#ecd29a'); rim.addColorStop(0.45, '#a9793a'); rim.addColorStop(1, '#5a3b19');
+    g.shadowColor = 'rgba(12,6,2,.5)'; g.shadowBlur = 14; g.shadowOffsetX = 4; g.shadowOffsetY = 7; // cast on the wall
+    g.fillStyle = rim; g.beginPath(); g.arc(cx, cy, R - 14, 0, 7); g.fill();
+    g.shadowColor = 'transparent';
+    g.fillStyle = '#3b2611'; g.beginPath(); g.arc(cx, cy, R - 27, 0, 7); g.fill();
+    const face = g.createRadialGradient(cx - 20, cy - 24, 8, cx, cy, R - 30); face.addColorStop(0, '#fcf3df'); face.addColorStop(1, '#dfcca7');
+    g.fillStyle = face; g.beginPath(); g.arc(cx, cy, R - 30, 0, 7); g.fill();
+    g.strokeStyle = '#4b3520'; g.lineCap = 'round';
+    for (let i = 0; i < 60; i++) { const a = i / 30 * Math.PI, big = i % 5 === 0, r1 = R - 37, r0 = big ? R - 49 : R - 41; g.lineWidth = big ? 4 : 1.6; g.beginPath(); g.moveTo(cx + Math.sin(a) * r0, cy - Math.cos(a) * r0); g.lineTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1); g.stroke(); }
+    g.fillStyle = '#3a2615'; g.font = `600 25px ${SERIF}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const [s, f] of [['12', 0], ['3', 0.25], ['6', 0.5], ['9', 0.75]]) { const a = f * Math.PI * 2, r = R - 64; g.fillText(s, cx + Math.sin(a) * r, cy - Math.cos(a) * r + 1); }
+    const hand = (a, len, wd) => { g.save(); g.translate(cx, cy); g.rotate(a); g.beginPath(); g.moveTo(-wd / 2, 12); g.lineTo(-wd * 0.32, -len); g.lineTo(0, -len - 7); g.lineTo(wd * 0.32, -len); g.lineTo(wd / 2, 12); g.closePath(); g.fill(); g.restore(); };
+    g.fillStyle = '#26190d'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 4; g.shadowOffsetX = 0; g.shadowOffsetY = 2;
+    hand((h % 12) / 12 * Math.PI * 2, R * 0.38, 9); hand((m % 60) / 60 * Math.PI * 2, R * 0.56, 6);
+    g.shadowColor = 'transparent'; g.fillStyle = '#b08240'; g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
+    const gl = g.createLinearGradient(cx - R, cy - R, cx, cy); gl.addColorStop(0, 'rgba(255,255,255,.26)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); // glass
+    g.fillStyle = gl; g.beginPath(); g.ellipse(cx - 24, cy - 30, R * 0.42, R * 0.2, -0.65, 0, 7); g.fill();
+    D.clock = `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')}${m >= 720 ? 'pm' : 'am'}`;
   }
   P(); ctx.save(); ctx.translate(CK.x, CK.y); ctx.transform(1, 0.03, 0, 1, 0, 0); // follows the left wall a little
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.16 + 0.015 * Math.sin(t * 0.7)) * (0.5 + 0.7 * env.dark); ctx.drawImage(CK.glow, -26, -26, CK.w + 52, CK.h + 52);
-  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(CK.c, 0, 0, CK.w, CK.h); ctx.restore();
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.07 + 0.01 * Math.sin(t * 0.7)) * (0.3 + 0.7 * env.dark); ctx.drawImage(CK.glow, -16, -16, CK.w + 32, CK.h + 32);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(CK.c, 0, 0, CK.w, CK.h);
+  if (env.n > 0) { ctx.globalAlpha = 0.55 * env.n; ctx.fillStyle = '#0d0a18'; ctx.beginPath(); ctx.arc(CK.w / 2, CK.h / 2, CK.w * 0.44, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } // night: the whole clock sits in the room's shade
+  ctx.restore();
 }
 const tripPhase = g => g.trip && g.phase !== 'back' && g.phase !== 'sit' && g.phase !== 'settle';
 const spotTaken = sp => wl.some(o => o.walk && tripPhase(o.walk) && o.walk.trip.spot === sp);

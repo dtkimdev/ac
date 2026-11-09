@@ -150,7 +150,9 @@ export function makeFx(L, rnd, img) {
 
   // window lights sampled from the night plate: [x, y, cool, offR, offG, offB]
   const lights = L.lights.map(([x, y, c, r, g, b]) => ({ x: x * PW, y: y * PH, c, off: `rgb(${r},${g},${b})`, ph: rnd() * 7, sp: 0.4 + rnd() * 1.4 }));
-  const starPts = (L.stars || []).map(([x, y]) => ({ x: x * PW, y: y * PH, ph: rnd() * 7, sp: 0.6 + rnd() * 1.6, r: 2.5 + rnd() * 2 }));
+  // stars: each has its own steady brightness (magnitude) and colour, and shimmers gently through the air; they never switch off
+  const starPts = (L.stars || []).map(([x, y]) => { const m = rnd(); return { x: x * PW, y: y * PH, ph: rnd() * 7, ph2: rnd() * 7, f1: 0.5 + rnd() * 1.3, f2: 1.9 + rnd() * 3.1, b: 0.3 + 0.7 * m * m, r: 1.6 + 2.2 * m, warm: rnd() < 0.3 }; });
+  const starW = glowSprite('255,236,214', 16, 0.18), starC = glowSprite('214,226,255', 16, 0.18);
   const toggles = []; // pool of switching windows (fraction lit follows the darkness; fades are slow)
   for (let i = 0; i < 96; i++) { const l = lights[(rnd() * lights.length) | 0]; toggles.push({ l, on: rnd() < 0.6 ? 1 : 0, v: rnd() < 0.6 ? 1 : 0, t: 2 + rnd() * 40 }); }
   // city lights just above the water -> shimmering vertical reflections
@@ -202,7 +204,7 @@ export function makeFx(L, rnd, img) {
 
   // per time-bucket tinted sprites (rebuilt by rebuild())
   let T = null;
-  function rebuild(env) {
+  function rebuild(env, dk = 1) { // dk: device pixels per plate pixel, so sprites can be built at the size they are drawn
     const n = env.n, G = env.grade;
     const P = k => { // palette colour for the current blend + grade wash
       let c = mixc(pal.dusk[k], pal.night[k], n);
@@ -222,9 +224,11 @@ export function makeFx(L, rnd, img) {
       return s.d === 0 ? soften(t, 0.55) : s.d === 1 ? soften(t, 0.8) : t;
     });
     const [bcw, bch] = L.boats.cell, bwater = L.boats.water + 2;
-    const boatT = BK.map((_, k) => [0.42, 0.24, 0.08].map(dz => { // three depths: haze toward the sea, dusk gives a warm rim, night dims the hulls
-      const raw = boatCell(img.boats, k, bcw, bch, bwater, 0.5), nightA = 0.58 * n, sp = tinted(tinted(raw, mixc(city, [14, 16, 40], 0.6), nightA), mixc(seaC, horizon, 0.3), dz + 0.1 * (1 - n));
-      return { sp, lit: boatCell(img.boatsLit, k, bcw, bch, bwater, 0.5), ref: reflectionOf(sp, seaC) };
+    const boatT = BK.map((K, k) => [0.42, 0.24, 0.08].map((dz, z) => { // three depths: haze toward the sea, dusk gives a warm rim, night dims the hulls
+      // built at the largest size it is drawn on screen at this depth (it was half size, then stretched back up: soft and blocky on big screens)
+      const sc = Math.min(1, Math.max(0.2, K.w * (24 + [0.3, 0.6, 1][z] * 34) * dk * 1.15 / bcw));
+      const raw = boatCell(img.boats, k, bcw, bch, bwater, sc), nightA = 0.58 * n, sp = tinted(tinted(raw, mixc(city, [14, 16, 40], 0.6), nightA), mixc(seaC, horizon, 0.3), dz + 0.1 * (1 - n));
+      return { sp, lit: boatCell(img.boatsLit, k, bcw, bch, bwater, sc), ref: reflectionOf(sp, seaC) };
     }));
     const cloudTop = mixc(mixc(horizon, [255, 236, 220], 0.5 * (1 - n)), [255, 190, 170], 0.35 * env.golden), cloudBase = mixc(sky, city, 0.25 + 0.3 * n);
     let cs = 11; const crnd = () => ((cs = Math.imul(cs, 1664525) + 1013904223 >>> 0) / 4294967296); // same shapes every bucket
@@ -289,8 +293,8 @@ export function makeFx(L, rnd, img) {
       ctx.globalCompositeOperation = 'lighter';
       if (env.stars > 0.02) {
         for (let i = 0; i < starPts.length; i += share < 1 ? 4 : 1) {
-          const s = starPts[i], tw = Math.sin(t * s.sp + s.ph); if (tw < 0.2) continue;
-          ctx.globalAlpha = env.stars * 0.55 * (tw - 0.2); ctx.drawImage(strobe, s.x - s.r / 2, s.y - s.r / 2, s.r, s.r);
+          const s = starPts[i], tw = 0.7 + 0.2 * Math.sin(t * s.f1 + s.ph) + 0.1 * Math.sin(t * s.f2 + s.ph2), r = s.r * (0.85 + 0.15 * tw);
+          ctx.globalAlpha = env.stars * 0.75 * s.b * tw; ctx.drawImage(s.warm ? starW : starC, s.x - r / 2, s.y - r / 2, r, r);
         }
       }
       ctx.globalCompositeOperation = 'source-over';
