@@ -38,7 +38,8 @@ ensure_pages() {
 push_now() { # 0 pushed or nothing to do, 1 failed
   local started tree old c out kb
   started=$(date +%s)
-  bin/pages-build.sh || return 1
+  . bin/pages-pull.sh; pull_main
+  bin/pages-build.sh || return 1; write_receipt
   ensure_repo || { log "repo check/create failed"; return 1; }
   init_git
   git_auth=(-c credential.helper= -c 'credential.helper=!gh auth git-credential')
