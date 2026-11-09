@@ -22,9 +22,30 @@ pull_main() {
       echo "$new" > logs/main-bad; git reset -q --hard "$head"; rm -rf "$tmp"; return 0
     fi
   done
+  for f in bin/*.sh; do # the publisher updates itself from main, so its own scripts must parse too
+    [ -f "$f" ] || continue
+    if ! bash -n "$f" 2>"$tmp/err"; then
+      log "main: ${new:0:7} breaks $f ($(head -c 160 "$tmp/err" | tr '\n' ' ')), staying on ${head:0:7}"
+      echo "$new" > logs/main-bad; git reset -q --hard "$head"; rm -rf "$tmp"; return 0
+    fi
+  done
   rm -rf "$tmp"
   log "main: ${head:0:7} -> ${new:0:7}"
   if git diff --name-only "$head" "$new" | grep -qE '^(server\.js|lib/)'; then log "main: server code changed, restart the server to use it"; fi
+  return 0
+}
+
+# The ↻ button on the live site starts .github/workflows/refresh.yml, which does nothing itself. A run newer than the last one
+# seen means "publish now". Outbound check only, about once a minute from bin/pages.sh tick. The first run ever seen is only recorded.
+refresh_requested() {
+  local id last
+  id=$(gh api "repos/dtkimdev/ac/actions/workflows/refresh.yml/runs?per_page=1" --jq '.workflow_runs[0].id // empty' 2>/dev/null) || return 1
+  [ -n "$id" ] || return 1
+  last=$(cat logs/refresh-last 2>/dev/null || true)
+  [ "$id" = "$last" ] && return 1
+  echo "$id" > logs/refresh-last
+  [ -n "$last" ] || return 1
+  log "refresh button pressed (run $id), publishing now"
   return 0
 }
 

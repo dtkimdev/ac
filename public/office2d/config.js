@@ -1,6 +1,9 @@
 // Agent City settings. Change behaviour, speed and items here; no drawing code needed. Recipes: AGENTS.md, "Common edits".
 // Art and positions live in assets/layout.json.
 
+// ↻ button on the live site: rings a GitHub workflow that the publisher watches (see main.js setupPagesRefresh).
+export const REFRESH = { repo: 'dtkimdev/ac', workflow: 'refresh.yml', ref: 'main', waitSeconds: 300 };
+
 // ---------- bots ----------
 export const BOTS = {
   hiddenIds: ['a80017dc-128b-4534-8cde-674d5b094b4f'], // never shown in the office; the bot itself is untouched (bot11 Notes)

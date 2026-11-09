@@ -7,7 +7,7 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { BOTS, behaviorOf, DOG_MOODS, PROPS, QUALITY, LITE } from './config.js';
+import { BOTS, behaviorOf, DOG_MOODS, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
 const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=20'; // V: busts the 1 h asset cache when the art set changes
@@ -341,43 +341,46 @@ function apply(s) {
 }
 const POLL_MS = 60e3;
 const stateUrl = () => STATIC ? `./state.json?t=${Date.now()}` : '/api/state'; // cache-buster: Pages/CDN caches files for 10 min
-// Pages refresh button: Bearer token (localStorage or ?rt=) -> host /api/pages-refresh; host enforces 1 h since last push
+// Pages refresh button, a doorbell through GitHub (no Funnel, nothing on the shared computer open to the internet): the button starts the
+// do-nothing .github/workflows/refresh.yml with a key that can only start workflows; the publisher checks for new runs every minute and
+// publishes at once (bin/pages-pull.sh refresh_requested). The button then waits for /published.json to change and reloads the data.
 function setupPagesRefresh() {
   const btn = document.getElementById('refresh'), toast = document.getElementById('refresh-toast');
   if (!btn) return;
-  const KEY = 'ac_refresh_token';
+  const KEY = 'ac_refresh_key';
   const qrt = new URLSearchParams(location.search).get('rt');
   if (qrt) { try { localStorage.setItem(KEY, qrt); } catch {} history.replaceState(null, '', location.pathname + location.search.replace(/([?&])rt=[^&]*/g, '$1').replace(/[?&]$/, '').replace(/[?&]{2,}/g, '?') + location.hash); }
   const tip = (msg, ms = 4200) => { if (!toast) return; toast.textContent = msg; toast.classList.add('show'); clearTimeout(tip._t); tip._t = setTimeout(() => toast.classList.remove('show'), ms); };
   const token = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
   const ask = () => {
-    const v = prompt('Paste your Agent City refresh token (saved on this device only):', token());
+    const v = prompt('Paste the Agent City refresh key (a GitHub key that can only start the refresh). Saved on this device only:', token());
     if (v == null) return null;
     const s = v.trim();
     try { if (s) localStorage.setItem(KEY, s); else localStorage.removeItem(KEY); } catch {}
     return s;
   };
-  const endpoint = () => window.AC_REFRESH || 'https://agentcity.tailacdee6.ts.net/api/pages-refresh';
+  const builtAt = () => fetch(`./published.json?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => j && j.built).catch(() => null);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
   btn.onclick = async () => {
     let tok = token();
     if (!tok) tok = ask();
-    if (!tok) return tip('No token — cancelled');
+    if (!tok) return tip('No key — cancelled');
     btn.disabled = true; btn.classList.add('spin');
     try {
-      const r = await fetch(endpoint(), { method: 'POST', headers: { Authorization: 'Bearer ' + tok }, mode: 'cors' });
-      let body = null; try { body = await r.json(); } catch {}
-      if (r.status === 401) { tip('Bad token — try again'); ask(); }
-      else if (r.status === 429) {
-        const w = body && body.wait_sec != null ? body.wait_sec : 3600;
-        tip(`Wait ${Math.max(1, Math.round(w / 60))}m (once per hour)`);
-      } else if (r.status === 409) tip('Already refreshing…');
-      else if (r.status === 202 || r.ok) {
-        tip('Publishing… reloading data in ~20s');
-        setTimeout(() => poll(), 20000);
-        setTimeout(() => poll(), 45000);
-      } else tip(`Refresh failed (${r.status})`);
+      const before = await builtAt();
+      const r = await fetch(`https://api.github.com/repos/${REFRESH.repo}/actions/workflows/${REFRESH.workflow}/dispatches`, {
+        method: 'POST', headers: { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: REFRESH.ref }) });
+      if (r.status === 401 || r.status === 403) { tip('Key refused — press ↻ to paste it again', 6000); try { localStorage.removeItem(KEY); } catch {} return; }
+      if (r.status !== 204) { tip(`Refresh failed (${r.status})`); return; }
+      tip('Refresh requested… usually live in 1–2 minutes', 9000);
+      for (const end = Date.now() + REFRESH.waitSeconds * 1000; Date.now() < end;) {
+        await wait(15000);
+        const now = await builtAt();
+        if (now && now !== before) { poll(); tip('Updated ✓'); return; }
+      }
+      tip('Still waiting: the publishing computer may be asleep. The site updates when it wakes.', 8000);
     } catch {
-      tip('Host asleep or unreachable — try when the PC is awake');
+      tip('Could not reach GitHub — try again');
     } finally {
       btn.classList.remove('spin');
       setTimeout(() => { btn.disabled = false; }, 1500);

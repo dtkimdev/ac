@@ -1,0 +1,12 @@
+name: refresh
+# The doorbell for the live site's ↻ button. It does nothing itself: the publisher on the shared computer checks for new
+# runs of this workflow about once a minute and publishes fresh data at once (bin/pages-pull.sh, refresh_requested).
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: echo "refresh requested"

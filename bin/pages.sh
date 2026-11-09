@@ -72,6 +72,7 @@ case "${1:-}" in
     [ -f "$OFF" ] && exit 0
     if ! authed; then [ -f "$NOAUTH" ] || { log "gh not logged in, waiting"; touch "$NOAUTH"; }; exit 0; fi
     rm -f "$NOAUTH"
+    . bin/pages-pull.sh; if refresh_requested; then touch "$WAKE"; fi # ↻ on the site skips the 10 min wait (hourly cap still applies)
     last=$(cat "$LAST" 2>/dev/null || echo 0); failed=$(cat "$FAIL" 2>/dev/null || echo 0)
     [ -f "$WAKE" ] || [ $((now-last)) -ge "$MIN_GAP" ] || exit 0
     [ $((now-failed)) -ge "$RETRY" ] || exit 0
