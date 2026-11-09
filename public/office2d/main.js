@@ -985,7 +985,8 @@ function wallBars(id, now) {
 }
 function drawMonitor(m, t, redraw) {
   if (m.wall) {
-    if (redraw && (m.wt = (m.wt || 0) - 1) <= 0) { m.wt = 4; const [a, b] = wallBars(m.wall, Date.now()); drawWall(m.g, m.wall === 'grok' ? 'GROK' : 'CLAUDE', a, b, t); D.wall[m.wall] = [a, b]; warpMonitor(m, t, false, false); }
+    // lite refreshes rarely already, so every lite refresh repaints the bars
+    if (redraw && (qual.lite || (m.wt = (m.wt || 0) - 1) <= 0)) { m.wt = 4; const [a, b] = wallBars(m.wall, Date.now()); drawWall(m.g, m.wall === 'grok' ? 'GROK' : 'CLAUDE', a, b, t); D.wall[m.wall] = [a, b]; warpMonitor(m, t, false, false); }
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(m.wc, m.bx, m.by); return;
   }
   const occ = m.desk.id === 'boss' ? m.desk._boss : m.occ;
@@ -1255,7 +1256,7 @@ function paintRect(R, all, t) {
   for (let i = 0; i < items.length; i++) {
     const it = items[i], b = it.t === 3 ? workerBox(it.r) : it.t === 5 ? dogBox(it.r) : it.b;
     if (!b || !(all || overlap(b, R))) continue;
-    if (it.t === 7) drawClock(t); else { drawItem(it, t, it.t === 0 && it.r.due); if (it.t === 0) it.r.due = false; }
+    if (it.t === 7) drawClock(t); else { drawItem(it, t, it.t === 0 && (all || it.r.due)); if (it.t === 0) it.r.due = false; } // a full paint fills every monitor at once (they were blank until their patch came round)
   }
   drawErrorGlows(t, all ? null : R);
   if (!NOTAGS) { ctx.setTransform(1, 0, 0, 1, 0, 0); for (let i = 0; i < order.length; i++) { const o = order[i]; if (o.lb && (all || overlap(o.lb, R))) drawLabel(o); } }
@@ -1357,8 +1358,11 @@ document.addEventListener('visibilitychange', () => {
   else if (booted && !raf) { last = 0; fpsN = 0; fpsT = performance.now(); raf = requestAnimationFrame(frame); } // booted: never start frame before load() has finished
 });
 
-resize();
-load().then(() => fetch(stateUrl(), { credentials: 'same-origin' }))
-  .then(r => r.status === 401 ? (location.href = '/login') : r.json())
-  .then(s => { if (!s) return; apply(s); connect(); applyFx(); D.quality = qual; fpsT = performance.now(); booted = true; raf = requestAnimationFrame(frame); })
-  .catch(e => { console.error(e); setTimeout(() => location.reload(), 15000); });
+if (q.has('diag')) import('./diag.js'); // ?diag=1: device check instead of the office (see diag.js)
+else {
+  resize();
+  load().then(() => fetch(stateUrl(), { credentials: 'same-origin' }))
+    .then(r => r.status === 401 ? (location.href = '/login') : r.json())
+    .then(s => { if (!s) return; apply(s); connect(); applyFx(); D.quality = qual; fpsT = performance.now(); booted = true; raf = requestAnimationFrame(frame); })
+    .catch(e => { console.error(e); setTimeout(() => location.reload(), 15000); });
+}
