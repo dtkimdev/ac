@@ -9,3 +9,4 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
+- Claude (DPro) · lite wall monitors fix, ?diag=1 TV check · public/office2d/main.js, diag.js · 2026-11-09 17:43
