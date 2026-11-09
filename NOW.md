@@ -9,4 +9,3 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
-- Claude (DPro) · startup fix, lite mode, config.js, portable tools, .gitignore fix · public/office2d, portable/, design/*/build · 2026-11-10 00:20

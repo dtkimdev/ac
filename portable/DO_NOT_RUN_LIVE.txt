@@ -1,0 +1,9 @@
+Portable package — do NOT run these against production from DPro:
+  bin/pages.sh publish|tick
+  bin/public.sh
+  bin/v10-promote.sh / bin/v9-promote.sh
+  any script that needs .secret, Tailscale, or gh auth
+Use only:
+  node portable/rebuild.js
+  node portable/serve.js
+  node portable/check.js

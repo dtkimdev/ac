@@ -1,0 +1,4 @@
+Snapshot source: live:8789
+Captured/labelled Bangkok: 2026-11-06 16:43:20 (UTC+7)
+Bots: 15
+NOTE: local snapshot is NOT live bot data; frozen at capture. Do not invent bot rows.

@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>ceiling</title><style>html,body{margin:0;height:100%;background:#000}canvas{position:fixed;inset:0;width:100vw;height:100vh}</style>
+<canvas id="office" width="1280" height="720"></canvas>
+<script>
+// Trivial page: one small rectangle per frame. Shows the most fps tv-bench.js can report at a given slowdown.
+// Copy it into portable/preview/ (rebuild.js wipes that folder) and pass --url http://127.0.0.1:8791/preview-ceiling.html
+const g = document.getElementById('office').getContext('2d', { alpha: false }), D = window.__office2d = { frames: 0, quality: { level: -1, scale: 1 } };
+let x = 0;
+(function f() { requestAnimationFrame(f); g.fillStyle = '#123'; g.fillRect(x, 10, 40, 40); x = (x + 7) % 1240; g.fillStyle = '#fa0'; g.fillRect(x, 10, 40, 40); D.frames++; })();
+</script>
