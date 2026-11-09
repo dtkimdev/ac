@@ -29,6 +29,10 @@ export const BEHAVIOR = {
 };
 export const behaviorOf = num => ({ ...BEHAVIOR.default, ...(BEHAVIOR.byBot[num] || {}) });
 
+// Bots with no desk (not listed on any desk in layout.json, for example Shopper and future bots) live in the kitchen. Between trips to
+// the coffee machine, fridge, bean bags, table and the dogs they idle at a kitchen spot. These override BEHAVIOR for them.
+export const LOITER = { tripEvery: [5, 18], tripStay: [10, 32] };
+
 // Corgi moods: bigger number = picked more often. begWithVisitors replaces beg while a bot is in the lounge.
 export const DOG_MOODS = { wander: 34, affection: 16, belly: 6, nap: 14, rest: 12, beg: 6, begWithVisitors: 40, zoomies: 5 };
 

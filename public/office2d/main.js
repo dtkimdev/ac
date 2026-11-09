@@ -7,7 +7,7 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { BOTS, behaviorOf, DOG_MOODS, PROPS, QUALITY, LITE, REFRESH } from './config.js';
+import { BOTS, behaviorOf, LOITER, DOG_MOODS, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
 const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=20'; // V: busts the 1 h asset cache when the art set changes
@@ -68,7 +68,8 @@ async function load() {
   const home = lng.bags.find(b => b.id === 'bag-b'), ld = L.desks.find(d => d.id === 'lounge');
   seats.push({ x: home.sit[0], top: home.sit[1] - 90, h: 100, clip: home.sit[1], base: home.sit[1], feet: home.visit, node: home.node, chair: null, desk: ld, idx: 0, bot: null, bag: home, self: true });
   initDog();
-  standing = L.standing.map((s, i) => ({ x: s.x * PW, top: s.top * PH, h: s.h * PH, clip: (s.top + s.h * 0.92) * PH, chair: null, desk: { id: 'standing', label: 'Standing', accent: '#da92d4' }, idx: i, stand: true, bot: null, node: 0, feet: nav[0] }));
+  // bots without a desk live in the kitchen: each gets a home spot to idle at between short trips (coffee, bean bags, the dogs)
+  standing = KITCHEN_HOMES.map((p, i) => kitchenHome(p, i));
   D.screens = monitors.map(m => m.kind);
   propImgs = await Promise.all(PROPS.map(p => img(p.file)));
   buildStatic();
@@ -189,8 +190,9 @@ function assign(bots) {
   }
   const reserved = s => s.desk.bots[s.idx] != null && live.some(x => x.num === s.desk.bots[s.idx]);
   for (const b of homeless) {
-    const s = seats.find(s => !s.bot && !s.spare && !reserved(s)) || seats.find(s => !s.bot && !reserved(s)) || standing.find(s => !s.bot);
-    if (s) s.bot = b; else { const i = standing.length; standing.push({ ...standing[i % 4], x: standing[i % 4].x + 40 * Math.floor(i / 4), idx: i, bot: b }); }
+    // no desk of its own: a kitchen home (spare desk seats stay free for bots that are assigned to them)
+    const s = standing.find(s => !s.bot);
+    if (s) s.bot = b; else { const i = standing.length, [x, y, node] = KITCHEN_HOMES[i % KITCHEN_HOMES.length], s2 = kitchenHome([x + 28 * Math.floor(i / KITCHEN_HOMES.length), y, node], i); s2.bot = b; standing.push(s2); }
   }
   const pins = BOTS.spriteByNum, used = new Set(Object.values(pins)), spriteOf = new Map(); // pinned rows are kept for good, whatever the seed says
   const nBase = L.baseSprites; // Dashboards has her own art (the last sprite), everyone else draws from the base set
@@ -202,6 +204,8 @@ function assign(bots) {
     if (!w) { w = newWorker(s.bot); workers.set(s.bot.id, w); }
     if (w.seat && w.seat !== s) w.walk = null;
     w.bot = s.bot; w.seat = s; w.sprite = spriteOf.get(s.bot.id); w.label = labelText(s.bot);
+    w.b = s.roam ? { ...behaviorOf(s.bot.num), ...LOITER } : behaviorOf(s.bot.num);
+    if (s.roam && w.tripT > w.b.tripEvery[1]) w.tripT = span(...w.b.tripEvery); // the desk bots' first-break delay is minutes; kitchen bots get going in seconds
   }
   wl.length = 0; for (const w of workers.values()) wl.push(w);
   labelMax = maxUsage();
@@ -220,6 +224,12 @@ function newWorker(b) {
 // display-only: bots hidden from the office by id (bot itself untouched). bot11 Notes removed from the office v8.
 const HIDDEN_IDS = new Set(BOTS.hiddenIds);
 const isDash = b => String(b.id).startsWith(BOTS.loungeBotIdPrefix); // bot14 Dashboards lives in the lounge
+// kitchen homes for bots without a desk: [x, floor y, nearest walking node], in plate px. A sixth bot reuses the first spot, shifted aside.
+const KITCHEN_HOMES = [[196, 600, 7], [290, 698, 12], [204, 656, 8], [170, 694, 11], [232, 578, 0]];
+function kitchenHome([x, y, node], i) {
+  const hu = hAt(y);
+  return { x, top: y - hu * 1.45, h: hu * 1.45, clip: y, base: y, feet: [x, y], node, chair: null, desk: { id: 'kitchen', label: 'Kitchen', accent: '#e6b07a', seats: [] }, idx: i, roam: true, bot: null };
+}
 // counters refresh once an hour (zero tokens: the server only stats files, and caches those reads for the hour too); labelClock holds the time of the last refresh
 const LABEL_EVERY = 3600; let labelClock = Date.now();
 // tag time colour: 0 d = green -> yellow/orange -> red at 7+ d; unknown = neutral grey
@@ -257,14 +267,14 @@ function turnTo(w, to, dur, dir, done) { // ease the body from where it is to `t
   if (Math.abs(to - P.b) < 1e-3) { P.dur = 0; if (done) done(); }
 }
 function startTurn(w, hold, dir) {
-  if (!w || w.walk || w.seat.bag || w.seat.stand || w.chatting || w.pose.dur > 0 || w.pose.b > 0 || turnedNow() >= 2) return false;
+  if (!w || w.walk || w.seat.bag || w.seat.stand || w.seat.roam || w.chatting || w.pose.dur > 0 || w.pose.b > 0 || turnedNow() >= 2) return false;
   const P = w.pose;
   turnTo(w, rnd() < 0.65 ? 4 : 3, TURN_T, dir || (rnd() < 0.5 ? 1 : -1), () => { P.hold = hold ?? 2 + rnd() * 3; P.after = () => turnTo(w, 0, TURN_T + 0.1 * rnd()); });
   return true;
 }
 function stepPose(w, dt) {
   const P = w.pose, g = w.walk, s = w.seat;
-  if (s.bag || s.stand) return;
+  if (s.bag || s.stand || s.roam) return;
   if (!g && P.b === 0 && P.dur === 0 && !w.chatting && (w.turnT -= dt) <= 0) { w.turnT = DEMO ? 6 + rnd() * 9 : span(...w.b.turnEvery); if (!busy(w)) startTurn(w); }
   const manual = g && (g.phase === 'stand' || g.phase === 'sit');
   if (!manual) {
@@ -285,7 +295,7 @@ D.turn = i => startTurn(typeof i === 'number' ? wl[i] : findWorker(i), 4);
 
 // ---------- neighbour chat: two idle desk neighbours face each other for a moment. Cosmetic: never written to the interactions feed ----------
 let nchat = null, nchatT = DEMO ? 2 : 14 + rnd() * 30;
-const freeSeated = w => w && !w.walk && !busy(w) && !w.chatting && w.pose.b === 0 && w.pose.dur === 0 && !w.seat.bag && !w.seat.stand;
+const freeSeated = w => w && !w.walk && !busy(w) && !w.chatting && w.pose.b === 0 && w.pose.dur === 0 && !w.seat.bag && !w.seat.stand && !w.seat.roam;
 function startChat(a, b) {
   if (nchat || !freeSeated(a) || !freeSeated(b)) return false;
   const C = nchat = { a, b, phase: 'in', t: 0, n: 0, talk: rnd() < 0.5 ? 0 : 1, dur: 6 + rnd() * 6, next: 0 };
@@ -321,6 +331,20 @@ function stepChat(dt) {
   }
 }
 D.neighbourChat = i => { const w = typeof i === 'number' ? wl[i] : findWorker(i), p = w && seats.filter(s => s.desk === w.seat.desk && s.bot); return !!(p && p.length === 2 && startChat(workers.get(p[0].bot.id), workers.get(p[1].bot.id))); };
+// debug aids for portable/shot.js: a bot's on-screen box in CSS pixels (with padding), and who is walking
+D.boxOf = (name, pad = 30) => { const w = findWorker(name); if (!w) return null; const b = w.box, c = 1 / (dpr * qual.scale); return [(offX + b[0] * k) * c - pad, (offY + b[1] * k) * c - pad, (b[2] - b[0]) * k * c + pad * 2, (b[3] - b[1]) * k * c + pad * 2].map(Math.round); };
+D.order = () => items.map(it => `${it.k.toFixed(1)} ${['monitor', 'occluder', 'chair', 'bot', 'overlay', 'dog', 'bossfx', 'lounge', 'steam', 'prop'][it.t]} ${it.t === 3 ? it.r.bot.name : it.t === 0 ? it.r.desk.id + it.r.idx : it.t === 1 ? it.r.mask : it.t === 2 ? it.r.desk.id + it.r.idx : ''}`); // painter's order, back to front
+D.navShow = () => { // draws the walking graph (yellow), behind-desk zones (red) and seats (blue) over the canvas, until reload
+  const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; c.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:5;pointer-events:none';
+  const g = c.getContext('2d'); g.setTransform(k, 0, 0, k, offX, offY); g.lineWidth = 2 / k; g.font = `${11 / k * 1.4}px sans-serif`;
+  g.strokeStyle = '#ff0'; for (const [a, b] of L.nav.edges) { g.beginPath(); g.moveTo(...nav[a]); g.lineTo(...nav[b]); g.stroke(); }
+  g.fillStyle = '#ff0'; nav.forEach(([x, y], i) => { g.fillRect(x - 3, y - 3, 6, 6); g.fillText(i, x + 4, y - 4); });
+  g.strokeStyle = '#f33'; for (const z of zones) { g.strokeRect(z.x0, 0, z.x1 - z.x0, z.y); }
+  g.fillStyle = '#4af'; for (const s of seats) if (s.feet) g.fillRect(s.feet[0] - 4, s.feet[1] - 4, 8, 8);
+  document.body.appendChild(c); return nav.length;
+};
+D.walkers = () => wl.filter(w => w.walk && (w.walk.phase === 'go' || w.walk.phase === 'back')).map(w => w.bot.name);
+D.walkInfo = () => items.filter(it => it.t === 3 && it.r.walk).map(it => ({ name: it.r.bot.name, phase: it.r.walk.phase, x: Math.round(it.r.walk.x), y: Math.round(it.r.walk.y), key: +it.k.toFixed(1) }));
 
 function deskInfo(id) { const w = workers.get(id); return w && { label: w.seat.desk.label, accent: w.seat.desk.accent }; }
 
@@ -451,12 +475,12 @@ function navPath(a, b) { // Dijkstra on the floor graph -> node ids after a, up 
 }
 let adjC = null; const navAdj = () => { if (adjC) return adjC; adjC = nav.map(() => []); for (const [a, b] of L.nav.edges) { const d = Math.hypot(nav[a][0] - nav[b][0], nav[a][1] - nav[b][1]); adjC[a].push([b, d]); adjC[b].push([a, d]); } return adjC; };
 function pathPts(P) { const out = []; for (const p of P) { const l = out[out.length - 1]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) > 1) out.push(p); } return out; }
-const visitOf = s => s.bag ? s.feet : [s.x + (s.idx ? 36 : -36) * (s.desk.seats.length > 1 ? 1 : 0.9), s.feet[1]];
+const visitOf = s => s.bag || s.roam ? s.feet : [s.x + (s.idx ? 36 : -36) * (s.desk.seats.length > 1 ? 1 : 0.9), s.feet[1]];
 const route = (a, b) => pathPts([a.feet, ...navPath(a.node, b.node).map(n => nav[n]), visitOf(b)]);
 const DEMO_NOTES = ['handoff ✓', 'got a sec?', 'PR is up', 'numbers look good', 'synced the inbox', 'backup done', 'new clip ready', 'shield check passed'];
 function leave(w, g) { // rise: turn out of the chair towards the way out, then stand up (phase `stand`); the bean bag has no chair to turn
   w.fid = null; if (w.chatting) endChat(w.chatting);
-  if (w.seat.bag) return;
+  if (w.seat.bag || w.seat.roam) return;
   const dir = g.pts[1] && g.pts[1][0] < w.seat.x ? -1 : 1;
   w.pose.dir = w.pose.b < 0.05 ? dir : w.pose.dir;
   turnTo(w, 3.4, TURN_T, dir, () => { if (w.walk === g && g.phase === 'rise') { g.phase = 'stand'; g.t = 0; } });
@@ -480,7 +504,7 @@ const RISE = 0.55, STAND = 0.4, TALK = 3.6;
 function stepWalk(w, dt) {
   const g = w.walk, P = w.pose, s = w.seat;
   g.t += dt; if (g.fade > 0) g.fade -= dt;
-  if (g.phase === 'rise') { if (s.bag && g.t >= RISE) { g.phase = 'go'; g.t = 0; } return; }
+  if (g.phase === 'rise') { if ((s.bag || s.roam) && g.t >= RISE) { g.phase = 'go'; g.t = 0; } return; }
   if (g.phase === 'stand') { P.a = Math.max(0, 1 - g.t / STAND); if (g.t >= STAND) { g.phase = 'go'; g.t = 0; P.a = 0; P.b = P.hb = 0; P.dur = 0; s.self = false; } return; } // chair frame dissolves into the standing body
   if (g.phase === 'hang' || g.phase === 'petting') return stepHang(w, g, dt);
   if (g.phase === 'talk') {
@@ -490,7 +514,7 @@ function stepWalk(w, dt) {
     return;
   }
   if (g.phase === 'sit') { // back at the chair: the standing body dissolves into the frame, then the slow turn back to the desk
-    if (s.bag) { if (g.t >= RISE) { w.walk = null; layoutDirty = true; } return; }
+    if (s.bag || s.roam) { if (g.t >= RISE) { w.walk = null; layoutDirty = true; } return; }
     if (g.t < dt * 1.5 && P.a === 0) { P.b = P.hb = 3.4; P.dir = g.face; s.self = true; }
     P.a = Math.min(1, g.t / STAND); if (g.t >= STAND) { P.a = 1; g.phase = 'settle'; turnTo(w, 0, TURN_T + 0.1, 0, () => { w.walk = null; layoutDirty = true; }); }
     return;
@@ -514,7 +538,8 @@ function stepWalk(w, dt) {
   const ddx = Math.abs(nx - g.x), ddy = ny - g.y; // face the walk direction: front sprite toward the camera, back away
   if (Math.abs(ddy) > ddx * 0.35 && Math.abs(ddy) > 1e-3) g.front = ddy > 0;
   if (oldF !== g.front || oldD !== g.face) { g.prev = { front: oldF, face: oldD }; g.fade = FADE; } // direction changes dissolve instead of snapping
-  if (ddx + Math.abs(ddy) > 1e-3) g.legs = ddx > Math.abs(ddy) * 0.7 ? 'side' : g.front ? 'front' : 'back';
+  // legs always match the torso: there is no side-view torso, so the side stride under a front-facing body looked twisted
+  if (ddx + Math.abs(ddy) > 1e-3) g.legs = g.front ? 'front' : 'back';
   g.stride += Math.hypot(nx - g.x, ny - g.y) / Math.max(20, hu * 0.42) * Math.PI;
   g.x = nx; g.y = ny;
 }
@@ -632,18 +657,19 @@ function stepAmbient(dt) {
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], g = w.walk;
     // Dashboards keeps roaming even while her status is working (laptop life in the kitchen)
-    if (g && g.trip) { if (!isDash(w.bot)) away++; if (busy(w) && !isDash(w.bot) && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || g.phase === 'hang' || g.phase === 'petting')) recall(w); }
+    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if (busy(w) && !isDash(w.bot) && !w.seat.roam && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || g.phase === 'hang' || g.phase === 'petting')) recall(w); }
   }
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], dash = isDash(w.bot);
     if (w.walk || w.seat.stand || w.chatting) continue;
-    if (busy(w) && !dash) continue; // only Dashboards wanders while working
+    if (busy(w) && !dash && !w.seat.roam) continue; // only Dashboards and the kitchen bots wander while working
     if (!w.b.wanders || (w.tripT -= dt) > 0) continue;
     w.tripT = span(...w.b.tripEvery);
     if (!(w.pose.b === 0 && w.pose.dur === 0 && !visiting(w))) continue;
     if (dash) {
       if (rnd() < 0.4 ? dashVisit(w) : startTrip(w) || dashVisit(w)) {}
-    } else if (away < Math.min(3, wl.length - 1) && startTrip(w)) away++;
+    } else if (w.seat.roam) startTrip(w); // kitchen bots are always out and about; they do not count against the desk bots' break limit
+    else if (away < Math.min(3, wl.length - 1) && startTrip(w)) away++;
   }
   if ((ambT -= dt) <= 0) {
     ambT = 0.25;
@@ -671,7 +697,9 @@ function stepFidget(w, dt) {
     case 'scratch': w.fr = 0.05 * s2 * e + 0.016 * e * Math.sin(F.t * 21); break;
   }
 }
-const zoneKey = (x, y) => { for (let i = 0; i < zones.length; i++) { const z = zones[i]; if (x > z.x0 && x < z.x1 && y < z.y) return z.key; } return y; }; // behind a big desk: its monitors and body hide them
+// behind a big desk: its monitors and body hide them. hw = half the body width: a walker counts as behind while any part of it overlaps
+// the desk, so it no longer pops in front when its centre crosses the desk's edge
+const zoneKey = (x, y, hw = 0) => { for (let i = 0; i < zones.length; i++) { const z = zones[i]; if (x + hw > z.x0 && x - hw < z.x1 && y < z.y) return z.key; } return y; };
 
 // ---------- corgi: mood state machine on the floor graph (layout.dog): weighted random moods, variable durations, eased
 // starts and stops, smooth turns; poses come from the painted atlas; depth-sorted by its feet ----------
@@ -844,9 +872,11 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   const swing = P2.dur > 0 ? Math.sin(Math.PI * P2.p) : 0, sign = Math.sign(P2.to - P2.from) || 1, nod = P2.nod ? Math.sin(t * 5.5) * 0.04 : 0, up = P2.dir < 0 ? -1 : 1;
   ctx.setTransform(k, 0, 0, k, offX, offY); ctx.translate(s.x + swing * 3 * sign * P2.dir * ts, s.base + Math.sin(t * 1.7 + w.ph) * 0.5 * ts); ctx.scale(up * ts, ts); ctx.translate(0, -T.floor); // scaleX is only ever the mirror
   ctx.translate(0, T.floor * 0.5); ctx.rotate(swing * 0.03 * sign); ctx.translate(0, -T.floor * 0.5); // the weight shifts with the turn
-  const stepIn = win(f, 0.4, 0.52), stepOut = win(f, 0.5, 0.62), chatIn = win(P2.chat, 0.3, 0.5), chatOut = win(P2.chat, 0.45, 0.65), sx = j => j * cw, sy = row * ch;
+  const stepIn = win(f, 0.4, 0.52), stepOut = win(f, 0.5, 0.62), chatIn = win(P2.chat, 0.44, 0.5), chatOut = win(P2.chat, 0.5, 0.56), sx = j => j * cw, sy = row * ch;
   const body = (j, a) => { if (a > 0.004) { ctx.globalAlpha = alpha * a; ctx.drawImage(turnB, sx(j), sy, cw, ch, -T.cx, 0, cw, ch); } };
   body(i, (1 - stepOut) * (1 - chatOut)); body(i + 1, stepIn * (1 - chatOut)); body(5, chatIn);
+  // the talking pose (5) steps in like the turn frames: it is fully drawn over an opaque old pose before the old one fades. It used to
+  // cross-fade (both half see-through), so the desk screen showed through faces and caps whenever a bot started or stopped talking.
   // head: anchored on the neck of the frame on show; the leading angle picks the painted head
   const FR = T.frames, Fa = FR[i], Fb = FR[i + 1], Fc = FR[5], lerp = (a, b, q) => a + (b - a) * q, m = win(f, 0.42, 0.58), hxB = lerp(Fa.head[0], Fb.head[0], m), nkB = lerp(Fa.neck, Fb.neck, m), hx = lerp(hxB, Fc.head[0], chatIn), nk = lerp(nkB, Fc.neck, chatIn) - 2;
   const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * T.sprites[row].sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
@@ -928,7 +958,7 @@ function drawWalker(w, t, alpha = 1) {
 }
 function drawWorker(w, t) {
   const g = w.walk, s = w.seat;
-  if (s.stand) { drawStanding(w, t); return; }
+  if (s.roam) { if (!g || g.phase === 'rise' || g.phase === 'sit') return drawLoiter(w, t); return drawWalker(w, t); }
   if (s.bag) { if (!g || g.phase === 'rise' || g.phase === 'sit') { drawDash(w, t); return; } return drawWalker(w, t); }
   if (!g || g.phase === 'rise' || g.phase === 'settle') return drawSeated(w, t);
   if (g.phase === 'stand' || g.phase === 'sit') { // dissolve between the chair pose and the standing body, the plate chair comes back under it
@@ -937,11 +967,13 @@ function drawWorker(w, t) {
   }
   drawWalker(w, t);
 }
-function drawStanding(w, t) { // fallback for bots beyond the seats: a bust on a standing spot
-  const s = w.seat, im = fronts[w.sprite], ww = s.h * im.width / im.height;
-  P(); ctx.globalAlpha = 0.5; ctx.drawImage(shadowSpr, s.x - ww * 0.45, s.top + s.h * 0.9, ww * 0.9, s.h * 0.1); ctx.globalAlpha = 1;
-  ctx.drawImage(im, s.x - ww / 2, s.top + Math.sin(t * 1.7 + w.ph) * s.h * 0.006, ww, s.h);
-  w.box[0] = s.x - ww / 2; w.box[1] = s.top; w.box[2] = s.x + ww / 2; w.box[3] = s.clip; w.hx = s.x; w.hy = s.top;
+function drawLoiter(w, t) { // a kitchen bot at its home spot between trips: the full standing body, breathing, now and then looking the other way
+  const s = w.seat, x = s.feet[0], f = s.feet[1], hu = hAt(f), ww = hu * 0.64, face = Math.sin(t * 0.11 + w.ph * 3) > 0 ? 1 : -1;
+  const hip = f - hu * LEG_H + Math.sin(t * 2 + w.ph) * hu * 0.004;
+  P(); ctx.globalAlpha = 0.42; ctx.drawImage(shadowSpr, x - ww * 0.42, f - hu * 0.05, ww * 0.84, hu * 0.11); ctx.globalAlpha = 1;
+  drawLegSet('front', 0, x, hip, f, hu, ww, face);
+  const top = drawUpper(w, null, true, face, x, hip, hu, Math.sin(t * 0.9 + w.ph) * 0.015, 1);
+  w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = f; w.hx = x; w.hy = top;
 }
 // monitors: the content is warped into the glass quad at the screen refresh (true trapezoid in 12 strips: an affine map ignores the 4th corner and spills past the bezel),
 // glow included, then cut by a soft rounded mask of the glass. Per frame it is one blit, and nothing leaves the glass.
@@ -1124,17 +1156,18 @@ function sortItems() { // painter's order by plate depth; returns how many are o
     if (it.t !== 3) continue;
     const w = it.r, g = w.walk, s = w.seat;
     if (s.bag && (!g || g.phase === 'rise' || g.phase === 'sit')) { it.k = s.bag.depth + 1; if (g) walking++; continue; }
+    if (s.roam && (!g || g.phase === 'rise' || g.phase === 'sit')) { it.k = zoneKey(s.feet[0], s.feet[1], hAt(s.feet[1]) * 0.32); if (g) walking++; continue; }
     if (!g) it.k = s.clip + 0.1; // behind its own chair back (the bust), or carrying its own chair (turn frames)
     else {
       walking++;
       const b = g.trip?.spot?.bag ? g.trip.spot : null;
       if (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'sit' || g.phase === 'settle') it.k = s.clip + 0.1;
       else if (b && g.phase === 'hang') it.k = b.depth + 1;
-      else it.k = zoneKey(g.x, g.y);
+      else it.k = zoneKey(g.x, g.y, hAt(g.y) * 0.32);
     }
   }
   D.walking = walking;
-  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(items[i].r.x, items[i].r.y);
+  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(items[i].r.x, items[i].r.y, hAt(items[i].r.y) * 0.25);
   items.sort(byKey);
   return walking;
 }
