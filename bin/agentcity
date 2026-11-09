@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+// One-line registry edits:  agentcity rename <id|botN> "<name>"  |  agentcity pin <id|botN> <district>  |  agentcity list
+'use strict';
+const lib = require('../lib/city');
+const [cmd, who, ...rest] = process.argv.slice(2);
+const reg = lib.discover();
+const find = w => reg.bots.find(b => b.id === w || (/^bot\d+$/i.test(w || '') && b.num === +w.slice(3)) || (w && b.id.startsWith(w) && w.length >= 6));
+const die = m => { console.error(m); process.exit(1); };
+if (cmd === 'list' || !cmd) {
+  for (const b of reg.bots) console.log(`bot${b.num ?? '?'}\t${b.id}\t${b.name}\t${b.district}${b.pinned ? ' (pinned)' : ''}\t${b.status}`);
+  if (!cmd) console.log('\nusage: agentcity rename <id|botN> "<name>" | pin <id|botN> <district> | unpin <id|botN> | reset-name <id|botN> | list');
+  process.exit(0);
+}
+const b = find(who) || die(`no bot matches ${who}`);
+const arg = rest.join(' ').trim();
+if (cmd === 'rename') {
+  if (!arg) die('name required');
+  b.name = arg; b.renamed = true;
+} else if (cmd === 'pin') {
+  if (!arg) die(`district required; known: ${lib.ALL_DISTRICTS.join(' | ')}`);
+  const d = lib.ALL_DISTRICTS.find(x => x.toLowerCase() === arg.toLowerCase()) || arg;
+  const other = reg.bots.find(x => x !== b && x.district === d);
+  if (other) { other.district = null; other.pinned = false; } // displaced bot gets a free district on next discovery
+  b.district = d; b.pinned = true;
+} else if (cmd === 'reset-name') {
+  b.renamed = false;
+} else if (cmd === 'unpin') {
+  b.pinned = false;
+} else die(`unknown command ${cmd}`);
+lib.saveRegistry();
+lib.discover();
+console.log(`ok: bot${b.num} ${b.name} -> ${b.district}${b.pinned ? ' (pinned)' : ''}`);

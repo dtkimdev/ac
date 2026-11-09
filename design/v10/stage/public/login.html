@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent City — sign in</title><link rel="stylesheet" href="/style.css">
+<style>body{display:grid;place-items:center;background:linear-gradient(180deg,#3a3e7a 0%,#b06e88 55%,#f0a57a 100%)}
+form{background:rgba(28,26,46,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,240,210,.2);border-radius:16px;padding:28px 30px;width:300px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+h1{font-family:var(--serif);font-weight:600;margin:0 0 4px;font-size:26px}p{margin:0 0 18px;color:var(--dim);font-size:12px}
+input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,240,210,.25);background:rgba(255,255,255,.08);color:#fff;font:14px var(--sans)}
+button{margin-top:12px;width:100%;padding:10px;border-radius:10px;border:0;background:#ecc67c;color:#2a2230;font:600 14px var(--sans);cursor:pointer}.e{color:#ffb4a4;font-size:12px;margin-top:10px;display:none}</style></head>
+<body><form method="post" action="/login"><h1>Agent City</h1><p>A quiet harbor town where the bots live.</p>
+<input type="password" name="password" id="pw" placeholder="Password" autocomplete="current-password" autofocus required>
+<input type="hidden" name="next" id="next"><button type="submit">Enter the city</button><div class="e" id="e">That password didn't open the gate.</div></form>
+<script>const q=new URLSearchParams(location.search);document.getElementById('next').value=q.get('next')||'/';if(q.get('e'))document.getElementById('e').style.display='block';</script></body></html>

@@ -1,0 +1,1113 @@
+// Painted 2.5D office. Canvas 2D over pre-rendered plates (assets/plate-*.webp; v8 art via bin/preprocess_v8.py):
+// cached plate+grade, city FX behind the glass, themed monitor screens, seated chibi workers (one per live bot) who
+// turn in their chairs through painted in-between poses and walk over to another desk when the interactions feed says so,
+// cosmetic idle life (lounge visits, neighbour chats, fidgets, a moody corgi), harbour boats, lamps, dust.
+// Data/KPI/card/clock come from ui.js; the music toggle from /audio.js. Read-only viewer.
+import { bkkHour, envAt } from './time.js';
+import { renderKpi, renderRoster, showCard, hideCard, cardOpen, clock, renderAsOf } from './ui.js';
+import { SW, SH, THEME_KINDS, drawScreen } from './screens.js';
+import { makeFx, glowSprite, px, polyPath } from './fx.js';
+
+const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=10'; // V: busts the 1 h asset cache when the art set changes
+const q = new URLSearchParams(location.search);
+const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
+if (EMBED) document.body.classList.add('embed');
+let seedN = (Date.now() & 0xffff) | 1;
+const rnd = () => ((seedN = Math.imul(seedN, 1664525) + 1013904223 >>> 0) / 4294967296);
+
+const cv = document.getElementById('office'), ctx = cv.getContext('2d', { alpha: false });
+const tagsEl = document.getElementById('tags'), fpsEl = document.getElementById('fps');
+const QUALITY = [{ level: 0, scale: 1, fx: 1 }, { level: 1, scale: 1, fx: 0.6 }, { level: 2, scale: 0.8, fx: 0.5 }, { level: 3, scale: 0.66, fx: 0.35 }];
+const D = window.__office2d = { workers: [], ready: false, frames: 0, fps: 0, loaded: false, walking: 0, interactions: 0, quality: QUALITY[0], turned: 0, corgi: null, labels: [], plates: 'lo', glassClip: null, ambient: { away: [], lounge: [] }, assets: {} };
+
+const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('asset ' + src)); i.src = A + src + V; });
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
+const SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans').trim() || 'system-ui, sans-serif';
+
+// ---------- assets ----------
+let L, plates, sprites, fronts, dogImg, legImg, fx, bossMon, bossClip, nav, turnB, turnH, nochair, dashImg = {}, masks = {}, seats = [], monitors = [], occluders = [], zones = [], standing = [], walkH = [], lng;
+const redGlow = glowSprite('255,70,50'), screenGlow = glowSprite('150,190,255');
+async function load() {
+  L = await fetch(A + 'layout.json' + V, { credentials: 'same-origin' }).then(r => r.json());
+  const ships = L.airships.map(a => a.file), occ = L.occluders.map(o => o.mask);
+  const [dusk, night, fgM, skyM, rlM, rrM, waterM, dogI, legsI, tbI, thI, ncD, ncN, lapI, mugI, boatI, boatL, ...rest] = await Promise.all([img('plate-dusk.webp'), img('plate-night.webp'), img('fg-mask.png'), img('sky-mask.png'), img('room-l-mask.png'), img('room-r-mask.png'),
+    img('water-mask.png'), img(L.corgi.file), img(L.legs.file), img(L.turn.bodies), img(L.turn.heads), img('nochair-dusk.webp'), img('nochair-night.webp'), img(L.dash.laptop), img(L.dash.mug), img(L.boats.file), img(L.boats.lit),
+    ...occ.map(m => img(m + '-mask.png')), ...ships.flatMap(f => [img(f + '-dusk.png'), img(f + '-night.png')]), ...L.sprites.map(s => img(s.file)), ...L.sprites.map(s => img(s.front))]);
+  plates = { dusk, night }; masks = { fg: fgM, sky: skyM, 'room-l': rlM, 'room-r': rrM };
+  occ.forEach((m, i) => { masks[m] = rest[i]; }); const r2 = rest.slice(occ.length);
+  const shipImgs = ships.map((_, i) => ({ dusk: r2[i * 2], night: r2[i * 2 + 1] }));
+  sprites = r2.slice(ships.length * 2, ships.length * 2 + L.sprites.length);
+  fronts = r2.slice(ships.length * 2 + L.sprites.length);
+  dogImg = dogI; legImg = legsI; turnB = tbI; turnH = thI; nochair = { dusk: ncD, night: ncN }; dashImg = { laptop: lapI, mug: mugI };
+  D.assets = { legs: legsI.naturalWidth, corgi: dogI.naturalWidth, turnBodies: tbI.naturalWidth, turnHeads: thI.naturalWidth, nochair: ncD.naturalWidth, dashLaptop: lapI.naturalWidth, dashMug: mugI.naturalWidth, dashFront: fronts[fronts.length - 1].naturalWidth, boats: boatI.naturalWidth, boatsLit: boatL.naturalWidth };
+  initLounge();
+  fx = makeFx(L, rnd, { ships: shipImgs, water: waterM, boats: boatI, boatsLit: boatL });
+  D.city = () => fx.counts();
+  D.glassClip = { panes: fx.glassPanes(), masks: ['fg', 'sky'], water: !!waterM };
+  bossMon = L.boss.monitors.map(px); bossClip = L.boss.clip.map((c, i) => c ? px(c) : bossMon[i]);
+  walkH = L.walk.h.map(([f, h]) => [f * PH, h * PH]);
+  nav = L.nav.nodes.map(([x, y]) => [x * PW, y * PH]);
+  occluders = L.occluders.map(o => ({ mask: o.mask, depth: o.depth * PH, patch: null }));
+  zones = L.occluders.filter(o => o.zone).map(o => ({ x0: o.zone[0] * PW, x1: o.zone[1] * PW, y: o.zone[2] * PH, key: o.key * PH }));
+  const T = L.turn, F0 = T.frames[0];
+  for (const d of L.desks) {
+    d.seats.forEach((s, i) => {
+      const x = s.x * PW, ctop = s.ctop * PH, base = s.base * PH, H = base - ctop, ts = H / T.chairH; // ts: plate px per turn-atlas px, from the chair in the plate
+      seats.push({ ...s, x, ctop, base, ts, hsc: ts * 0.78, neckY: base - (T.floor - F0.neck) * ts, top: ctop - H * 0.5, h: H * 1.05, clip: ctop + H * 0.56, chair: px(s.chair), feet: [s.feet[0] * PW, s.feet[1] * PH], desk: d, idx: i, bot: null, self: false, nc: L.nochair[s.nc], ncP: null });
+    });
+    const kinds = THEME_KINDS[d.theme] || THEME_KINDS.default, ow = { boss: 0, numbers: 1 }[d.id], cuts = d.cuts || [];
+    d.monitors.forEach((m, i) => {
+      const Q = px(m), c = mk(SW, SH);
+      monitors.push({ q: Q, desk: d, idx: i, kind: kinds[i % kinds.length], c, g: c.getContext('2d'), cut: cuts[i] ? px(cuts[i]) : null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: ow != null ? occluders[ow].depth + 1 : Math.max(...Q.map(p => p[1])), cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] });
+    });
+  }
+  // Dashboards (bot14) has no desk: her seat is the blue bean bag
+  const home = lng.bags.find(b => b.id === 'bag-b'), ld = L.desks.find(d => d.id === 'lounge');
+  seats.push({ x: home.sit[0], top: home.sit[1] - 90, h: 100, clip: home.sit[1], base: home.sit[1], feet: home.visit, node: home.node, chair: null, desk: ld, idx: 0, bot: null, bag: home, self: true });
+  initDog();
+  standing = L.standing.map((s, i) => ({ x: s.x * PW, top: s.top * PH, h: s.h * PH, clip: (s.top + s.h * 0.92) * PH, chair: null, desk: { id: 'standing', label: 'Standing', accent: '#da92d4' }, idx: i, stand: true, bot: null, node: 0, feet: nav[0] }));
+  D.screens = monitors.map(m => m.kind);
+  buildStatic();
+  D.loaded = true; maybeHi();
+  document.getElementById('loading').remove();
+}
+
+// ---------- static sprites built once: floor shadow, paper note ----------
+let shadowSpr, noteSpr;
+function buildStatic() {
+  shadowSpr = mk(64, 24); { const g = shadowSpr.getContext('2d'), gr = g.createRadialGradient(32, 12, 0, 32, 12, 32); gr.addColorStop(0, 'rgba(14,6,10,.6)'); gr.addColorStop(0.5, 'rgba(14,6,10,.3)'); gr.addColorStop(1, 'rgba(14,6,10,0)'); g.setTransform(1, 0, 0, 0.375, 0, 7.5); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }
+  noteSpr = mk(28, 34); { const g = noteSpr.getContext('2d'), gr = g.createLinearGradient(0, 0, 28, 34); gr.addColorStop(0, '#fffaf0'); gr.addColorStop(1, '#e9dcc8'); g.fillStyle = gr; g.beginPath(); g.roundRect(3, 3, 22, 28, 2); g.fill(); g.fillStyle = 'rgba(90,70,100,.45)'; for (let i = 0; i < 4; i++) g.fillRect(7, 9 + i * 5.5, 14 - (i === 3 ? 6 : 0), 1.6); }
+}
+
+// ---------- viewport + cached plate (re-composited only when the time-of-day bucket, size or quality changes) ----------
+let dpr = 1, k = 1, offX = 0, offY = 0, base = mk(1, 1), baseKey = '', qual = QUALITY[+q.get('q') || 0] || QUALITY[0];
+// plate sets: 2560x1440 for normal canvases, 3840x2160 (loaded lazily) once the canvas itself is bigger than that
+let hiLoading = false;
+function wantHi() { return cv.width > 2600 || cv.height > 1460; }
+function maybeHi() {
+  if (!plates || plates.hi || hiLoading || !wantHi()) return;
+  hiLoading = true;
+  Promise.all([img('plate-dusk-hi.webp'), img('plate-night-hi.webp')]).then(([d, n]) => { plates.hi = { dusk: d, night: n }; baseKey = ''; }).catch(() => {});
+}
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const s = dpr * qual.scale;
+  cv.width = Math.round(innerWidth * s); cv.height = Math.round(innerHeight * s);
+  k = Math.max(cv.width / PW, cv.height / PH); offX = (cv.width - PW * k) / 2; offY = (cv.height - PH * k) / 2;
+  baseKey = ''; layoutDirty = true; labelFont = 0; maybeHi();
+}
+addEventListener('resize', resize);
+let env = envAt(12);
+// overlays cut from the base: window frame + vines (fg), skyline (sky), floor plants (room-l / room-r); patches for chairs/occluders
+const over = { fg: null, sky: null, 'room-l': null, 'room-r': null };
+function cutMasked(name) {
+  const [x0, y0, x1, y1] = L.masks[name], X = offX + x0 * PW * k, Y = offY + y0 * PH * k, W = (x1 - x0) * PW * k, H = (y1 - y0) * PH * k;
+  const bx = Math.floor(X), by = Math.floor(Y), c = mk(W + 2, H + 2), g = c.getContext('2d');
+  g.drawImage(base, -bx, -by);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(masks[name], X - bx, Y - by, W, H);
+  return { c, x: bx, y: by };
+}
+function cutPoly(poly) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [x, y] of poly) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const bx = Math.floor(offX + x0 * k) - 2, by = Math.floor(offY + y0 * k) - 2, c = mk((x1 - x0) * k + 5, (y1 - y0) * k + 5), g = c.getContext('2d');
+  g.setTransform(k, 0, 0, k, offX - bx, offY - by);
+  polyPath(g, poly); g.clip(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(base, -bx, -by);
+  return { c, x: bx, y: by };
+}
+function paintBase(g, n, G, nc) { // the plate + grade + bloom pipeline; nc = also lay the chair-less patches in, so they get the very same grade
+  const PS = plates.hi && wantHi() ? plates.hi : plates; D.plates = PS === plates ? 'lo' : 'hi';
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.fillStyle = '#1c1622'; g.fillRect(0, 0, cv.width, cv.height);
+  g.setTransform(k, 0, 0, k, offX, offY); g.imageSmoothingQuality = 'high';
+  const layer = (P2, im) => { g.drawImage(P2, 0, 0, PW, PH); if (nc) for (const s of seats) if (s.nc) { const [ax, ay, w, h, x, y] = s.nc; g.drawImage(im, ax, ay, w, h, x, y, w / 2, h / 2); } };
+  if (n < 1) layer(PS.dusk, nochair.dusk);
+  if (n > 0) { g.globalAlpha = n; layer(PS.night, nochair.night); g.globalAlpha = 1; }
+  // grade: warm/cool wash; midday cools and lifts the golden-hour plate
+  g.globalCompositeOperation = 'soft-light'; g.fillStyle = `rgba(${G.rgb},${Math.min(1, G.a * 2.5)})`; g.fillRect(0, 0, PW, PH);
+  if (G.lift > 0) { g.globalCompositeOperation = 'screen'; g.fillStyle = `rgba(150,170,205,${G.lift})`; g.fillRect(0, 0, PW, PH); }
+  if (env.golden > 0) { g.globalCompositeOperation = 'overlay'; g.fillStyle = `rgba(255,170,110,${0.10 * env.golden})`; g.fillRect(0, 0, PW, PH); }
+  // light shafts from the window (stronger at dusk), static window-light bloom
+  g.globalCompositeOperation = 'lighter';
+  for (const s of L.shafts.map(px)) {
+    const gr = g.createLinearGradient(0, 40, 0, 700); gr.addColorStop(0, `rgba(255,200,150,${0.07 * (1 - n) * (0.6 + 0.4 * env.golden)})`); gr.addColorStop(1, 'rgba(255,180,120,0)');
+    g.fillStyle = gr; polyPath(g, s); g.fill();
+  }
+  fx.bake(g, env);
+  g.globalCompositeOperation = 'source-over';
+  const vg = g.createRadialGradient(640, 380, 300, 640, 380, 820); vg.addColorStop(0, 'rgba(10,6,20,0)'); vg.addColorStop(1, `rgba(10,6,20,${0.28 + 0.12 * n})`);
+  g.fillStyle = vg; g.fillRect(0, 0, PW, PH);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
+function rebuildBase(h) {
+  const key = `${Math.round(h * 30)}|${cv.width}x${cv.height}|${plates.hi ? 1 : 0}`;
+  if (key === baseKey) return; baseKey = key;
+  env = envAt(h); const n = env.n, G = env.grade;
+  if (base.width !== cv.width || base.height !== cv.height) base = mk(cv.width, cv.height);
+  paintBase(base.getContext('2d'), n, G, false);
+  fx.rebuild(env);
+  for (const kk in over) over[kk] = cutMasked(kk);
+  for (const o of occluders) o.patch = cutMasked(o.mask);
+  for (const s of seats) if (s.chair) s.patch = cutPoly(s.chair);
+  // chair-less floor under a turning bot: the same pipeline over the erased patches, cut with the patch's own soft alpha
+  const nb = mk(cv.width, cv.height); paintBase(nb.getContext('2d'), n, G, true);
+  for (const s of seats) if (s.nc) {
+    const [ax, ay, w, h2, x, y] = s.nc, X = offX + x * k, Y = offY + y * k, W = w / 2 * k, H = h2 / 2 * k, bx = Math.floor(X), by = Math.floor(Y), c = mk(W + 2, H + 2), g = c.getContext('2d');
+    g.drawImage(nb, -bx, -by); g.globalCompositeOperation = 'destination-in'; g.drawImage(nochair.dusk, ax, ay, w, h2, X - bx, Y - by, W, H);
+    s.ncP = { c, x: bx, y: by };
+  }
+  buildMonitors();
+}
+const blit = p => ctx.drawImage(p.c, p.x, p.y);
+
+// ---------- data: seats, sprites, workers ----------
+let S = null;
+const workers = new Map(), wl = []; // bot id -> worker; wl = the same workers as an array (no per-frame iterators)
+function demoize(bots) {
+  return bots.map(b => b.num === 1 ? { ...b, status: 'working', task: 'routing a request' } : b.num === 3 ? { ...b, status: 'working', task: 'triaging inbox' } : b.num === 9 ? { ...b, status: 'error', error: 'heartbeat stale' } : b.num === 2 ? { ...b, status: 'working', task: 'market-desk brief' } : b.num === 14 ? { ...b, status: 'working', task: 'charting usage' } : b); // preview only
+}
+function assign(bots) {
+  const live = bots.filter(b => b.status !== 'moved_out' && !HIDDEN_IDS.has(b.id)).sort((a, b) => (a.num ?? 999) - (b.num ?? 999));
+  for (const s of [...seats, ...standing]) s.bot = null;
+  const deskOf = want => L.desks.find(d => d.id === want || d.label.toLowerCase() === want.toLowerCase());
+  const homeless = [];
+  for (const b of live) {
+    const want = b.desk != null && String(b.desk).trim() ? deskOf(String(b.desk).trim()) : L.desks.find(d => d.bots.includes(b.num));
+    const mine = want && seats.find(s => s.desk === want && s.idx === want.bots.indexOf(b.num));
+    const free = mine && !mine.bot ? mine : want && seats.find(s => s.desk === want && !s.bot);
+    if (free) free.bot = b; else homeless.push(b);
+  }
+  const reserved = s => s.desk.bots[s.idx] != null && live.some(x => x.num === s.desk.bots[s.idx]);
+  for (const b of homeless) {
+    const s = seats.find(s => !s.bot && !s.spare && !reserved(s)) || seats.find(s => !s.bot && !reserved(s)) || standing.find(s => !s.bot);
+    if (s) s.bot = b; else { const i = standing.length; standing.push({ ...standing[i % 4], x: standing[i % 4].x + 40 * Math.floor(i / 4), idx: i, bot: b }); }
+  }
+  const used = new Set(), spriteOf = new Map();
+  const nBase = L.baseSprites; // Dashboards has her own art (the last sprite), everyone else draws from the base set
+  for (const b of live) { if (isDash(b)) { spriteOf.set(b.id, nBase); continue; } let i = (b.sprite_seed >>> 0) % nBase, n = 0; while (used.has(i) && n++ < nBase) i = (i + 1) % nBase; used.add(i); spriteOf.set(b.id, i); }
+  const all = [...seats, ...standing].filter(s => s.bot);
+  for (const [id, w] of workers) if (!all.some(s => s.bot.id === id)) { w.tag.remove(); workers.delete(id); }
+  for (const s of all) {
+    let w = workers.get(s.bot.id);
+    if (!w) { w = newWorker(s.bot); workers.set(s.bot.id, w); }
+    if (w.seat && w.seat !== s) w.walk = null;
+    w.bot = s.bot; w.seat = s; w.sprite = spriteOf.get(s.bot.id); w.label = labelText(s.bot);
+  }
+  wl.length = 0; for (const w of workers.values()) wl.push(w);
+  buildItems(); refreshOccupants();
+}
+function newWorker(b) {
+  const el = document.createElement('div'); el.className = 'w';
+  el.innerHTML = '<div class="tag"><span></span></div>';
+  el.querySelector('.tag').onclick = ev => { ev.stopPropagation(); showCard(S, b.id, [ev.clientX, ev.clientY], deskInfo); };
+  tagsEl.appendChild(el);
+  return { bot: b, tag: el, box: [0, 0, 0, 0], ph: rnd() * 7, tilt: 0, tiltT: 3 + rnd() * 10, tiltDir: 1, tiltA: 9, look: 0, walk: null, key: 0, lx: 0, ly: 0, lw: 0, lh: 0, bh: 0, hx: 0, hy: 0,
+    pose: { b: 0, hb: 0, from: 0, to: 0, t: 0, dur: 0, p: 0, dir: 1, a: 0, hold: 0, after: null, done: null, chat: 0, chatTo: 0, nod: 0 }, turnT: DEMO ? 1 + rnd() * 4.5 : 10 + rnd() * 50, label: labelText(b),
+    fid: null, fidT: 4 + rnd() * 18, fr: 0, fx: 0, fsy: 1, tripT: isDash(b) ? 8 + rnd() * 18 : 40 + rnd() * 200, sayNow: null, sayOff: 0, chatting: null };
+}
+// ---------- last-active suffix on the name tags: `Grok · 1d`, `2h`, `15m`, `now`, `—` (from bot.last_active; whole numbers only) ----------
+// display-only: bots hidden from the office by id (bot itself untouched). bot11 Notes removed from the office v8.
+const HIDDEN_IDS = new Set(['a80017dc-128b-4534-8cde-674d5b094b4f']);
+const isDash = b => String(b.id).startsWith('fa5eb849-'); // bot14 Dashboards lives in the lounge
+// counters refresh once an hour (zero tokens: the server only stats files, and caches those reads for the hour too); labelClock holds the time of the last refresh
+const LABEL_EVERY = 3600; let labelClock = Date.now();
+// tag time colour: 0 d = green -> yellow/orange -> red at 7+ d; unknown = neutral grey
+function ageColor(ms) {
+  if (!ms) return 'rgba(200,196,206,.78)';
+  const d = Math.min(7, Math.max(0, (labelClock - ms) / 864e5)), h = 120 * (1 - d / 7);
+  return `hsl(${h.toFixed(0)},80%,${(62 - 4 * Math.sin(Math.PI * d / 7)).toFixed(0)}%)`;
+}
+function agoStr(ms) {
+  if (!ms) return '—';
+  const s = Math.max(0, (labelClock - ms) / 1000);
+  // whole minutes / hours / days only (David: no decimals on time counters)
+  return s < 60 ? 'now' : s < 3600 ? Math.round(s / 60) + 'm' : s < 86400 ? Math.max(1, Math.round(s / 3600)) + 'h' : Math.max(1, Math.round(s / 86400)) + 'd';
+}
+const pctStr = v => v == null ? '' : ` · ${Math.round(v)}%`;
+const labelText = b => `${b.name} · ${agoStr(b.last_active)}${pctStr(b.usage_pct)}`;
+function refreshLabels() {
+  labelClock = Date.now();
+  let changed = false;
+  for (let i = 0; i < wl.length; i++) { const w = wl[i], t = labelText(w.bot); if (t !== w.label) { w.label = t; changed = true; } }
+  D.labels = wl.map(w => w.label);
+  if (changed) layoutDirty = true;
+}
+
+// ---------- turning in the chair: the painted poses back -> 3/4 back -> side -> 3/4 front -> front, composited per bot (turn atlases,
+// bin/preprocess_v8.py). pose.b is the continuous body angle (0..4), the head leads it, the swivel chair in the frames turns with the body and
+// the plate chair is hidden by a chair-less patch while pose.a > 0. Eased; never a squash or a flip of the seated body. ----------
+const ease = p => p < 0.5 ? 4 * p * p * p : 1 - (2 - 2 * p) ** 3 / 2;
+const easeOut = p => 1 - (1 - p) ** 2;
+const TURN_T = 0.85;
+const turnedNow = () => { let n = 0; for (let i = 0; i < wl.length; i++) if (wl[i].pose.a > 0 && !wl[i].walk && !wl[i].chatting) n++; return n; };
+function turnTo(w, to, dur, dir, done) { // ease the body from where it is to `to`; dir = which way round (the art faces right, -1 mirrors the whole pose)
+  const P = w.pose; if (dir && P.b < 0.05) P.dir = dir;
+  P.from = P.b; P.to = to; P.t = 0; P.dur = dur * Math.max(0.55, Math.min(1, Math.abs(to - P.b) / 3)); P.p = 0; P.done = done || null; P.hold = 0; P.after = null;
+  if (Math.abs(to - P.b) < 1e-3) { P.dur = 0; if (done) done(); }
+}
+function startTurn(w, hold, dir) {
+  if (!w || w.walk || w.seat.bag || w.seat.stand || w.chatting || w.pose.dur > 0 || w.pose.b > 0 || turnedNow() >= 2) return false;
+  const P = w.pose;
+  turnTo(w, rnd() < 0.65 ? 4 : 3, TURN_T, dir || (rnd() < 0.5 ? 1 : -1), () => { P.hold = hold ?? 2 + rnd() * 3; P.after = () => turnTo(w, 0, TURN_T + 0.1 * rnd()); });
+  return true;
+}
+function stepPose(w, dt) {
+  const P = w.pose, g = w.walk, s = w.seat;
+  if (s.bag || s.stand) return;
+  if (!g && P.b === 0 && P.dur === 0 && !w.chatting && (w.turnT -= dt) <= 0) { w.turnT = DEMO ? 6 + rnd() * 9 : 30 + rnd() * 60; if (!busy(w)) startTurn(w); }
+  const manual = g && (g.phase === 'stand' || g.phase === 'sit');
+  if (!manual) {
+    const on = P.dur > 0 || P.b > 1e-3 || P.hold > 0 || !!w.chatting || (g && (g.phase === 'rise' || g.phase === 'settle'));
+    P.a = Math.max(0, Math.min(1, P.a + (on ? 1 : -1) * dt / 0.14));
+    if (P.a === 0 && g && g.phase !== 'rise' && g.phase !== 'settle') { P.b = P.hb = 0; }
+  }
+  if (P.dur > 0 && P.a >= 1) {
+    P.t += dt; P.p = Math.min(1, P.t / P.dur); P.b = P.from + (P.to - P.from) * ease(P.p);
+    P.hb = P.from + (P.to - P.from) * ease(Math.min(1, P.p * 1.25)); // the head starts first and arrives first
+    if (P.p >= 1) { P.dur = 0; P.b = P.hb = P.to; P.p = 0; const f = P.done; P.done = null; if (f) f(); }
+  }
+  if (P.hold > 0 && (P.hold -= dt) <= 0) { P.hold = 0; const f = P.after; P.after = null; if (f) f(); }
+  P.chat += (P.chatTo - P.chat) * Math.min(1, dt * 6);
+  s.self = P.a > 0;
+}
+D.turn = i => startTurn(typeof i === 'number' ? wl[i] : findWorker(i), 4);
+
+// ---------- neighbour chat: two idle desk neighbours face each other for a moment. Cosmetic: never written to the interactions feed ----------
+const NCHAT = ['…', 'haha', '👍', 'lunch?', '😂', 'nice', '👀', 'really?', '🙂', 'ok!', '☕?', 'hmm'];
+let nchat = null, nchatT = DEMO ? 2 : 14 + rnd() * 30;
+const freeSeated = w => w && !w.walk && !busy(w) && !w.chatting && w.pose.b === 0 && w.pose.dur === 0 && !w.seat.bag && !w.seat.stand;
+function startChat(a, b) {
+  if (nchat || !freeSeated(a) || !freeSeated(b)) return false;
+  const C = nchat = { a, b, phase: 'in', t: 0, n: 0, talk: rnd() < 0.5 ? 0 : 1, dur: 6 + rnd() * 6, next: 0 };
+  a.chatting = b.chatting = C; a.fid = b.fid = null;
+  turnTo(a, 2, TURN_T + 0.05, 1, () => { C.n++; }); setTimeout0(0.12 + rnd() * 0.2, () => { if (nchat === C) turnTo(b, 2, TURN_T, -1, () => { C.n++; }); });
+  return true;
+}
+const delayed = []; function setTimeout0(s, f) { delayed.push([s, f]); } // on the frame clock, so a hidden tab just pauses it
+function endChat(C) {
+  if (C !== nchat) return; nchat = null;
+  for (const w of [C.a, C.b]) { w.chatting = null; w.sayNow = null; w.pose.chatTo = 0; w.pose.nod = 0; if (!w.walk) turnTo(w, 0, TURN_T + rnd() * 0.15); } layoutDirty = true;
+}
+function stepChat(dt) {
+  for (let i = delayed.length - 1; i >= 0; i--) if ((delayed[i][0] -= dt) <= 0) { const f = delayed[i][1]; delayed.splice(i, 1); f(); }
+  if (!nchat) {
+    if ((nchatT -= dt) <= 0) {
+      nchatT = DEMO ? 10 : 25 + rnd() * 50;
+      const ds = L.desks.map(d => seats.filter(s => s.desk === d && s.bot)).filter(p => p.length === 2 && !p[0].bag);
+      for (let n = 0; n < 6; n++) { const p = ds[(rnd() * ds.length) | 0], a = p && workers.get(p[0].bot.id), b = p && workers.get(p[1].bot.id); if (a && b && startChat(a, b)) break; }
+    }
+    return;
+  }
+  const C = nchat, { a, b } = C;
+  if (a.walk || b.walk || busy(a) || busy(b)) return endChat(C);
+  for (const w of [a, b]) if (w.sayNow && (w.sayOff -= dt) <= 0) { w.sayNow = null; layoutDirty = true; }
+  if (C.n < 2) return;
+  C.t += dt; C.next -= dt;
+  if (C.t > C.dur) return endChat(C);
+  if (C.next <= 0) { // alternate: the speaker turns a bit to the viewer and gestures, the other one listens and nods
+    C.talk ^= 1; C.next = 1.8 + rnd() * 1.4; const sp = C.talk ? b : a, li = C.talk ? a : b;
+    sp.pose.chatTo = 1; li.pose.chatTo = 0; sp.pose.nod = 0; li.pose.nod = 1;
+    sp.sayNow = NCHAT[(rnd() * NCHAT.length) | 0]; sp.sayOff = 1.5; layoutDirty = true;
+  }
+}
+D.neighbourChat = i => { const w = typeof i === 'number' ? wl[i] : findWorker(i), p = w && seats.filter(s => s.desk === w.seat.desk && s.bot); return !!(p && p.length === 2 && startChat(workers.get(p[0].bot.id), workers.get(p[1].bot.id))); };
+
+function deskInfo(id) { const w = workers.get(id); return w && { label: w.seat.desk.label, accent: w.seat.desk.accent }; }
+
+let layoutDirty = true;
+function apply(s) {
+  if (q.get('fakeages') && s.bots) s.bots = s.bots.map((b, i) => ({ ...b, last_active: Date.now() - (i % 8) * 864e5 - 5e5 })); // screenshot aid only: a spread of ages
+  if (DEMO && s.bots) {
+    s.bots = demoize(s.bots);
+    s.kpi = { ...(s.kpi || {}), working: s.bots.filter(b => b.status === 'working').length, errors: s.bots.filter(b => b.status === 'error').map(b => b.name) };
+  }
+  S = { ...(S || {}), ...s };
+  if (D.loaded) { assign(S.bots || []); if (!D.labels.length) refreshLabels(); }
+  renderKpi(S); renderRoster({ ...S, bots: (S.bots || []).filter(b => !HIDDEN_IDS.has(b.id)) }, id => deskInfo(id)?.label);
+  if (cardOpen()) showCard(S, cardOpen(), null, deskInfo);
+  D.workers = [...workers.values()].map(w => ({ id: w.bot.id, name: w.bot.name, num: w.bot.num, desk: w.seat.desk.label, seat: w.seat.idx, sprite: L.sprites[w.sprite].file, status: w.bot.status }));
+  if (!DEMO && Array.isArray(s.interactions)) feed(s.interactions);
+  layoutDirty = true;
+}
+const POLL_MS = 60e3;
+const stateUrl = () => STATIC ? `./state.json?t=${Date.now()}` : '/api/state'; // cache-buster: Pages/CDN caches files for 10 min
+function poll() {
+  fetch(stateUrl()).then(r => r.ok ? r.json() : null).then(s => { if (s) apply(s); }).catch(() => {}).finally(() => renderAsOf(S && S.now));
+}
+function connect() {
+  if (STATIC) { renderAsOf(S && S.now); setInterval(poll, POLL_MS); return; }
+  const es = new EventSource('/api/stream');
+  es.addEventListener('init', e => apply(JSON.parse(e.data)));
+  es.addEventListener('status', e => apply(JSON.parse(e.data)));
+  es.addEventListener('usage', e => apply({ usage: JSON.parse(e.data) }));
+  es.addEventListener('portfolio', e => apply({ portfolio: JSON.parse(e.data) }));
+  es.addEventListener('claude', e => apply({ claude_usage: JSON.parse(e.data) }));
+  es.onerror = () => { if (es.readyState === 2) setTimeout(connect, 5000); };
+}
+
+// ---------- interactions: data/interactions.jsonl -> /api/state + SSE `interactions` -> walks (each entry once) ----------
+const seen = new Set(), pending = [], PAGE_T0 = Date.now();
+function findWorker(ref) {
+  const r = String(ref).trim().toLowerCase(), m = r.match(/^bot(\d+)$/);
+  for (const w of workers.values()) if (m ? w.bot.num === +m[1] : (w.bot.id === ref || String(w.bot.name).toLowerCase() === r)) return w;
+  return null;
+}
+function feed(list) {
+  for (const o of list) {
+    const key = `${o.ts}|${o.from}|${o.to}`;
+    if (seen.has(key)) continue; seen.add(key);
+    const t = Date.parse(o.ts);
+    if (!(t >= PAGE_T0 - 120e3)) continue; // on page load only replay the last 2 minutes
+    pending.push({ from: o.from, to: o.to, note: o.note || '', at: performance.now() });
+    D.interactions++;
+  }
+}
+function pump(now) {
+  for (let i = pending.length - 1; i >= 0; i--) {
+    const p = pending[i], a = findWorker(p.from), b = findWorker(p.to);
+    if (!a || !b || a === b || a.seat.stand || b.seat.stand || now - p.at > 90e3) { pending.splice(i, 1); continue; }
+    if (a.walk?.trip) recall(a); if (b.walk?.trip) recall(b); // real interactions outrank the cosmetic ones
+    if (a.walk || b.walk || visiting(b)) continue;
+    if (a.chatting) endChat(a.chatting); if (b.chatting) endChat(b.chatting);
+    pending.splice(i, 1); startWalk(a, b, p.note, false);
+  }
+}
+const visiting = w => { for (let i = 0; i < wl.length; i++) if (wl[i].walk && wl[i].walk.to === w) return true; return false; };
+
+// ---------- walking: stand up, walk the walkway to the other desk, talk, walk back, sit ----------
+function hAt(f) { // upper-body sprite height for a floor y (piecewise fit of the measured seats)
+  const W = walkH; if (f <= W[0][0]) return W[0][1] + (f - W[0][0]) * (W[1][1] - W[0][1]) / (W[1][0] - W[0][0]);
+  for (let i = 1; i < W.length; i++) if (f <= W[i][0] || i === W.length - 1) return W[i - 1][1] + (f - W[i - 1][0]) * (W[i][1] - W[i - 1][1]) / (W[i][0] - W[i - 1][0]);
+  return W[W.length - 1][1];
+}
+function navPath(a, b) { // Dijkstra on the floor graph -> node ids after a, up to and including b
+  const n = nav.length, dist = new Array(n).fill(1e9), prev = new Array(n).fill(-1), done = new Array(n).fill(false); dist[a] = 0;
+  for (;;) {
+    let u = -1; for (let i = 0; i < n; i++) if (!done[i] && dist[i] < 1e9 && (u < 0 || dist[i] < dist[u])) u = i;
+    if (u < 0 || u === b) break; done[u] = true;
+    for (const [v, d] of navAdj()[u]) if (dist[u] + d < dist[v]) { dist[v] = dist[u] + d; prev[v] = u; }
+  }
+  const p = []; for (let u = b; u >= 0 && u !== a; u = prev[u]) p.unshift(u); return p;
+}
+let adjC = null; const navAdj = () => { if (adjC) return adjC; adjC = nav.map(() => []); for (const [a, b] of L.nav.edges) { const d = Math.hypot(nav[a][0] - nav[b][0], nav[a][1] - nav[b][1]); adjC[a].push([b, d]); adjC[b].push([a, d]); } return adjC; };
+function pathPts(P) { const out = []; for (const p of P) { const l = out[out.length - 1]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) > 1) out.push(p); } return out; }
+const visitOf = s => s.bag ? s.feet : [s.x + (s.idx ? 36 : -36) * (s.desk.seats.length > 1 ? 1 : 0.9), s.feet[1]];
+const route = (a, b) => pathPts([a.feet, ...navPath(a.node, b.node).map(n => nav[n]), visitOf(b)]);
+const DEMO_NOTES = ['handoff ✓', 'got a sec?', 'PR is up', 'numbers look good', 'synced the inbox', 'backup done', 'new clip ready', 'shield check passed'];
+function leave(w, g) { // rise: turn out of the chair towards the way out, then stand up (phase `stand`); the bean bag has no chair to turn
+  w.fid = null; if (w.chatting) endChat(w.chatting);
+  if (w.seat.bag) return;
+  const dir = g.pts[1] && g.pts[1][0] < w.seat.x ? -1 : 1;
+  w.pose.dir = w.pose.b < 0.05 ? dir : w.pose.dir;
+  turnTo(w, 3.4, TURN_T, dir, () => { if (w.walk === g && g.phase === 'rise') { g.phase = 'stand'; g.t = 0; } });
+}
+function startWalk(w, to, note, demo) {
+  const pts = route(w.seat, to.seat), len = [];
+  for (let i = 1; i < pts.length; i++) len.push(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  w.walk = { to, pts, len, i: 0, front: true, f: 0, dir: 1, phase: 'rise', t: 0, x: pts[0][0], y: pts[0][1], stride: 0, v: 0, face: 1, legs: 'side', prev: null, fade: 0, note: note || (demo ? DEMO_NOTES[(rnd() * DEMO_NOTES.length) | 0] : '…'), demo };
+  leave(w, w.walk); layoutDirty = true;
+}
+let nextDemo = 1.2 + rnd() * 0.8;
+function maybeDemo(t) {
+  if (!DEMO || t < nextDemo) return;
+  nextDemo = t + 8 + rnd() * 4;
+  const ws = [...workers.values()].filter(w => !w.seat.stand && !w.walk && !visiting(w)); // bag seat (Dashboards) may walk too
+  if (ws.length < 2) return;
+  const a = ws[(rnd() * ws.length) | 0], others = ws.filter(o => o !== a && o.seat.desk !== a.seat.desk);
+  const b = others[(rnd() * others.length) | 0]; if (b) startWalk(a, b, '', true);
+}
+const RISE = 0.55, STAND = 0.4, TALK = 3.6;
+function stepWalk(w, dt) {
+  const g = w.walk, P = w.pose, s = w.seat;
+  g.t += dt; if (g.fade > 0) g.fade -= dt;
+  if (g.phase === 'rise') { if (s.bag && g.t >= RISE) { g.phase = 'go'; g.t = 0; } return; }
+  if (g.phase === 'stand') { P.a = Math.max(0, 1 - g.t / STAND); if (g.t >= STAND) { g.phase = 'go'; g.t = 0; P.a = 0; P.b = P.hb = 0; P.dur = 0; s.self = false; } return; } // chair frame dissolves into the standing body
+  if (g.phase === 'hang' || g.phase === 'petting') return stepHang(w, g, dt);
+  if (g.phase === 'talk') {
+    g.to.look = g.x < g.to.seat.x ? -1 : 1;
+    g.face = g.x < g.to.seat.x ? 1 : -1;
+    if (g.t >= TALK) { g.to.look = 0; if (!g.to.walk && !g.to.seat.bag && g.to.pose.b > 0) turnTo(g.to, 0, TURN_T); g.phase = 'back'; g.t = 0; g.i = g.len.length - 1; g.f = 1; g.dir = -1; }
+    return;
+  }
+  if (g.phase === 'sit') { // back at the chair: the standing body dissolves into the frame, then the slow turn back to the desk
+    if (s.bag) { if (g.t >= RISE) { w.walk = null; layoutDirty = true; } return; }
+    if (g.t < dt * 1.5 && P.a === 0) { P.b = P.hb = 3.4; P.dir = g.face; s.self = true; }
+    P.a = Math.min(1, g.t / STAND); if (g.t >= STAND) { P.a = 1; g.phase = 'settle'; turnTo(w, 0, TURN_T + 0.1, 0, () => { w.walk = null; layoutDirty = true; }); }
+    return;
+  }
+  if (g.phase === 'settle') return;
+  const hu = hAt(g.y), cruise = Math.max(42, hu * 0.75), rem = (g.dir > 0 ? g.i === g.len.length - 1 ? (1 - g.f) * g.len[g.i] : 99 : g.i === 0 ? g.f * g.len[0] : 99);
+  g.v += (cruise * Math.max(0.4, Math.min(1, rem / 16)) - g.v) * Math.min(1, dt * 6); // eased start and stop
+  let d = g.v * dt;
+  while (d > 0) {
+    const l = g.len[g.i] || 1, r = g.dir > 0 ? (1 - g.f) * l : g.f * l;
+    if (d < r) { g.f += g.dir * d / l; d = 0; }
+    else {
+      d -= r;
+      if (g.dir > 0) { if (g.i < g.len.length - 1) { g.i++; g.f = 0; } else { g.f = 1; g.phase = g.pet ? 'petting' : g.trip ? 'hang' : 'talk'; g.t = 0; g.v = 0; layoutDirty = true; if (g.pet) dogPetted(w); else if (g.to && !g.to.walk && !g.to.seat.bag) { endIf(g.to); turnTo(g.to, 2, TURN_T, g.x < g.to.seat.x ? -1 : 1); } break; } }
+      else { if (g.i > 0) { g.i--; g.f = 1; } else { g.f = 0; g.phase = 'sit'; g.t = 0; g.v = 0; break; } }
+    }
+  }
+  if (g.phase === 'sit' || g.phase === 'hang' || g.phase === 'talk' || g.phase === 'petting') return;
+  const p0 = g.pts[g.i], p1 = g.pts[g.i + 1] || p0, nx = p0[0] + (p1[0] - p0[0]) * g.f, ny = p0[1] + (p1[1] - p0[1]) * g.f, oldF = g.front, oldD = g.face;
+  if (Math.abs(nx - g.x) > 0.01) g.face = nx > g.x ? 1 : -1;
+  const ddx = Math.abs(nx - g.x), ddy = ny - g.y; // face the walk direction: front sprite toward the camera, back away
+  if (Math.abs(ddy) > ddx * 0.35 && Math.abs(ddy) > 1e-3) g.front = ddy > 0;
+  if (oldF !== g.front || oldD !== g.face) { g.prev = { front: oldF, face: oldD }; g.fade = FADE; } // direction changes dissolve instead of snapping
+  if (ddx + Math.abs(ddy) > 1e-3) g.legs = ddx > Math.abs(ddy) * 0.7 ? 'side' : g.front ? 'front' : 'back';
+  g.stride += Math.hypot(nx - g.x, ny - g.y) / Math.max(20, hu * 0.42) * Math.PI;
+  g.x = nx; g.y = ny;
+}
+const FADE = 0.16, endIf = w => { if (w.chatting) endChat(w.chatting); };
+
+// ---------- ambient idle life: purely cosmetic and client-side, never an interaction (no feed, no API, no handoff labels) ----------
+const CHAT = ['…', 'haha', '😂', '👍', '🙂', 'nice', '👀', '☕?'], SNACK = ['☕', '🍪', '☕', '🍩', '🍎'];
+const busy = w => w.bot.status === 'working' || w.bot.status === 'error';
+function initLounge() {
+  const O = L.lounge, P2 = p => [p[0] * PW, p[1] * PH];
+  lng = { ...O, steam: P2(O.steam), heart: P2(O.heart), espresso: P2(O.espresso), heartG: glowSprite('255,90,190'), puff: glowSprite('255,244,232', 32, 0.2), puffs: [0, 1, 2, 3, 4].map(i => ({ ph: i / 5, sw: rnd() * 7 })),
+    bags: O.bags.map(b => ({ ...b, sit: P2(b.sit), visit: P2(b.visit), depth: b.depth * PH, bag: true, id: b.id })), spots: O.spots.map(s => ({ ...s, x: s.p[0] * PW, y: s.p[1] * PH })) };
+  for (const b of lng.bags) { b.x = b.visit[0]; b.y = b.visit[1]; }
+}
+function drawLounge(t) {
+  P(); ctx.globalCompositeOperation = 'lighter';
+  const d = 0.5 + 0.65 * env.dark, [hx, hy] = lng.heart;
+  ctx.globalAlpha = (0.2 + 0.05 * Math.sin(t * 2.3)) * d; ctx.drawImage(lng.heartG, hx - 34, hy - 34, 68, 68);
+  ctx.globalCompositeOperation = 'source-over';
+  const [sx, sy] = lng.steam;
+  for (let i = 0; i < 5; i++) {
+    const p = lng.puffs[i], a = (t * 0.22 + p.ph) % 1, sz = 7 + a * 15;
+    ctx.globalAlpha = Math.sin(a * Math.PI) * 0.2 * (1 - a * 0.4);
+    ctx.drawImage(lng.puff, sx + Math.sin(a * 5 + p.sw) * (2 + a * 5) - sz / 2, sy - a * 40 - sz * 0.7, sz, sz * 1.4);
+  }
+  ctx.globalAlpha = 1;
+}
+const tripPhase = g => g.trip && g.phase !== 'back' && g.phase !== 'sit' && g.phase !== 'settle';
+const spotTaken = sp => wl.some(o => o.walk && tripPhase(o.walk) && o.walk.trip.spot === sp);
+function pickSpot(w) {
+  const dash = isDash(w.bot), bags = dash ? [] : lng.bags.filter(b => b.id !== 'bag-b' && !spotTaken(b)), free = lng.spots.filter(s => !spotTaken(s)); // the blue bag is her home
+  const list = bags.length && rnd() < 0.72 ? bags : free.length ? free : bags;
+  return list.length ? list[(rnd() * list.length) | 0] : null;
+}
+function startTrip(w, force) {
+  if (!w || w.walk || w.seat.stand) return false;
+  const spot = pickSpot(w); if (!spot) return false;
+  const pts = pathPts([w.seat.feet, ...navPath(w.seat.node, spot.node).map(n => nav[n]), [spot.x, spot.y]]), len = [];
+  for (let i = 1; i < pts.length; i++) len.push(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  w.walk = { to: null, pts, len, i: 0, front: true, f: 0, dir: 1, phase: 'rise', t: 0, x: pts[0][0], y: pts[0][1], stride: 0, v: 0, face: 1, legs: 'side', prev: null, fade: 0, note: '', demo: false, say: null, sayT: 1 + rnd() * 2, sayOff: 0, stayT: 22 + rnd() * 40, pet: false, petted: false, sitK: 0, leaving: false,
+    force: !!force && busy(w), trip: { spot } }; // a forced trip by a busy bot (debug hook) is not recalled at once
+  leave(w, w.walk); layoutDirty = true; return true;
+}
+function recall(w) { // back to the desk from wherever they are on the route
+  const g = w.walk;
+  if (g.phase === 'rise') { w.walk = null; if (!w.seat.bag) turnTo(w, 0, TURN_T); layoutDirty = true; return; }
+  if (g.phase === 'stand') { g.phase = 'sit'; g.t = STAND * (1 - Math.min(1, g.t / STAND)); return; }
+  if (g.phase === 'go') g.dir = -1;
+  else if (g.phase === 'hang' || g.phase === 'petting') { if (g.sitK > 0) { g.leaving = true; return; } g.i = g.len.length - 1; g.f = 1; g.dir = -1; }
+  else return;
+  g.phase = 'back'; g.t = 0; g.say = null; layoutDirty = true;
+}
+function say(g, text, dur) { g.say = text; g.sayOff = dur; layoutDirty = true; }
+function stepHang(w, g, dt) {
+  const sp = g.trip.spot;
+  if (g.phase === 'petting') {
+    g.face = dog.x > g.x ? 1 : -1;
+    if (g.t > 3.8) { g.pet = false; g.stayT = 0; g.phase = 'hang'; }
+    return;
+  }
+  if (g.leaving) { g.sitK -= dt / 0.65; if (g.sitK <= 0) { g.sitK = 0; g.leaving = false; recall(w); } return; }
+  if (sp.bag) { g.sitK = Math.min(1, g.sitK + dt / 0.7); g.front = true; } else { g.front = !sp.back; if (sp.face) g.face = sp.face; }
+  if (g.say && (g.sayOff -= dt) <= 0) { g.say = null; layoutDirty = true; }
+  if ((g.stayT -= dt) <= 0 && !g.say) return recall(w);
+  if ((g.sayT -= dt) > 0) return;
+  g.sayT = 4 + rnd() * 5;
+  const others = wl.filter(o => o !== w && o.walk && o.walk.phase === 'hang'), r = rnd();
+  if (others.length && r < 0.55) { // alternating small talk
+    say(g, CHAT[(rnd() * CHAT.length) | 0], 2);
+    const o = others[(rnd() * others.length) | 0]; if (o.walk.sayT > 2.4) o.walk.sayT = 2.2 + rnd() * 0.5;
+  } else if (!g.petted && !sp.bag && r > 0.6 && dogNear()) { // walk over and pet the dog (the way home retraces this leg)
+    const dx = dog.x > g.x ? -1 : 1, tx = dog.x + dx * 36, ty = dog.y + 3;
+    g.petted = g.pet = true; g.pts.push([tx, ty]); g.len.push(Math.hypot(tx - g.x, ty - g.y)); g.i = g.len.length - 1; g.f = 0; g.dir = 1; g.phase = 'go'; g.t = 0; g.say = null;
+  } else say(g, SNACK[(rnd() * SNACK.length) | 0], 2.2);
+}
+const dogNear = () => dog.y > 590 && dog.x > 60 && dog.x < 480;
+let ambT = 0;
+function dashVisit(w) { // Dashboards leaves the bean bag to check in at a desk, then walks back
+  const targets = wl.filter(o => o !== w && !o.seat.stand && !o.seat.bag && !o.walk && !visiting(o) && !busy(o) && !o.chatting);
+  if (!targets.length) return false;
+  startWalk(w, targets[(rnd() * targets.length) | 0], '☕ check-in', false);
+  return true;
+}
+function stepAmbient(dt) {
+  let away = 0;
+  for (let i = 0; i < wl.length; i++) {
+    const w = wl[i], g = w.walk;
+    // Dashboards keeps roaming even while her status is working (laptop life in the kitchen)
+    if (g && g.trip) { if (!isDash(w.bot)) away++; if (busy(w) && !isDash(w.bot) && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || g.phase === 'hang' || g.phase === 'petting')) recall(w); }
+  }
+  for (let i = 0; i < wl.length; i++) {
+    const w = wl[i], dash = isDash(w.bot);
+    if (w.walk || w.seat.stand || w.chatting) continue;
+    if (busy(w) && !dash) continue; // only Dashboards wanders while working
+    if ((w.tripT -= dt) > 0) continue;
+    w.tripT = dash ? 28 + rnd() * 55 : 120 + rnd() * 240;
+    if (!(w.pose.b === 0 && w.pose.dur === 0 && !visiting(w))) continue;
+    if (dash) {
+      if (rnd() < 0.4 ? dashVisit(w) : startTrip(w) || dashVisit(w)) {}
+    } else if (away < Math.min(3, wl.length - 1) && startTrip(w)) away++;
+  }
+  if ((ambT -= dt) <= 0) {
+    ambT = 0.25;
+    D.ambient = { away: wl.filter(w => w.walk?.trip).map(w => w.bot.name), lounge: wl.filter(w => w.walk?.phase === 'hang' || w.walk?.phase === 'petting').map(w => w.bot.name), onBag: wl.filter(w => w.walk?.sitK > 0.9).map(w => w.bot.name) };
+  }
+}
+D.loungeTrip = i => { const w = typeof i === 'number' ? wl[i] : findWorker(i); return startTrip(w, true); };
+
+// ---------- seated fidgets (idle only): lean, swivel, stretch, look around, head scratch; soft envelopes, no two alike ----------
+const FIDGETS = [['lean', 2.5, 5], ['stretch', 2, 3.2], ['look', 2.4, 4], ['scratch', 1.6, 2.6]];
+function stepFidget(w, dt) {
+  w.fr = w.fx = 0; w.fsy = 1;
+  if (w.walk || busy(w) || w.pose.a > 0 || w.seat.bag) { w.fid = null; return; }
+  if (!w.fid) {
+    if ((w.fidT -= dt) > 0) return;
+    const [kind, a, b] = FIDGETS[(rnd() * FIDGETS.length) | 0];
+    w.fid = { kind, d: a + rnd() * (b - a), t: 0, dir: rnd() < 0.5 ? -1 : 1 }; w.fidT = 6 + rnd() * 20;
+  }
+  const F = w.fid, p = (F.t += dt) / F.d; if (p >= 1) { w.fid = null; return; }
+  const e = Math.sin(Math.PI * p), s2 = F.dir;
+  switch (F.kind) {
+    case 'lean': w.fr = 0.06 * s2 * e; w.fx = 0.022 * s2 * e; break;
+    case 'stretch': w.fsy = 1 + 0.05 * e * e; w.fr = 0.015 * s2 * Math.sin(p * 9); break;
+    case 'look': w.fr = 0.055 * s2 * Math.sin(p * Math.PI * 2); w.fx = 0.008 * s2 * Math.sin(p * Math.PI * 2); break;
+    case 'scratch': w.fr = 0.05 * s2 * e + 0.016 * e * Math.sin(F.t * 21); break;
+  }
+}
+const zoneKey = (x, y) => { for (let i = 0; i < zones.length; i++) { const z = zones[i]; if (x > z.x0 && x < z.x1 && y < z.y) return z.key; } return y; }; // behind a big desk: its monitors and body hide them
+
+// ---------- corgi: mood state machine on the floor graph (layout.dog): weighted random moods, variable durations, eased
+// starts and stops, smooth turns; poses come from the painted atlas; depth-sorted by its feet ----------
+let dog = null, zSpr = null;
+function initDog() {
+  const N = nav, adj = navAdj();
+  dog = { N, adj, fr: L.corgi.frames, x: N[L.dog.start][0], y: N[L.dog.start][1], node: L.dog.start, path: [], mood: 'nap', pose: DEMO ? 'sit' : 'sleep', t: DEMO ? 1.5 : 5 + rnd() * 6, face: 1, fs: 1, ph: 0, v: 0, pace: 1, seq: [], by: null, zoom: 0 };
+  zSpr = mk(48, 48); { const g = zSpr.getContext('2d'); g.font = `italic 700 34px Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(200,220,255,.9)'; g.shadowBlur = 8; g.fillStyle = 'rgba(250,246,255,.95)'; g.fillText('z', 24, 25); }
+  D.corgi = { mode: dog.pose, mood: dog.mood, x: dog.x, y: dog.y, node: dog.node, by: null };
+}
+const dogPath = navPath;
+const nearestNode = (x, y) => { let best = 0, bd = 1e9; dog.N.forEach(([nx, ny], i) => { const d = Math.hypot(nx - x, ny - y); if (d < bd) { bd = d; best = i; } }); return [best, bd]; };
+const span = (a, b) => a + rnd() * (b - a);
+function dogGo(node, pace, seq) { // walk to node at pace, then play seq = [[pose, seconds, fn?], ...]; an empty path plays seq right here
+  const d = dog; d.path = dogPath(d.node, node); d.pace = pace; d.seq = seq;
+  if (d.path.length) { d.pose = 'walk'; d.t = 0; } else dogSeq();
+}
+function dogSeq() {
+  const d = dog, s = d.seq.shift();
+  if (!s) return dogNext();
+  d.pose = s[0]; d.t = s[1]; if (s[2]) s[2]();
+}
+function loungeBots() { const o = []; for (let i = 0; i < wl.length; i++) if (wl[i].walk?.phase === 'hang') o.push(wl[i]); return o; }
+function dogMood(m, w) {
+  const d = dog, K = L.dog.beg; d.mood = m; d.by = null; d.zoom = 0;
+  switch (m) {
+    case 'wander': { // varied pace: a trot, or a slow sniff with pauses
+      const slow = rnd() < 0.5, n = (rnd() * d.N.length) | 0;
+      return dogGo(n, slow ? span(0.4, 0.6) : span(0.85, 1.15), rnd() < 0.65 ? [[rnd() < 0.5 ? 'sniff' : 'sit', span(1.5, 5)]] : []);
+    }
+    case 'affection': case 'belly': {
+      const list = wl.filter(o => !o.seat.stand && (!o.walk || o.walk.phase === 'hang') && nearestNode(...(o.walk ? [o.walk.x, o.walk.y] : o.seat.feet))[1] < 80);
+      w = w || list[(rnd() * list.length) | 0];
+      if (!w) return dogMood('wander');
+      d.by = w;
+      const seatSide = () => { d.face = (w.walk ? w.walk.x : w.seat.x) > d.x ? 1 : -1; };
+      const greet = () => { seatSide(); if (w.walk) say(w.walk, '🐶', 2.2); else startTurn(w, 3 + rnd() * 2, d.x < w.seat.x ? -1 : 1); };
+      const seq = m === 'belly' ? [['sit', span(1, 2), greet], ['belly', span(5, 10)], ['sit', span(1, 2)]] : [['sit', span(1.5, 3), greet], ['happy', span(2.5, 4.5)], ['sit', span(2, 5)]];
+      return dogGo(nearestNode(...(w.walk ? [w.walk.x, w.walk.y] : w.seat.feet))[0], span(1, 1.3), seq);
+    }
+    case 'nap': { const c = L.dog.rest.filter(r => r[1] === 'sleep'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.9), [['sleep', span(30, 95)]]); }
+    case 'rest': { const c = L.dog.rest.filter(r => r[1] === 'lie'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.95), [['lie', span(14, 42)]]); }
+    case 'beg': {
+      const treat = () => { const b = loungeBots(); if (b.length && rnd() < 0.5) { const o = b[(rnd() * b.length) | 0]; say(o.walk, '🍪', 2.2); d.seq.unshift(['happy', span(2, 3.2)]); } };
+      const lb = loungeBots(), nearSpot = lb.length ? nearestNode(lb[0].walk.x, lb[0].walk.y)[0] : K[(rnd() * K.length) | 0];
+      return dogGo(rnd() < 0.5 ? nearSpot : K[(rnd() * K.length) | 0], span(1, 1.25), [['beg', span(3, 6)], ['sit', span(1.5, 3)], ['beg', span(3, 6), null], ['sit', 1, treat]]);
+    }
+    case 'zoomies': d.zoom = 3 + ((rnd() * 4) | 0); return dogGo((rnd() * d.N.length) | 0, span(2.2, 2.8), []);
+    case 'happy': return dogGo(d.node, 1, [['happy', span(2.5, 4)], ['sit', 2]]);
+    default: return dogGo(d.node, 1, [[m, span(6, 12)]]);
+  }
+}
+function dogNext() {
+  const kb = loungeBots().length, W = [['wander', 34], ['affection', DEMO ? 34 : 16], ['belly', 6], ['nap', 14], ['rest', 12], ['beg', kb ? 40 : 6], ['zoomies', 5]];
+  let r = rnd() * W.reduce((a, b) => a + b[1], 0);
+  for (const [m, wt] of W) if ((r -= wt) <= 0) return dogMood(m);
+  dogMood('wander');
+}
+function dogPetted(w) { const d = dog; d.mood = 'happy'; d.by = w; d.path = []; d.v = 0; d.zoom = 0; d.face = w.walk.x > d.x ? 1 : -1; d.seq = [['happy', 3.6], ['sit', span(2, 4)]]; dogSeq(); }
+D.dogMood = m => { if (!dog) return false; dog.path = []; dog.seq = []; dog.v = 0; dogMood(m); return true; };
+function stepDog(dt) {
+  if (!dog) return;
+  const d = dog;
+  d.fs += (d.face - d.fs) * Math.min(1, dt * 9);
+  if (d.pose !== 'walk') { if ((d.t -= dt) <= 0) dogSeq(); }
+  else {
+    const [tx, ty] = d.N[d.path[0]], dx = tx - d.x, dy = ty - d.y, dist = Math.hypot(dx, dy), last = d.path.length === 1 && !d.zoom;
+    const cruise = hAt(d.y) * 0.5 * d.pace, want = last ? Math.min(cruise, 16 + dist * 2.4) : cruise; // ease in, ease out on the last leg
+    d.v += (want - d.v) * Math.min(1, dt * (d.pace > 2 ? 9 : 4.5));
+    const step = d.v * dt, mv = Math.min(step, dist);
+    if (Math.abs(dx) > 0.5) d.face = dx > 0 ? 1 : -1;
+    d.x += dx / (dist || 1) * mv; d.y += dy / (dist || 1) * mv;
+    d.ph += mv / (hAt(d.y) * 0.075); // walk cycle synced to distance
+    if (dist <= Math.max(step, 0.4)) {
+      d.node = d.path.shift();
+      if (!d.path.length) {
+        if (d.zoom > 0) { d.zoom--; const a = d.adj[d.node]; dogGo(d.zoom ? (rnd() * d.N.length) | 0 : a[(rnd() * a.length) | 0][0], d.pace, d.zoom ? [] : [['sit', span(3, 6)]]); }
+        else { d.v = 0; dogSeq(); }
+      }
+    }
+  }
+  const c = D.corgi; c.mode = d.pose === 'walk' && d.zoom ? 'zoomies' : d.pose; c.mood = d.mood; c.x = Math.round(d.x); c.y = Math.round(d.y); c.node = d.node; c.by = d.by ? d.by.bot.name : null;
+}
+function drawDog(t) {
+  const d = dog, C = L.corgi, hu = hAt(d.y), [cw, ch] = C.cell, W = 0.507 * hu / C.bodyW, H = W * ch / cw; // same body length on screen as the old atlas
+  const pose = d.pose, fi = pose === 'walk' ? C.walk[(d.ph | 0) % C.walk.length] : pose === 'sniff' ? C.walk[0] : C[pose] ?? C.sit, f = d.fr[fi];
+  let sy = 1, rot = 0, hop = 0;
+  if (pose === 'sleep' || pose === 'lie') sy = 1 + Math.sin(t * (pose === 'sleep' ? 1.6 : 2)) * 0.022;
+  else if (pose === 'sit') { sy = 1 + Math.sin(t * 2.2) * 0.012; rot = Math.sin(t * 8) * 0.008; }
+  else if (pose === 'sniff') { rot = 0.03 + Math.sin(t * 5) * 0.022; sy = 1 + Math.sin(t * 9) * 0.006; }
+  else if (pose === 'beg') { sy = 1 + Math.sin(t * 3.4) * 0.022; rot = Math.sin(t * 5.5) * 0.02; }
+  else if (pose === 'happy') { hop = Math.abs(Math.sin(t * 6.2)) * H * 0.075; rot = Math.sin(t * 12.4) * 0.03; }
+  else if (pose === 'belly') { rot = Math.sin(t * 4.6) * 0.035; sy = 1 + Math.sin(t * 9) * 0.012; }
+  else if (pose === 'walk') hop = Math.abs(Math.sin(d.ph * Math.PI / 3)) * H * 0.012 * Math.min(2, d.pace);
+  const dir = (d.fs < 0 ? -1 : 1) * Math.max(0.22, Math.abs(d.fs));
+  P();
+  ctx.globalAlpha = 0.5 - hop / H; ctx.drawImage(shadowSpr, d.x - W * 0.42, d.y - H * 0.08, W * 0.84, H * 0.17); ctx.globalAlpha = 1;
+  ctx.save(); ctx.translate(d.x, d.y - hop); ctx.scale(dir, 1); ctx.rotate(rot);
+  ctx.drawImage(dogImg, f[0], f[1], f[2], f[3], -W * C.ax, -H * sy, W, H * sy);
+  ctx.restore();
+  if (pose === 'sleep') for (let i = 0; i < 3; i++) { // tiny rising "z" puffs
+    const p = (t * 0.3 + i / 3) % 1, s = H * (0.13 + 0.16 * p);
+    ctx.globalAlpha = Math.sin(p * Math.PI) * 0.75;
+    ctx.drawImage(zSpr, d.x + d.face * W * 0.3 + p * H * 0.28 - s / 2, d.y - H * 0.52 - p * H * 0.7 - s / 2, s, s);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- boss desk FX: screen glow, scanline shimmer on the 3 curved monitors ----------
+const warmScreen = glowSprite('255,180,120');
+const scanSpr = (() => { const c = mk(64, 128), g = c.getContext('2d');
+  for (let y = 0; y < 128; y += 2) { g.fillStyle = 'rgba(200,230,255,.10)'; g.fillRect(0, y, 64, 1); }
+  for (const y0 of [24, 88]) { const gr = g.createLinearGradient(0, y0, 0, y0 + 16); gr.addColorStop(0, 'rgba(210,235,255,0)'); gr.addColorStop(0.5, 'rgba(210,235,255,.5)'); gr.addColorStop(1, 'rgba(210,235,255,0)'); g.fillStyle = gr; g.fillRect(0, y0, 64, 16); }
+  return c; })();
+function drawBossFx(t) {
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) {
+    const Q = bossMon[i], [TL, TR, BR, BL] = Q, cx = (TL[0] + BR[0]) / 2, cy = (TL[1] + BR[1]) / 2, w = TR[0] - TL[0];
+    P(); ctx.save(); polyPath(ctx, bossClip[i]); ctx.clip(); ctx.globalAlpha = (0.12 + 0.05 * Math.sin(t * 1.3 + i * 2.1)) * (0.6 + 0.6 * env.n);
+    ctx.drawImage(i === 2 ? warmScreen : screenGlow, cx - w * 0.85, cy - w * 0.6, w * 1.7, w * 1.2);
+    ctx.setTransform(k * (TR[0] - TL[0]) / 64, k * (TR[1] - TL[1]) / 64, k * (BL[0] - TL[0]) / 64, k * (BL[1] - TL[1]) / 64, offX + k * TL[0], offY + k * TL[1]);
+    ctx.globalAlpha = 0.16 + 0.04 * Math.sin(t * 7 + i);
+    ctx.drawImage(scanSpr, 0, ((t * 9 + i * 21) % 64), 64, 64, 0, 0, 64, 64); ctx.restore();
+  }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+
+// ---------- painter's list (persistent, sorted in place each frame) ----------
+const items = [];
+function buildItems() {
+  items.length = 0;
+  for (const m of monitors) items.push({ k: m.depth, t: 0, r: m });
+  for (const o of occluders) items.push({ k: o.depth, t: 1, r: o });
+  for (const s of seats) if (s.chair) items.push({ k: s.clip + 0.2, t: 2, r: s });
+  for (const w of workers.values()) items.push({ k: 0, t: 3, r: w });
+  items.push({ k: 9998, t: 4, r: 'room-l' }, { k: 9999, t: 4, r: 'room-r' });
+  items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: 0, t: 5, r: 'dog' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
+}
+const byKey = (a, b) => a.k - b.k;
+
+// ---------- drawing ----------
+const P = () => ctx.setTransform(k, 0, 0, k, offX, offY);
+function drawBust(w, t) { // the default pose at the desk: the back bust behind the plate chair's backrest
+  const s = w.seat, b = w.bot, im = sprites[w.sprite], sp = L.turn.sprites[w.sprite], bs = s.hsc * sp.sc, ww = im.width * bs, hh = im.height * bs, top = s.neckY - sp.neck * bs, x = s.x;
+  const err = b.status === 'error', working = b.status === 'working', h = s.h, B = w.pose.b;
+  let dx = 0, dy = Math.sin(t * 1.7 + w.ph) * h * 0.006, rot = 0, sy = 1 + Math.sin(t * 1.7 + w.ph) * 0.008;
+  if (working) { dx = Math.sin(t * 23 + w.ph) * h * 0.005; dy += Math.abs(Math.sin(t * 11.5 + w.ph)) * h * 0.006; }
+  if (err) { dy += h * 0.06; rot = 0.07 * (w.ph > 3.5 ? 1 : -1); sy *= 0.97; }
+  rot += w.tilt * 0.07 + w.look * 0.06 + w.fr; dx += w.tilt * h * 0.012 + w.fx * h; // look around: small head tilt + lean, idle fidgets
+  dy -= (w.fsy - 1) * h * 0.45; sy *= w.fsy;
+  const pivotY = hh * 0.55;
+  P();
+  ctx.save(); ctx.beginPath(); ctx.rect(x - ww, top - hh, ww * 2, s.clip - top + hh); ctx.clip();
+  ctx.translate(x + dx, top + pivotY + dy); ctx.rotate(rot); ctx.scale(1, sy); ctx.drawImage(im, -ww * sp.axb, -pivotY, ww, hh);
+  ctx.restore();
+  w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = s.base;
+  w.hx = x; w.hy = top;
+}
+const win = (v, a, b) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
+function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atlas; the head is its own layer so it can lead the turn. Poses step (a quick wipe of opaque art over opaque art), they never dissolve through each other
+  const s = w.seat, T = L.turn, P2 = w.pose, [cw, ch] = T.cell, [hw, hh] = T.head, row = w.sprite, ts = s.ts, B = Math.min(4, P2.b), i = Math.min(3, B | 0), f = B - i;
+  const swing = P2.dur > 0 ? Math.sin(Math.PI * P2.p) : 0, sign = Math.sign(P2.to - P2.from) || 1, nod = P2.nod ? Math.sin(t * 5.5) * 0.04 : 0, up = P2.dir < 0 ? -1 : 1;
+  ctx.setTransform(k, 0, 0, k, offX, offY); ctx.translate(s.x + swing * 3 * sign * P2.dir * ts, s.base + Math.sin(t * 1.7 + w.ph) * 0.5 * ts); ctx.scale(up * ts, ts); ctx.translate(0, -T.floor); // scaleX is only ever the mirror
+  ctx.translate(0, T.floor * 0.5); ctx.rotate(swing * 0.03 * sign); ctx.translate(0, -T.floor * 0.5); // the weight shifts with the turn
+  const stepIn = win(f, 0.4, 0.52), stepOut = win(f, 0.5, 0.62), chatIn = win(P2.chat, 0.3, 0.5), chatOut = win(P2.chat, 0.45, 0.65), sx = j => j * cw, sy = row * ch;
+  const body = (j, a) => { if (a > 0.004) { ctx.globalAlpha = alpha * a; ctx.drawImage(turnB, sx(j), sy, cw, ch, -T.cx, 0, cw, ch); } };
+  body(i, (1 - stepOut) * (1 - chatOut)); body(i + 1, stepIn * (1 - chatOut)); body(5, chatIn);
+  // head: anchored on the neck of the frame on show; the leading angle picks the painted head
+  const FR = T.frames, Fa = FR[i], Fb = FR[i + 1], Fc = FR[5], lerp = (a, b, q) => a + (b - a) * q, m = win(f, 0.42, 0.58), hxB = lerp(Fa.head[0], Fb.head[0], m), nkB = lerp(Fa.neck, Fb.neck, m), hx = lerp(hxB, Fc.head[0], chatIn), nk = lerp(nkB, Fc.neck, chatIn) - 2;
+  const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * T.sprites[row].sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
+  ctx.save(); ctx.translate(hx - T.cx, nk); ctx.rotate(hr); ctx.translate(0, nod * 18);
+  const dw = hw * hk, dh = hh * hk, [ax, ay] = T.anchor, ox = -ax * hk, oy = -ay * hk;
+  const head = (j, a) => { if (a <= 0.004) return; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh, hw, hh, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw, row * hh, hw, hh, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side
+  head(hi, (1 - hOut) * (1 - chatOut)); head(hi + 1, hIn * (1 - chatOut)); head(5, chatIn);
+  ctx.restore(); ctx.globalAlpha = 1;
+  P();
+  w.box[0] = s.x - cw * ts / 2; w.box[1] = s.base + (nk - T.floor - ay * hk) * ts; w.box[2] = s.x + cw * ts / 2; w.box[3] = s.base;
+  w.hx = s.x; w.hy = w.box[1];
+}
+function drawSeated(w, t) {
+  const a = w.pose.a, s = w.seat;
+  if (a < 1) { drawBust(w, t); if (a > 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); blit(s.patch); } } // patch: the chair's own item is skipped while s.self
+  if (a > 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = a; blit(s.ncP); ctx.globalAlpha = 1; drawFrame(w, t, a); }
+}
+// a bean bag: front bust + sitting legs, sunk a little into the bag. `alpha` crossfades with the standing walker
+function drawOnBag(w, t, bag, alpha, lean) {
+  const im = fronts[w.sprite], sprite = L.sprites[w.sprite], hu = hAt(bag.y) * 0.98 * im.height / 216, ar = im.width / im.height, ww = hu * ar, hem = sprite.hemF, [x, seat] = bag.sit;
+  const hip = seat - hu * 0.05 + Math.sin(t * 1.9 + w.ph) * hu * 0.006 + (1 - lean) * hu * 0.16;
+  ctx.globalAlpha = alpha; P();
+  drawLegSet('sit', 0, x, hip, hip + hu * 0.27, hu, ww, 1);
+  ctx.save(); ctx.translate(x, hip + hu * 0.04); ctx.rotate(bag.tilt + Math.sin(t * 0.8 + w.ph) * 0.012); ctx.drawImage(im, -ww * hem[2], -hu * hem[0], ww, hu); ctx.restore();
+  ctx.globalAlpha = 1;
+  const top = hip + hu * 0.04 - hu * hem[0];
+  if (alpha > 0.5) { w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = hip + hu * 0.27; w.hx = x; w.hy = top; }
+}
+function drawDash(w, t) { // full-body art on her bean bag: laptop while working, mug when idle
+  const s = w.seat, working = busy(w), im = working ? dashImg.laptop : dashImg.mug, Hd = hAt(s.bag.y) * 1.18, Wd = Hd * im.width / im.height, x = s.x + (working ? -6 : 2), y = s.base + Hd * 0.3;
+  const bob = working ? Math.abs(Math.sin(t * 10.5 + w.ph)) * Hd * 0.004 : Math.sin(t * 1.5 + w.ph) * Hd * 0.006; // tiny typing bob, or breathing
+  P(); ctx.globalAlpha = 0.34; ctx.drawImage(shadowSpr, x - Wd * 0.4, y - Hd * 0.09, Wd * 0.8, Hd * 0.13); ctx.globalAlpha = 1;
+  ctx.drawImage(im, x - Wd / 2, y - Hd - bob, Wd, Hd);
+  if (working) {
+    const [gx, gy] = L.dash.glow, r = Hd * (0.3 + 0.02 * Math.sin(t * 3.1)); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.3 + 0.1 * Math.sin(t * 2.2 + w.ph)) * (0.6 + 0.6 * env.n);
+    ctx.drawImage(screenGlow, x - Wd / 2 + Wd * gx - r, y - Hd + Hd * gy - r, r * 2, r * 2); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  w.box[0] = x - Wd / 2; w.box[1] = y - Hd; w.box[2] = x + Wd / 2; w.box[3] = y; w.hx = x; w.hy = y - Hd;
+}
+// painted legs (assets/legs.png): cell scaled from the body height, hip line at `hip`, sole on `floor`; waist fits the hoodie hem
+function drawLegSet(set, i, x, hip, floor, hu, ww, face) {
+  const G = L.legs, [cw, ch] = G.cell, c = G[set][i], foot = G[set + 'Foot'][i], H = (floor - hip) / (foot - G.hip), W = 0.6 * ww / G.waist * Math.min(1, 1.1 * H / (hu * 0.6)), top = hip - G.hip * H;
+  if (face > 0) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(legImg, c[0], c[1], cw, ch, -W / 2, top, W, H); ctx.restore(); } // the sheet faces left
+  else ctx.drawImage(legImg, c[0], c[1], cw, ch, x - W / 2, top, W, H);
+}
+const LEG_H = 0.33; // hip to sole, in upper-body heights
+function drawUpper(w, g, front, face, x, hip, hu0, sway, alpha) {
+  const sprite = L.sprites[w.sprite], im = front ? fronts[w.sprite] : sprites[w.sprite], hem = front ? sprite.hemF : sprite.hem, hu = hu0 * im.height / 216, ww = hu * im.width / im.height;
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, hip + hu0 * 0.035); ctx.rotate(sway); if (face < 0) ctx.scale(-1, 1);
+  ctx.drawImage(im, -ww * hem[2], -hu * hem[0], ww, hu);
+  ctx.restore();
+  return hip + hu0 * 0.035 - hu * hem[0];
+}
+function drawWalker(w, t, alpha = 1) {
+  const g = w.walk, moving = g.phase === 'go' || g.phase === 'back', front = g.front, x = g.x, f = g.y, hu = hAt(f), ww = hu * 0.64, cyc = g.stride / (Math.PI * 2);
+  const petting = g.phase === 'petting', crouch = petting ? 0.34 + Math.sin(t * 7) * 0.04 : 0, bag = g.trip?.spot?.bag && g.sitK > 0 ? g.trip.spot : null, sk = bag ? g.sitK * g.sitK * (3 - 2 * g.sitK) : 0;
+  let set = front ? 'front' : 'back', i = 0;
+  if (moving) { set = g.legs; const n = L.legs[set].length; i = ((cyc * n) % n + n) % n | 0; }
+  const bob = moving ? Math.sin(g.stride * 2) * hu * 0.006 : g.phase === 'hang' ? Math.sin(t * 2.3 + w.ph) * hu * 0.005 : Math.sin(t * 2 + w.ph) * hu * 0.004;
+  const foot = L.legs[set + 'Foot'][i], ref = L.legs[set === 'side' ? 'sideFoot' : set + 'Foot'][0]; // side frames carry their own hip drop
+  const hip = f - hu * LEG_H * (1 - crouch) * (foot - L.legs.hip) / (ref - L.legs.hip) + bob;
+  const sway = moving ? Math.sin(g.stride) * 0.03 : g.phase === 'talk' ? Math.sin(t * 3.2) * 0.03 : petting ? 0.16 * g.face + Math.sin(t * 7) * 0.03 : 0;
+  if (sk < 1) {
+    P(); ctx.globalAlpha = 0.42 * alpha * (1 - sk); ctx.drawImage(shadowSpr, x - ww * 0.42, f - hu * 0.05, ww * 0.84, hu * 0.11);
+    ctx.globalAlpha = alpha * (1 - sk); drawLegSet(set, i, x, hip, f, hu, ww, g.face);
+    let top;
+    if (g.fade > 0 && g.prev) { const m = g.fade / FADE; drawUpper(w, g, g.prev.front, g.prev.face, x, hip, hu, sway, m); top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1 - m * 0.5); }
+    else top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1);
+    ctx.globalAlpha = 1;
+    w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = f;
+    w.hx = x; w.hy = top;
+  }
+  if (bag) drawOnBag(w, t, bag, sk, sk);
+  if (g.demo && g.phase !== 'back' && g.phase !== 'sit') { // demo only: the paper note in hand
+    ctx.save(); ctx.translate(x + g.face * ww * 0.36, hip - hu * 0.45); ctx.rotate(-0.25 * g.face + Math.sin(t * 6) * 0.08);
+    ctx.drawImage(noteSpr, -hu * 0.08, -hu * 0.1, hu * 0.16, hu * 0.2); ctx.restore();
+  }
+}
+function drawWorker(w, t) {
+  const g = w.walk, s = w.seat;
+  if (s.stand) { drawStanding(w, t); return; }
+  if (s.bag) { if (!g || g.phase === 'rise' || g.phase === 'sit') { drawDash(w, t); return; } return drawWalker(w, t); }
+  if (!g || g.phase === 'rise' || g.phase === 'settle') return drawSeated(w, t);
+  if (g.phase === 'stand' || g.phase === 'sit') { // dissolve between the chair pose and the standing body, the plate chair comes back under it
+    const a = w.pose.a; ctx.setTransform(1, 0, 0, 1, 0, 0); if (a > 0) { ctx.globalAlpha = a; blit(s.ncP); ctx.globalAlpha = 1; drawFrame(w, t, a); }
+    return drawWalker(w, t, 1 - a);
+  }
+  drawWalker(w, t);
+}
+function drawStanding(w, t) { // fallback for bots beyond the seats: a bust on a standing spot
+  const s = w.seat, im = fronts[w.sprite], ww = s.h * im.width / im.height;
+  P(); ctx.globalAlpha = 0.5; ctx.drawImage(shadowSpr, s.x - ww * 0.45, s.top + s.h * 0.9, ww * 0.9, s.h * 0.1); ctx.globalAlpha = 1;
+  ctx.drawImage(im, s.x - ww / 2, s.top + Math.sin(t * 1.7 + w.ph) * s.h * 0.006, ww, s.h);
+  w.box[0] = s.x - ww / 2; w.box[1] = s.top; w.box[2] = s.x + ww / 2; w.box[3] = s.clip; w.hx = s.x; w.hy = s.top;
+}
+// monitors: the content is warped into the glass quad at the screen refresh (true trapezoid in 12 strips: an affine map ignores the 4th corner and spills past the bezel),
+// glow included, then cut by a soft rounded mask of the glass. Per frame it is one blit, and nothing leaves the glass.
+function glassPath(g, Q, r) {
+  g.beginPath(); const n = Q.length;
+  for (let i = 0; i < n; i++) { const a = Q[i], b = Q[(i + 1) % n], c = Q[(i + 2) % n], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; if (!i) g.moveTo(mx, my); g.arcTo(b[0], b[1], (b[0] + c[0]) / 2, (b[1] + c[1]) / 2, r); }
+  g.closePath();
+}
+function buildMonitors() {
+  for (const m of monitors) {
+    const dq = m.q.map(([x, y]) => [offX + x * k, offY + y * k]), bx = Math.floor(Math.min(...dq.map(p => p[0]))) - 1, by = Math.floor(Math.min(...dq.map(p => p[1]))) - 1, W = Math.ceil(Math.max(...dq.map(p => p[0]))) - bx + 2, H = Math.ceil(Math.max(...dq.map(p => p[1]))) - by + 2;
+    m.bx = bx; m.by = by; m.dq = dq.map(([x, y]) => [x - bx, y - by]);
+    if (!m.wc || m.wc.width !== W || m.wc.height !== H) { m.wc = mk(W, H); m.wg = m.wc.getContext('2d'); m.mask = mk(W, H); }
+    const g = m.mask.getContext('2d'), r = 2.6 * k; g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+    g.fillStyle = '#fff'; glassPath(g, m.dq, r); g.fill();
+    g.globalCompositeOperation = 'destination-out'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,.34)'; // feathered edge
+    for (const w of [1.6, 0.9]) { g.lineWidth = w * k; glassPath(g, m.dq, r); g.stroke(); }
+    if (m.cut) { g.setTransform(k, 0, 0, k, offX - bx, offY - by); polyPath(g, m.cut); g.fillStyle = '#000'; g.fill(); }
+  }
+}
+const lerp2 = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u], STRIPS = 12;
+function warpMonitor(m, t, working, error) {
+  const G = m.wg, [TL, TR, BR, BL] = m.dq, W = m.wc.width, H = m.wc.height, sw = SW / STRIPS;
+  G.setTransform(1, 0, 0, 1, 0, 0); G.globalCompositeOperation = 'source-over'; G.globalAlpha = m.desk.id === 'boss' ? 0.92 : m.occ ? 0.98 : 0.8; G.clearRect(0, 0, W, H);
+  for (let i = 0; i < STRIPS; i++) {
+    const a = lerp2(TL, TR, i / STRIPS), b = lerp2(TL, TR, (i + 1) / STRIPS), c = lerp2(BL, BR, i / STRIPS), sx = i * sw;
+    G.setTransform((b[0] - a[0]) / sw, (b[1] - a[1]) / sw, (c[0] - a[0]) / SH, (c[1] - a[1]) / SH, a[0] - sx * (b[0] - a[0]) / sw, a[1] - sx * (b[1] - a[1]) / sw);
+    G.drawImage(m.c, sx, 0, sw + 0.7, SH, sx, 0, sw + 0.7, SH);
+  }
+  G.setTransform(1, 0, 0, 1, 0, 0); G.globalCompositeOperation = 'lighter'; // the screen's own glow, on the glass
+  const r = W * (working ? 0.75 : 0.62); G.globalAlpha = (working ? 0.26 + 0.08 * Math.sin(t * 5 + m.idx) : 0.12) * (0.6 + 0.6 * env.n);
+  G.drawImage(error ? redGlow : screenGlow, W / 2 - r, H / 2 - r * 0.8, r * 2, r * 1.6);
+  G.globalAlpha = 1; G.globalCompositeOperation = 'destination-in'; G.drawImage(m.mask, 0, 0);
+}
+function drawMonitor(m, t, redraw) {
+  const occ = m.desk.id === 'boss' ? m.desk._boss : m.occ;
+  const working = occ?.status === 'working', error = occ?.status === 'error';
+  if (redraw) { drawScreen(m.g, m.kind, t + m.idx * 1.3, { accent: m.desk.accent, seed: m.desk.id.length * 7 + m.idx, working, error, portfolio: S?.portfolio, usage: S?.usage, bots: liveBots }); warpMonitor(m, t, working, error); }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(m.wc, m.bx, m.by);
+}
+let liveBots = [];
+function refreshOccupants() {
+  liveBots = (S?.bots || []).filter(b => b.status !== 'moved_out' && !HIDDEN_IDS.has(b.id));
+  for (const m of monitors) m.occ = seats.find(s => s.desk === m.desk && s.idx === m.idx)?.bot;
+  for (const d of L.desks) d._boss = seats.find(s => s.desk === d && s.idx === 0)?.bot;
+}
+
+// ---------- labels + bubbles: cached bitmaps drawn on the canvas; transparent DOM pills stay as click targets ----------
+let labelFont = 0, labelCache = new Map(), bubbleCache = new Map();
+function fontSize() {
+  const vs = Math.min(innerWidth / 1280, innerHeight / 800);
+  return EMBED ? Math.max(11, Math.min(20, 12 * vs)) : Math.max(13, Math.min(26, 15.5 * vs));
+}
+const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+function labelBitmap(w) {
+  const b = w.bot, acc = w.seat.desk.accent, mx = wl.reduce((a, v) => Math.max(a, Math.round(v.bot.usage_pct || 0)), 0), key = `${w.label}|${b.status}|${acc}|${mx}`;
+  let c = labelCache.get(key); if (c) return c;
+  // two rows: name on top, `1.4d · 18%` underneath in a smaller font (about half the width of one row)
+  const f = labelFont, S2 = dpr * qual.scale, fp = f * S2, fs = fp * 0.7, pad = fp * 0.55, dot = fp * 0.42, r1 = fp * 1.12, r2 = fs * 1.2, hgt = Math.round(r1 + r2 + fp * 0.28);
+  const m = mk(1, 1).getContext('2d');
+  const name = b.name, rest = w.label.slice(name.length + 3), k = rest.indexOf(' · '), tm = k < 0 ? rest : rest.slice(0, k), pc = k < 0 ? '' : rest.slice(k);
+  m.font = `700 ${fp}px ${SANS}`; const nw = m.measureText(name).width;
+  m.font = `600 ${fs}px ${SANS}`; const tw = m.measureText(tm).width, w2 = tw + m.measureText(pc).width;
+  const W = Math.round(pad * 2 + dot + fp * 0.38 + Math.max(nw, w2)), sh = Math.ceil(fp * 0.5), rad = Math.min(hgt / 2, fp * 0.62);
+  c = mk(W + sh * 2, hgt + sh * 2); const g = c.getContext('2d');
+  const col = b.status === 'error' ? [255, 122, 102] : b.status === 'working' ? [166, 214, 126] : hexRgb(acc);
+  g.translate(sh, sh);
+  g.shadowColor = 'rgba(8,4,14,.55)'; g.shadowBlur = sh; g.shadowOffsetY = sh * 0.3;
+  g.fillStyle = b.status === 'error' ? 'rgba(70,18,22,.86)' : 'rgba(20,16,32,.82)'; g.beginPath(); g.roundRect(0, 0, W, hgt, rad); g.fill();
+  g.shadowColor = 'transparent';
+  const sheen = g.createLinearGradient(0, 0, 0, hgt); sheen.addColorStop(0, 'rgba(255,255,255,.16)'); sheen.addColorStop(0.5, 'rgba(255,255,255,.03)'); sheen.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = sheen; g.beginPath(); g.roundRect(0, 0, W, hgt, rad); g.fill();
+  g.strokeStyle = `rgba(${col},.95)`; g.lineWidth = Math.max(1, S2 * 1.3); g.beginPath(); g.roundRect(0.5 * g.lineWidth, 0.5 * g.lineWidth, W - g.lineWidth, hgt - g.lineWidth, rad); g.stroke();
+  const y1 = fp * 0.14 + r1 / 2, y2 = fp * 0.14 + r1 + r2 / 2 - fs * 0.04;
+  const dx = pad + dot / 2, dy = y1, gl = g.createRadialGradient(dx, dy, 0, dx, dy, dot * 1.3);
+  gl.addColorStop(0, `rgba(${col},.9)`); gl.addColorStop(0.45, `rgba(${col},.5)`); gl.addColorStop(1, `rgba(${col},0)`);
+  g.fillStyle = gl; g.fillRect(dx - dot * 1.3, dy - dot * 1.3, dot * 2.6, dot * 2.6);
+  g.fillStyle = `rgb(${col})`; g.beginPath(); g.arc(dx, dy, dot / 2, 0, 7); g.fill();
+  g.textBaseline = 'middle';
+  const tx = pad + dot + fp * 0.38;
+  g.font = `700 ${fp}px ${SANS}`;
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(name, tx, y1 + S2 * 1.1);
+  g.fillStyle = '#fff8ec'; g.fillText(name, tx, y1 + S2 * 0.2);
+  g.font = `600 ${fs}px ${SANS}`; // row 2: coloured age, then cream % of this week's pool
+  g.fillStyle = 'rgba(0,0,0,.5)'; g.fillText(tm + pc, tx, y2 + S2 * 0.9);
+  g.fillStyle = ageColor(b.last_active); g.fillText(tm, tx, y2);
+  if (pc) { const sep = ' · ', sw = m.measureText(sep).width, u = mx > 0 ? Math.min(1, Math.round(b.usage_pct || 0) / mx) : 0; g.fillStyle = 'rgba(255,226,196,.82)'; g.fillText(sep, tx + tw, y2); g.fillStyle = `hsl(${(120 * (1 - u)).toFixed(0)},80%,${(62 - 4 * Math.sin(Math.PI * u)).toFixed(0)}%)`; g.fillText(pc.slice(3), tx + tw + sw, y2); } // % of week: green 0% to red for the top user
+  c.pad = sh; labelCache.set(key, c); return c;
+}
+function bubbleBitmap(text, talk) {
+  const key = (talk ? 'T|' : 'W|') + text;
+  let c = bubbleCache.get(key); if (c) return c;
+  const S2 = dpr * qual.scale, fp = labelFont * 0.92 * S2, pad = fp * 0.7, hgt = Math.round(fp * 1.85), tail = fp * 0.55, sh = Math.ceil(fp * 0.6);
+  const m = mk(1, 1).getContext('2d'); m.font = `600 ${fp}px ${SANS}`;
+  let s = text; while (m.measureText(s).width > fp * 15 && s.length > 4) s = s.slice(0, -2);
+  if (s !== text) s = s.trimEnd() + '…';
+  const W = Math.round(m.measureText(s).width + pad * 2);
+  c = mk(W + sh * 2, hgt + tail + sh * 2); const g = c.getContext('2d'); g.translate(sh, sh);
+  const path = () => { g.beginPath(); g.roundRect(0, 0, W, hgt, hgt * 0.42); g.moveTo(W / 2 - tail * 0.8, hgt - 1); g.quadraticCurveTo(W / 2 - tail * 0.1, hgt + tail * 0.4, W / 2 - tail * 0.35, hgt + tail); g.quadraticCurveTo(W / 2 + tail * 0.5, hgt + tail * 0.2, W / 2 + tail * 0.8, hgt - 1); g.closePath(); };
+  g.shadowColor = 'rgba(30,10,30,.45)'; g.shadowBlur = sh; g.shadowOffsetY = sh * 0.35;
+  const bg = g.createLinearGradient(0, 0, 0, hgt); bg.addColorStop(0, talk ? 'rgba(255,250,240,.96)' : 'rgba(255,246,228,.94)'); bg.addColorStop(1, talk ? 'rgba(246,228,236,.94)' : 'rgba(240,226,206,.92)');
+  g.fillStyle = bg; path(); g.fill(); g.shadowColor = 'transparent';
+  g.strokeStyle = talk ? 'rgba(232,128,160,.55)' : 'rgba(166,214,126,.6)'; g.lineWidth = Math.max(1, S2); path(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.roundRect(hgt * 0.25, 2 * S2, W - hgt * 0.5, hgt * 0.22, hgt * 0.11); g.fill();
+  g.font = `600 ${fp}px ${SANS}`; g.textBaseline = 'middle'; g.fillStyle = '#3a2438'; g.fillText(s, pad, hgt / 2 + S2 * 0.5);
+  c.pad = sh; bubbleCache.set(key, c); return c;
+}
+const order = [];
+const bubbleText = w => w.walk ? (w.walk.phase === 'talk' ? w.walk.note : w.walk.say) : w.sayNow || (w.bot.status === 'working' ? (w.bot.task || 'working…') : null);
+function layoutLabels() {
+  const f = fontSize();
+  if (f !== labelFont) { labelFont = f; labelCache.clear(); bubbleCache.clear(); }
+  order.length = 0;
+  for (let i = 0; i < wl.length; i++) {
+    const w = wl[i];
+    const bm = labelBitmap(w);
+    w.lw = bm.width - bm.pad * 2; w.lh = bm.height - bm.pad * 2;
+    w.lx = offX + w.hx * k - w.lw / 2; w.ly = offY + w.hy * k - w.lh - 3 * dpr;
+    const m = 5 * dpr * qual.scale; w.lx = Math.max(m, Math.min(cv.width - w.lw - m, w.lx)); // tags at the screen edges stay fully on screen
+    const bt = bubbleText(w); w.bh = bt ? bubbleBitmap(bt, !!w.walk || !!w.sayNow).height * 0.9 : 0; // the bubble sits on top of the tag
+    order.push(w);
+  }
+  // stagger: never overlap a neighbour's tag (push the later one up)
+  order.sort((a, b) => b.ly - a.ly || a.lx - b.lx);
+  for (let i = 0; i < order.length; i++) {
+    const a = order[i];
+    for (let pass = 0; pass < 4; pass++) {
+      let hit = false;
+      for (let j = 0; j < i; j++) {
+        const b = order[j];
+        if (a.lx < b.lx + b.lw + 4 && b.lx < a.lx + a.lw + 4 && a.ly - a.bh < b.ly + b.lh + 3 && b.ly - b.bh < a.ly + a.lh + 3) { a.ly = b.ly - b.bh - a.lh - 3; hit = true; }
+      }
+      if (!hit) break;
+    }
+  }
+}
+function drawLabels() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const css = 1 / (dpr * qual.scale);
+  for (let i = 0; i < order.length; i++) {
+    const w = order[i], bm = labelBitmap(w);
+    ctx.drawImage(bm, Math.round(w.lx - bm.pad), Math.round(w.ly - bm.pad));
+    const text = bubbleText(w);
+    if (text) { const bb = bubbleBitmap(text, !!w.walk || !!w.sayNow), bx = Math.max(0, Math.min(cv.width - bb.width, w.lx + w.lw / 2 - bb.width / 2)); ctx.drawImage(bb, Math.round(bx), Math.round(w.ly - bb.height + bb.pad * 0.6)); }
+    // DOM hit target follows the bitmap (only touched when it moves)
+    const X = (w.lx * css).toFixed(1), Y = (w.ly * css).toFixed(1);
+    if (w._x !== X || w._y !== Y || w._w !== w.lw) {
+      w._x = X; w._y = Y; w._w = w.lw;
+      w.tag.style.transform = `translate(${X}px,${Y}px)`;
+      const t = w.tag.firstChild; t.style.width = (w.lw * css).toFixed(1) + 'px'; t.style.height = (w.lh * css).toFixed(1) + 'px';
+    }
+    const tk = `${w.label}|${w.bot.status}`;
+    if (w.tag._k !== tk) { w.tag._k = tk; w.tag.firstChild.firstChild.textContent = w.label; w.tag.firstChild.className = 'tag ' + w.bot.status; }
+  }
+}
+const lampTint = l => { if (!l.desk) return null; const s = seats.find(s => s.desk.id === l.desk && s.bot); return s && s.bot.status === 'error' ? redGlow : null; };
+
+let screenT = 0;
+function render(t, dt) {
+  rebuildBase(bkkHour());
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(base, 0, 0);
+  // city: far FX -> skyline from the plate -> near FX -> window frame + vines from the plate
+  P(); fx.far(ctx, t, dt, env);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.sky);
+  P(); fx.near(ctx, t, dt, env);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.fg);
+  // painter's order by plate depth
+  const redraw = (screenT -= dt) <= 0; if (redraw) screenT = 0.12;
+  let walking = 0;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.t !== 3) continue;
+    const w = it.r, g = w.walk, s = w.seat;
+    if (s.bag && (!g || g.phase === 'rise' || g.phase === 'sit')) { it.k = s.bag.depth + 1; if (g) walking++; continue; }
+    if (!g) it.k = s.clip + 0.1; // behind its own chair back (the bust), or carrying its own chair (turn frames)
+    else {
+      walking++;
+      const b = g.trip?.spot?.bag ? g.trip.spot : null;
+      if (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'sit' || g.phase === 'settle') it.k = s.clip + 0.1;
+      else if (b && g.phase === 'hang') it.k = b.depth + 1;
+      else it.k = zoneKey(g.x, g.y);
+    }
+  }
+  D.walking = walking;
+  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(dog.x, dog.y);
+  items.sort(byKey);
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    switch (it.t) {
+      case 0: drawMonitor(it.r, t, redraw); break;
+      case 1: ctx.setTransform(1, 0, 0, 1, 0, 0); blit(it.r.patch); break;
+      case 2: if (!it.r.self) { ctx.setTransform(1, 0, 0, 1, 0, 0); blit(it.r.patch); } break;
+      case 3: drawWorker(it.r, t); break;
+      case 4: ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over[it.r]); break;
+      case 5: drawDog(t); break;
+      case 6: drawBossFx(t); break;
+      case 7: drawLounge(t); break;
+    }
+  }
+  P();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < wl.length; i++) { const w = wl[i]; if (w.bot.status !== 'error' || w.walk) continue;
+    const s = w.seat, r = s.h * (0.55 + 0.08 * Math.sin(t * 3));
+    ctx.globalAlpha = 0.55; ctx.drawImage(redGlow, s.x + s.h * 0.35 - r, s.top + s.h * 0.35 - r, r * 2, r * 2);
+  }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  fx.lamps(ctx, t, env, lampTint);
+  fx.motes(ctx, t, dt, env);
+  if (layoutDirty || walking) { layoutLabels(); layoutDirty = false; }
+  if (!NOTAGS) drawLabels();
+}
+
+// ---------- input ----------
+const toPlate = ev => [(ev.clientX * dpr * qual.scale - offX) / k, (ev.clientY * dpr * qual.scale - offY) / k];
+const hit = ev => { const [x, y] = toPlate(ev); let best = null; for (const w of workers.values()) { const b = w.box; if (b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3] && (!best || b[3] > best.box[3])) best = w; } return best; };
+cv.addEventListener('click', ev => { if (!S) return; const w = hit(ev); if (w) showCard(S, w.bot.id, [ev.clientX, ev.clientY], deskInfo); else hideCard(); });
+cv.addEventListener('mousemove', ev => { cv.style.cursor = hit(ev) ? 'pointer' : 'default'; });
+const mb = document.getElementById('music');
+mb.onclick = () => { const on = window.AC.music.toggle(); mb.setAttribute('aria-pressed', on); mb.textContent = on ? '♪ music on' : '♪ music off'; };
+
+// ---------- loop: one rAF, delta time, display rate, adaptive quality, paused while hidden ----------
+let labelT = LABEL_EVERY, raf = 0, last = 0, fpsN = 0, fpsT = 0, t = 0, clockT = 0, lowFor = 0, highFor = 0, lastQChange = 0;
+function setQuality(lv, now) {
+  qual = QUALITY[lv]; D.quality = qual; fx.setQuality(qual.fx); lastQChange = now; resize();
+}
+function frame(now) {
+  raf = requestAnimationFrame(frame);
+  const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now; t += dt;
+  for (let i = 0; i < wl.length; i++) {
+    const w = wl[i];
+    if (w.walk) stepWalk(w, dt);
+    stepPose(w, dt); stepFidget(w, dt);
+    if ((w.tiltT -= dt) <= 0) { w.tiltT = 6 + rnd() * 10; w.tiltDir = rnd() < 0.5 ? -1 : 1; w.tiltA = 0; }
+    w.tiltA += dt; w.tilt = w.tiltA < 1.8 ? Math.sin(w.tiltA / 1.8 * Math.PI) * w.tiltDir : 0;
+  }
+  maybeDemo(t); if (pending.length) pump(now);
+  stepChat(dt); stepAmbient(dt);
+  stepDog(dt);
+  if ((labelT -= dt) <= 0) { labelT = LABEL_EVERY; refreshLabels(); }
+  render(t, dt);
+  if ((clockT -= dt) <= 0) { clockT = 1; clock(); }
+  fpsN++; D.frames++;
+  if (now - fpsT >= 1000) {
+    const fps = fpsN * 1000 / (now - fpsT);
+    D.turned = wl.filter(w => w.pose.b > 1).length;
+    D.fps = window.__fps = Math.round(fps); fpsEl.textContent = D.fps + ' fps'; fpsN = 0; fpsT = now;
+    // adaptive quality: < 50 fps for 2 s steps down (fewer FX, then lower internal resolution); recovers slowly
+    if (D.frames > 90 && !q.get('q')) {
+      lowFor = fps < 50 ? lowFor + 1 : 0; highFor = fps >= 58 ? highFor + 1 : 0;
+      if (lowFor >= 2 && qual.level < QUALITY.length - 1 && now - lastQChange > 2500) { setQuality(qual.level + 1, now); lowFor = 0; }
+      else if (highFor >= 20 && qual.level > 0 && now - lastQChange > 30000) { setQuality(qual.level - 1, now); highFor = 0; }
+    }
+  }
+  if (S && D.frames > 5) D.ready = true;
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+  else if (!raf) { last = 0; fpsN = 0; fpsT = performance.now(); raf = requestAnimationFrame(frame); }
+});
+
+resize();
+load().then(() => fetch(stateUrl(), { credentials: 'same-origin' }))
+  .then(r => r.status === 401 ? (location.href = '/login') : r.json())
+  .then(s => { if (!s) return; apply(s); connect(); fx.setQuality(qual.fx); D.quality = qual; fpsT = performance.now(); raf = requestAnimationFrame(frame); })
+  .catch(e => { console.error(e); setTimeout(() => location.reload(), 15000); });

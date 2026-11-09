@@ -1,0 +1,20 @@
+# Never in the public repo: credentials, live data, logs, build output, dependencies
+.secret
+.secret*
+.env
+.env.*
+*.pem
+*.key
+logs/
+*.log
+build/
+node_modules/
+__pycache__/
+.venv/
+# live bot data changes all the time and stays on the shared computer; only the frozen preview snapshot is shared
+/data/*
+!/data/snapshot/
+# generated preview and screenshot folders
+portable/preview/
+shots/
+*-shots/
