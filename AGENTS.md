@@ -41,3 +41,4 @@ David's decision, 2026-11-09: when Claude on DPro and another bot disagree, Clau
 - `public/office2d/`: the viewer. `main.js` runs the scene, `fx.js` the city, `screens.js` the monitor pictures.
 - `public/office2d/assets/`: art. Positions are in `layout.json`.
 - `bin/pages.sh`, `bin/pages-pull.sh`: the publisher. Change only with David's approval.
+- Pages auto-publish on the shared computer: `bin/pages-watch.sh start|stop|status` runs `bin/pages.sh tick` every 60 s. It does not touch Funnel.
