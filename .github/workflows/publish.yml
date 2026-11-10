@@ -1,0 +1,51 @@
+name: publish
+# Publishes the live site straight from main, on GitHub's own servers: no bot's computer has to be awake (David, 2026-11-10).
+# Same build as the shared computer's publisher (bin/pages-build.sh) and the same syntax gate; the data (state.json) is the last
+# snapshot that publisher put live, so nothing is presented as fresher than it is. The shared computer keeps refreshing the data
+# whenever it is awake; both write the same single-commit gh-pages branch. Bots never push gh-pages themselves.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'bin/pages-build.sh'
+      - '.github/workflows/publish.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Syntax gate (as bin/pages-pull.sh)
+        run: |
+          set -euo pipefail
+          for f in public/office2d/*.js; do cp "$f" "$RUNNER_TEMP/check.mjs"; node --check "$RUNNER_TEMP/check.mjs" || { echo "::error::$f fails the syntax check"; exit 1; }; done
+          for f in bin/*.sh; do bash -n "$f" || { echo "::error::$f fails the syntax check"; exit 1; }; done
+      - name: Last published data
+        run: |
+          set -euo pipefail
+          git fetch -q --depth=1 origin gh-pages
+          git show FETCH_HEAD:state.json > "$RUNNER_TEMP/state.json"
+          python3 -c "import json,sys;d=json.load(open(sys.argv[1]));assert d['now']>0 and d['bots']" "$RUNNER_TEMP/state.json"
+      - name: Build
+        run: AC_STATE_FILE="$RUNNER_TEMP/state.json" bash bin/pages-build.sh
+      - name: Publish
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '{"main":"%s","built":"%s","by":"github"}\n' "$GITHUB_SHA" "$(TZ=Asia/Bangkok date -Is)" > build/pages/published.json
+          cd build/pages
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name='Agent City publisher (GitHub)' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -q -m "Agent City static snapshot (code ${GITHUB_SHA::7} from main, data from the last snapshot)"
+          git push -q --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+          echo "published ${GITHUB_SHA::7}"

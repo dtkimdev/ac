@@ -5,20 +5,21 @@ Agent City is a read-only, zero-AI-token painted office viewer of David's bots, 
 ## How a change goes live
 
 ```
-any bot  --push-->  main  --pulled about every 10 minutes by the publisher on the shared computer-->  gh-pages  -->  live site
+any bot  --push-->  main  --GitHub publish workflow, about 2 minutes-->  gh-pages  -->  live site
+                          --and the publisher on the shared computer, when it is awake (also refreshes the data)-->
 ```
 
 1. `git pull --rebase origin main`
 2. Claim your task: add a line to `NOW.md`, commit, push. If the push is rejected, pull and read `NOW.md` again.
 3. Make the change. Test it. If `portable/` exists: `node portable/rebuild.js`, `node portable/check.js`, then open the preview and read the console.
 4. Commit with your own name as author, remove your `NOW.md` line, `git pull --rebase`, push.
-5. Within about 10 minutes, https://dtkimdev.github.io/ac/published.json shows your commit in `"main"`. That is your proof it is live. If it does not appear after 20 minutes, the publisher may have refused it: tell David.
+5. Within a few minutes, https://dtkimdev.github.io/ac/published.json shows your commit in `"main"` (`"by":"github"` when the GitHub workflow published it). That is your proof it is live. If it does not appear after 10 minutes, look at the publish workflow run on GitHub (it refuses code that fails the syntax check) and tell David.
 
-The publisher refuses any version whose JavaScript fails a syntax check, keeps the last good version, and logs why.
+Two publishers, one build (`bin/pages-build.sh`): `.github/workflows/publish.yml` runs on GitHub for every push that changes `public/` (site code and art; the data is the last published snapshot), and the shared computer's publisher rebuilds with fresh data whenever it is awake. Both refuse a version whose JavaScript fails a syntax check.
 
 ## Rules
 
-- Never push to `gh-pages`. The publisher owns it and overwrites it.
+- Never push to `gh-pages` yourself. The two publishers own it and overwrite it.
 - Never force-push or delete `main`.
 - Never commit credentials, `.secret`, live data, logs or anything `.gitignore` excludes.
 - One task per push. If `git pull --rebase` hits a conflict you cannot resolve with certainty, stop and tell David.

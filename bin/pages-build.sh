@@ -27,6 +27,8 @@ grep -q 'AC_STATIC = true' "$OUT/index.html" || { echo "index.html: static flag 
 if grep -Eq '(href|src)="/' "$OUT/index.html"; then echo "index.html: root path left"; exit 1; fi
 tmp=$(mktemp "$OUT/.state.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
-curl -sf -m 10 "http://127.0.0.1:$PORT/api/state" -o "$tmp" || { echo "state export failed (server down?)"; exit 1; }
+# AC_STATE_FILE: use this state.json instead of asking the local server (the GitHub publish workflow passes the last published snapshot)
+if [ -n "${AC_STATE_FILE:-}" ]; then cp "$AC_STATE_FILE" "$tmp"
+else curl -sf -m 10 "http://127.0.0.1:$PORT/api/state" -o "$tmp" || { echo "state export failed (server down?)"; exit 1; }; fi
 python3 -c "import json,sys;d=json.load(open(sys.argv[1]));assert d['now']>0 and d['bots']" "$tmp" 2>/dev/null || { echo "state export invalid"; exit 1; }
 chmod 644 "$tmp"; mv "$tmp" "$OUT/state.json"
