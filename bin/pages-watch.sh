@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Pages-only watcher: keeps https://dtkimdev.github.io/ac/ fresh without Funnel (zero AI tokens).
 #   bin/pages-watch.sh start    run bin/pages.sh tick now, then every 60 s (pages.sh keeps its 10 min / wake / 8 per h rules)
-#   bin/pages-watch.sh stop     stop this watcher only (never touches server.js, public.sh, tailscaled)
+#   bin/pages-watch.sh stop     stop this watcher only (never stops server.js, never touches public.sh, tailscaled)
 #   bin/pages-watch.sh status
-# Does not start Funnel or tailscaled and never calls bin/public.sh. Log logs/pages-watch.log, pid logs/pages-watch.pid.
+# Server: on start and before each tick, if 8789/healthz is not 200 twice (5 s apart), it logs
+# "server not answering, restarting" and runs bin/stop.sh; bin/start.sh. A healthy server is never restarted.
+# Does not manage Funnel: never starts Funnel or tailscaled and never calls bin/public.sh. Log logs/pages-watch.log, pid logs/pages-watch.pid.
+# Test-only overrides: AC_WATCH_HEALTHZ, AC_WATCH_HEALTH_RETRY, AC_WATCH_STOP, AC_WATCH_START.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PID=logs/pages-watch.pid; LOG=logs/pages-watch.log; EVERY=60
+HEALTHZ=${AC_WATCH_HEALTHZ:-http://127.0.0.1:8789/healthz}; RETRY=${AC_WATCH_HEALTH_RETRY:-5}
+SRV_STOP=${AC_WATCH_STOP:-bin/stop.sh}; SRV_START=${AC_WATCH_START:-bin/start.sh}
 mkdir -p logs
+healthy() { [ "$(curl -s -m 10 -o /dev/null -w '%{http_code}' "$HEALTHZ" 2>/dev/null)" = 200 ]; }
+ensure_server() { # healthz twice, RETRY s apart; if both fail, restart once (stop then start) and move on
+  healthy && return 0
+  sleep "$RETRY"; healthy && return 0
+  echo "$(date -Is) server not answering, restarting"
+  timeout -k 5 30 $SRV_STOP; timeout -k 5 30 $SRV_START
+  return 0
+}
 alive() { # 0 if the pidfile names a live process that is this watcher's loop
   local p; p=$(cat "$PID" 2>/dev/null) || return 1
   [[ "$p" =~ ^[0-9]+$ ]] && kill -0 "$p" 2>/dev/null && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q 'pages-watch.sh _loop'
@@ -17,12 +30,14 @@ case "${1:-}" in
   start)
     if alive; then echo "pages-watch already running (pid $(cat "$PID"))"; exit 0; fi
     rm -f "$PID"
+    ensure_server >> "$LOG" 2>&1
     setsid nohup "$PWD/bin/pages-watch.sh" _loop >> "$LOG" 2>&1 < /dev/null &
     echo $! > "$PID"; echo "pages-watch started (pid $!), tick every ${EVERY}s, log $LOG" ;;
   _loop)
     trap 'kill "${s:-}" 2>/dev/null; exit 0' TERM INT
     echo "$(date -Is) pages-watch loop start (pid $$)"
     while true; do
+      ensure_server
       timeout -k 10 300 bin/pages.sh tick
       sleep "$EVERY" & s=$!; wait "$s"
     done ;;
