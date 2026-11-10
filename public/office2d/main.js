@@ -21,12 +21,21 @@ const cv = document.getElementById('office'), ctx = cv.getContext('2d', { alpha:
 const tagsEl = document.getElementById('tags'), fpsEl = document.getElementById('fps');
 const D = window.__office2d = { workers: [], ready: false, frames: 0, fps: 0, loaded: false, walking: 0, interactions: 0, quality: QUALITY[0], turned: 0, corgi: null, corgi2: null, wall: {}, labels: [], plates: 'lo', glassClip: null, ambient: { away: [], lounge: [] }, assets: {} };
 
-const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('asset ' + src)); i.src = A + src + V; });
-const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
+const LIVE = [], IMGS = []; // for __office2d.memory(): every canvas made here (weakly held) and every picture loaded
+const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => { IMGS.push(i); ok(i); }; i.onerror = () => no(new Error('asset ' + src)); i.src = A + src + V; });
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); if (typeof WeakRef === 'function') LIVE.push(new WeakRef(c)); return c; };
+const free = c => { if (c) { c.width = 0; c.height = 0; } }; // hand a canvas's pixels back now: weak TVs collect garbage late, so replaced canvases piled up
+D.memory = () => { // rough estimate of picture memory, in MB: canvases still alive plus decoded pictures
+  const MB = b => +(b / 1048576).toFixed(1); let cb = cv.width * cv.height * 4, n = 1, ib = 0; const bigC = [], bigI = [];
+  for (let i = LIVE.length - 1; i >= 0; i--) { const c = LIVE[i].deref(); if (!c || !c.width) { LIVE.splice(i, 1); continue; } const b = c.width * c.height * 4; cb += b; n++; if (b > 2e6) bigC.push(`${c.width}x${c.height}`); }
+  for (const i of IMGS) { const b = i.naturalWidth * i.naturalHeight * 4; ib += b; if (b > 4e6) bigI.push(`${i.src.split('/').pop().split('?')[0]} ${MB(b)}`); }
+  return { totalMB: MB(cb + ib), canvasesMB: MB(cb), canvases: n, bigCanvases: bigC, picturesMB: MB(ib), bigPictures: bigI };
+};
 const SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans').trim() || 'system-ui, sans-serif';
 
 // ---------- assets ----------
-let L, plates, sprites, fronts, dogImg, dogImg2, legImg, fx, bossMon, bossClip, nav, turnB, turnH, nochair, dashImg = {}, masks = {}, seats = [], monitors = [], occluders = [], zones = [], standing = [], walkH = [], lng;
+// ATL: pose-sheet scale (0.5 once lite shrinks them)
+let L, plates, sprites, fronts, dogImg, dogImg2, legImg, fx, bossMon, bossClip, nav, turnB, turnH, ATL = 1, nochair, dashImg = {}, masks = {}, seats = [], monitors = [], occluders = [], zones = [], standing = [], walkH = [], lng;
 const redGlow = glowSprite('255,70,50'), screenGlow = glowSprite('150,190,255');
 async function load() {
   L = await fetch(A + 'layout.json' + V, { credentials: 'same-origin' }).then(r => r.json());
@@ -73,7 +82,7 @@ async function load() {
   D.screens = monitors.map(m => m.kind);
   propImgs = await Promise.all(PROPS.map(p => img(p.file)));
   buildStatic();
-  D.loaded = true; maybeHi();
+  D.loaded = true; maybeHi(); if (qual.lite) shrinkForLite();
   document.getElementById('loading').remove();
 }
 
@@ -153,7 +162,10 @@ function rebuildBase(h) {
   const sky = skyAt(h), key = `${qual.lite ? sky.key.split('.')[0] : sky.key}|${cv.width}x${cv.height}|${plates.hi ? 1 : 0}`; // lite skips the 30 s repaints of a sky fade
   if (key === baseKey) return; baseKey = key; fullPaint = true;
   env = sky.env; D.sky = { bucket: sky.bucket, f: sky.f, n: env.n }; const n = env.n, G = env.grade;
-  if (base.width !== cv.width || base.height !== cv.height) base = mk(cv.width, cv.height);
+  if (base.width !== cv.width || base.height !== cv.height) { free(base); base = mk(cv.width, cv.height); }
+  for (const kk in over) free(over[kk]?.c); // the patches below are all cut again: release the old pixels now
+  for (const o of occluders) free(o.patch?.c);
+  for (const s of seats) { free(s.patch?.c); free(s.ncP?.c); }
   paintBase(base.getContext('2d'), n, G, false);
   if (qual.lite) { const g = base.getContext('2d'); g.setTransform(k, 0, 0, k, offX, offY); fx.lamps(g, 0, env, lampTint); g.setTransform(1, 0, 0, 1, 0, 0); } // lite: lamp glow is baked in once
   fx.rebuild(env, k);
@@ -167,6 +179,7 @@ function rebuildBase(h) {
     g.drawImage(nb, -bx, -by); g.globalCompositeOperation = 'destination-in'; g.drawImage(nochair.dusk, ax, ay, w, h2, X - bx, Y - by, W, H);
     s.ncP = { c, x: bx, y: by };
   }
+  free(nb); // a full-screen scratch canvas
   buildMonitors();
 }
 const blit = p => ctx.drawImage(p.c, p.x, p.y);
@@ -888,7 +901,7 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   ctx.setTransform(k, 0, 0, k, offX, offY); ctx.translate(s.x + swing * 3 * sign * P2.dir * ts, s.base + Math.sin(t * 1.7 + w.ph) * 0.5 * ts); ctx.scale(up * ts, ts); ctx.translate(0, -T.floor); // scaleX is only ever the mirror
   ctx.translate(0, T.floor * 0.5); ctx.rotate(swing * 0.03 * sign); ctx.translate(0, -T.floor * 0.5); // the weight shifts with the turn
   const stepIn = win(f, 0.4, 0.52), stepOut = win(f, 0.5, 0.62), chatIn = win(P2.chat, 0.44, 0.5), chatOut = win(P2.chat, 0.5, 0.56), sx = j => j * cw, sy = row * ch;
-  const body = (j, a) => { if (a > 0.004) { ctx.globalAlpha = alpha * a; ctx.drawImage(turnB, sx(j), sy, cw, ch, -T.cx, 0, cw, ch); } };
+  const body = (j, a) => { if (a > 0.004) { ctx.globalAlpha = alpha * a; ctx.drawImage(turnB, sx(j) * ATL, sy * ATL, cw * ATL, ch * ATL, -T.cx, 0, cw, ch); } };
   body(i, (1 - stepOut) * (1 - chatOut)); body(i + 1, stepIn * (1 - chatOut)); body(5, chatIn);
   // the talking pose (5) steps in like the turn frames: it is fully drawn over an opaque old pose before the old one fades. It used to
   // cross-fade (both half see-through), so the desk screen showed through faces and caps whenever a bot started or stopped talking.
@@ -897,7 +910,7 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * T.sprites[row].sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
   ctx.save(); ctx.translate(hx - T.cx, nk); ctx.rotate(hr); ctx.translate(0, nod * 18);
   const dw = hw * hk, dh = hh * hk, [ax, ay] = T.anchor, ox = -ax * hk, oy = -ay * hk;
-  const head = (j, a) => { if (a <= 0.004) return; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh, hw, hh, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw, row * hh, hw, hh, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side
+  const head = (j, a) => { if (a <= 0.004) return; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw * ATL, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side
   head(hi, (1 - hOut) * (1 - chatOut)); head(hi + 1, hIn * (1 - chatOut)); head(5, chatIn);
   ctx.restore(); ctx.globalAlpha = 1;
   P();
@@ -1001,7 +1014,7 @@ function buildMonitors() {
   for (const m of monitors) {
     const dq = m.q.map(([x, y]) => [offX + x * k, offY + y * k]), bx = Math.floor(Math.min(...dq.map(p => p[0]))) - 1, by = Math.floor(Math.min(...dq.map(p => p[1]))) - 1, W = Math.ceil(Math.max(...dq.map(p => p[0]))) - bx + 2, H = Math.ceil(Math.max(...dq.map(p => p[1]))) - by + 2;
     m.bx = bx; m.by = by; m.dq = dq.map(([x, y]) => [x - bx, y - by]);
-    if (!m.wc || m.wc.width !== W || m.wc.height !== H) { m.wc = mk(W, H); m.wg = m.wc.getContext('2d'); m.mask = mk(W, H); }
+    if (!m.wc || m.wc.width !== W || m.wc.height !== H) { free(m.wc); free(m.mask); m.wc = mk(W, H); m.wg = m.wc.getContext('2d'); m.mask = mk(W, H); }
     const g = m.mask.getContext('2d'), r = 2.6 * k; g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
     g.fillStyle = '#fff'; glassPath(g, m.dq, r); g.fill();
     g.globalCompositeOperation = 'destination-out'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,.34)'; // feathered edge
@@ -1363,7 +1376,18 @@ let booted = false, rescued = false, labelT = LABEL_EVERY, raf = 0, last = 0, fp
 const STATS = q.has('stats'); fpsEl.hidden = !STATS; // ?stats=1 shows the speed on screen, for checking a real TV
 const applyFx = () => fx.setQuality(qual.fx, qual.lite ? LITE.cityShare : 1);
 function setQuality(lv, now) {
-  qual = QUALITY[lv]; D.quality = qual; applyFx(); lastQChange = now; resize();
+  qual = QUALITY[lv]; D.quality = qual; applyFx(); lastQChange = now; if (qual.lite) shrinkForLite(); resize();
+}
+// lite draws at most 1280 wide, so the 2560-wide room pictures and the pose sheets only cost memory at full size there.
+// Shrinks them once (about 42 MB less on a TV); the originals are released. Lite never goes back to the full picture.
+function shrinkForLite() {
+  if (!plates || plates.small) return;
+  const shrink = (im, w, h) => { const c = mk(w, h), g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, w, h); return c; };
+  const old = [plates.dusk, plates.night, turnB, turnH];
+  plates = { dusk: shrink(plates.dusk, PW, PH), night: shrink(plates.night, PW, PH), small: true };
+  turnB = shrink(turnB, Math.round(turnB.width / 2), Math.round(turnB.height / 2)); turnH = shrink(turnH, Math.round(turnH.width / 2), Math.round(turnH.height / 2)); ATL = 0.5;
+  for (const i of old) { const n = IMGS.indexOf(i); if (n >= 0) IMGS.splice(n, 1); if (i.src) i.src = ''; }
+  baseKey = '';
 }
 function frame(now) {
   raf = requestAnimationFrame(frame);
