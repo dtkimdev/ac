@@ -35,8 +35,9 @@ export const LOITER = { tripEvery: [5, 18], tripStay: [10, 32] };
 
 // Corgi moods: bigger number = picked more often. David (2026-11-10): the dogs only act cute or ask a bot for attention, so the moods
 // aimed at a bot dominate. affection: trot up, happy wiggle. ask: beg at a bot until it answers. belly: roll over at a bot's feet.
+// feed: ask a bot for food; it reaches into its pocket and feeds the dog a biscuit (David, 2026-11-10).
 // beg / begWithVisitors: beg near the lounge visitors. wander and zoomies (running about alone) are off; nap and rest are short breaks.
-export const DOG_MOODS = { wander: 0, affection: 30, ask: 26, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
+export const DOG_MOODS = { wander: 0, affection: 24, ask: 10, feed: 24, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
 // Corgi size: 1 = the original size, 1.5 = 50% bigger (David, 2026-11-10).
 export const DOG = { size: 1.5 };
 // Walking: at most this many bots move about the room at once (David, 2026-11-10: no more than 3). Others wait their turn: a trip, a visit
