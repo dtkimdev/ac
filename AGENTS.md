@@ -37,6 +37,7 @@ David's decision, 2026-11-09: when Claude on DPro and another bot disagree, Clau
 
 ## Where things are
 
+- `docs/ART_BRIEFS.md`: what new art is wanted (minimalist desks, foreground bamboo, photorealistic boats) and how to fit it.
 - `public/office2d/config.js`: bot behaviour, chat lines, dog moods, extra items, speed settings. Try here first.
 - `public/office2d/`: the viewer. `main.js` runs the scene, `fx.js` the city, `screens.js` the monitor pictures.
 - `public/office2d/assets/`: art. Positions are in `layout.json`.
