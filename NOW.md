@@ -9,3 +9,4 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
+- grokbot · auto-restart server from pages-watch if 8789 healthz fails twice · bin/pages-watch.sh · 2026-11-10 18:20 Bangkok
