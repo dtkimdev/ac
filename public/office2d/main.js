@@ -7,10 +7,10 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { BOTS, behaviorOf, LOITER, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
+import { BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=26'; // V: busts the 1 h asset cache when the art set changes
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=27'; // V: busts the 1 h asset cache when the art set changes
 const q = new URLSearchParams(location.search);
 const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
 if (EMBED) document.body.classList.add('embed');
@@ -251,8 +251,8 @@ function newWorker(b) {
   el.querySelector('.tag').onclick = ev => { ev.stopPropagation(); showCard(S, b.id, [ev.clientX, ev.clientY], deskInfo); };
   tagsEl.appendChild(el);
   return { bot: b, b: behaviorOf(b.num), tag: el, box: [0, 0, 0, 0], ph: rnd() * 7, tilt: 0, tiltT: 3 + rnd() * 10, tiltDir: 1, tiltA: 9, look: 0, walk: null, key: 0, lx: 0, ly: 0, lw: 0, lh: 0, bh: 0, hx: 0, hy: 0,
-    pose: { b: 0, hb: 0, from: 0, to: 0, t: 0, dur: 0, p: 0, dir: 1, a: 0, hold: 0, after: null, done: null, chat: 0, chatTo: 0, nod: 0 }, turnT: DEMO ? 1 + rnd() * 4.5 : 10 + rnd() * 50, label: labelText(b),
-    fid: null, fidT: 4 + rnd() * 18, fr: 0, fx: 0, fsy: 1, tripT: isDash(b) ? 8 + rnd() * 18 : 40 + rnd() * 200, sayNow: null, sayOff: 0, chatting: null };
+    pose: { b: 0, hb: 0, from: 0, to: 0, t: 0, dur: 0, p: 0, dir: 1, a: 0, hold: 0, after: null, done: null, chat: 0, chatTo: 0, nod: 0 }, turnT: DEMO ? 1 + rnd() * 4.5 : 25 + rnd() * 125, label: labelText(b),
+    fid: null, fidT: 4 + rnd() * 18, fr: 0, fx: 0, fsy: 1, tripT: isDash(b) ? 20 + rnd() * 45 : 100 + rnd() * 500, sayNow: null, sayOff: 0, chatting: null };
 }
 // ---------- last-active suffix on the name tags: `Grok · 1d`, `2h`, `15m`, `now`, `—` (from bot.last_active; whole numbers only) ----------
 // display-only: bots hidden from the office by id (bot itself untouched). bot11 Notes removed from the office v8.
@@ -328,7 +328,7 @@ function stepPose(w, dt) {
 D.turn = i => startTurn(typeof i === 'number' ? wl[i] : findWorker(i), 4);
 
 // ---------- neighbour chat: two idle desk neighbours face each other for a moment. Cosmetic: never written to the interactions feed ----------
-let nchat = null, nchatT = DEMO ? 2 : 14 + rnd() * 30;
+let nchat = null, nchatT = DEMO ? 2 : 60 + rnd() * 140;
 const freeSeated = w => w && !w.walk && !busy(w) && !w.chatting && w.pose.b === 0 && w.pose.dur === 0 && !w.seat.bag && !w.seat.stand && !w.seat.roam;
 function startChat(a, b) {
   if (nchat || !freeSeated(a) || !freeSeated(b)) return false;
@@ -346,7 +346,7 @@ function stepChat(dt) {
   for (let i = delayed.length - 1; i >= 0; i--) if ((delayed[i][0] -= dt) <= 0) { const f = delayed[i][1]; delayed.splice(i, 1); f(); }
   if (!nchat) {
     if ((nchatT -= dt) <= 0) {
-      nchatT = DEMO ? 10 : 25 + rnd() * 50;
+      nchatT = DEMO ? 10 : span(...CHAT.every);
       const ds = L.desks.map(d => seats.filter(s => s.desk === d && s.bot)).filter(p => p.length === 2 && !p[0].bag);
       for (let n = 0; n < 6; n++) { const p = ds[(rnd() * ds.length) | 0], a = p && workers.get(p[0].bot.id), b = p && workers.get(p[1].bot.id); if (a && b && startChat(a, b)) break; }
     }
@@ -1465,9 +1465,12 @@ function render(t, dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.drawImage(base, 0, 0);
   // city: far FX -> skyline from the plate -> near FX -> window frame + vines from the plate
+  const tf = PROF ? performance.now() : 0;
   P(); fx.far(ctx, t, dt, env);
   ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.sky);
+  const tn = PROF ? performance.now() : 0;
   P(); fx.near(ctx, t, dt, env);
+  if (PROF) { const n = performance.now(); D.prof = D.prof || { far: 0, near: 0 }; D.prof.far = D.prof.far * 0.95 + (tn - tf) * 0.05; D.prof.near = D.prof.near * 0.95 + (n - tn) * 0.05; }
   ctx.setTransform(1, 0, 0, 1, 0, 0); blit(over.fg);
   const redraw = (screenT -= dt) <= 0; if (redraw) screenT = 0.12;
   const walking = sortItems();
@@ -1619,6 +1622,7 @@ mb.onclick = () => { const on = window.AC.music.toggle(); mb.setAttribute('aria-
 
 // ---------- loop: one rAF, delta time, display rate, adaptive quality, paused while hidden ----------
 let booted = false, rescued = false, labelT = LABEL_EVERY, raf = 0, last = 0, fpsN = 0, fpsT = 0, t = 0, lowFor = 0, highFor = 0, slowFor = 0, lastQChange = 0;
+const PROF = q.has('prof'); // ?prof=1: time the city layers (check aid)
 const STATS = q.has('stats'); fpsEl.hidden = !STATS; // ?stats=1 shows the speed on screen, for checking a real TV
 const applyFx = () => fx.setQuality(qual.fx, qual.lite ? LITE.cityShare : 1);
 function setQuality(lv, now) {
@@ -1649,7 +1653,9 @@ function frame(now) {
   stepChat(dt); stepAmbient(dt);
   if (dogs.length) { for (const d of dogs) { dog = d; stepDog(dt); } dog = dogs[0]; stepFeeds(dt); }
   if ((labelT -= dt) <= 0) { labelT = LABEL_EVERY; refreshLabels(); }
+  const r0 = performance.now();
   if (qual.lite) renderLite(t, dt); else render(t, dt);
+  D.ms = +((D.ms || 0) * 0.95 + (performance.now() - r0) * 0.05).toFixed(2); // average time spent drawing a frame (check aid: __office2d.ms)
   fpsN++; D.frames++;
   if (now - fpsT >= 1000) {
     const fps = fpsN * 1000 / (now - fpsT);

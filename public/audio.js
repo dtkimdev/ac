@@ -1,5 +1,4 @@
-// Music. The button plays the Lofi Trance Mix by Velvet Vinyl in YouTube's embedded player (bottom of this file); if YouTube cannot load,
-// this original 90s-style lofi hip-hop, synthesized live with WebAudio (no files, no samples), plays instead. Off by default.
+// Original 90s-style lofi hip-hop, synthesized live with WebAudio (no files, no samples). Music only, no atmosphere beds. Off by default.
 // Nothing ever restarts: the groove is scheduled bar by bar forever (the chords and the voicings drift, seeded).
 'use strict';
 (function () {
@@ -106,42 +105,20 @@ const synth = {
     const buf = await c.startRendering(); ctx = keep[0]; nextT = keep[1]; bar = keep[2]; return buf;
   },
 };
-// The music (David, 2026-11-10): "Lofi Trance Mix" by Velvet Vinyl on YouTube (HTOf4foA5LE), its first 30 minutes on a loop. It plays in
-// YouTube's own embedded player, shown small in the corner while it plays (YouTube's terms ask for a visible player of at least
-// 200 x 200 px); nothing is downloaded or re-hosted. youtube-nocookie.com: no tracking cookies until it plays. If YouTube cannot load
-// (offline, blocked, an old TV browser), the generated lofi above plays instead.
-const YT_ID = 'HTOf4foA5LE', LOOP_S = 1800;
-let yt = null, ytBox = null, ytReady = false, ytFailed = false, ytLoop = null;
-function ytOpen() {
-  ytBox = document.createElement('div'); ytBox.id = 'yt';
-  ytBox.style.cssText = 'position:fixed;right:14px;bottom:46px;width:200px;height:200px;z-index:3;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 6px 24px rgba(0,0,0,.45)';
-  const f = document.createElement('iframe'); f.title = 'Lofi Trance Mix (Velvet Vinyl) on YouTube'; f.width = '200'; f.height = '200';
-  f.src = 'https://www.youtube-nocookie.com/embed/' + YT_ID + '?enablejsapi=1&autoplay=1&playsinline=1&rel=0&start=0&end=' + LOOP_S + '&origin=' + encodeURIComponent(location.origin);
-  f.allow = 'autoplay; encrypted-media; picture-in-picture'; f.referrerPolicy = 'strict-origin-when-cross-origin'; f.style.cssText = 'border:0;width:100%;height:100%';
-  ytBox.appendChild(f); document.body.appendChild(ytBox);
-  const made = () => { try { yt = new window.YT.Player(f, { events: {
-    onReady: e => { ytReady = true; if (AC.music.on) e.target.playVideo(); },
-    onStateChange: e => { if (e.data === 0) { e.target.seekTo(0, true); e.target.playVideo(); } }, // ended (at 30:00): back to the start
-    onError: () => fallback() } }); } catch (e) { fallback(); } };
-  if (window.YT && window.YT.Player) made(); else { const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { if (prev) prev(); made(); };
-    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; s.onerror = fallback; document.head.appendChild(s); }
-  setTimeout(() => { if (!ytReady) fallback(); }, 12000);
-  ytLoop = setInterval(() => { try { if (ytReady && AC.music.on && yt.getCurrentTime() >= LOOP_S - 1) yt.seekTo(0, true); } catch (e) {} }, 4000);
-}
-function fallback() {
-  if (ytFailed) return; ytFailed = true; clearInterval(ytLoop); if (ytBox) ytBox.remove(); ytBox = null;
-  if (AC.music.on && !synth.on) synth.toggle();
+// The button (David, 2026-11-11): the generated lofi above, no video and no pop-up; while it plays a small line of text above the
+// button names the track. (The YouTube mix was dropped: YouTube's terms need its player visible, and David wanted no video.)
+const TRACK = 'Agent City Lofi · generated live';
+let label = null;
+function showLabel(on) {
+  if (!label) { label = document.createElement('div'); label.id = 'track'; label.textContent = '♪ ' + TRACK; label.setAttribute('aria-live', 'polite');
+    label.style.cssText = 'position:fixed;right:16px;bottom:40px;z-index:2;font:500 10px var(--sans,system-ui);color:var(--dim,#bbb);opacity:.85;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.6);transition:opacity .4s';
+    document.body.appendChild(label); }
+  label.style.opacity = on ? '.85' : '0';
 }
 AC.music = {
   on: false,
-  toggle() {
-    this.on = !this.on;
-    if (ytFailed) { if (synth.on !== this.on) synth.toggle(); return this.on; }
-    if (this.on) { if (!ytBox) ytOpen(); else { ytBox.style.display = ''; if (ytReady) yt.playVideo(); } }
-    else if (ytBox) { if (ytReady) yt.pauseVideo(); ytBox.style.display = 'none'; }
-    return this.on;
-  },
+  toggle() { this.on = synth.toggle(); showLabel(this.on); return this.on; },
   _render: synth._render,
-  _state() { try { return ytFailed ? 'synth' : ytReady ? { state: yt.getPlayerState(), at: Math.round(yt.getCurrentTime()) } : 'loading'; } catch (e) { return 'error'; } }, // check aid
+  track: TRACK,
 };
 })();

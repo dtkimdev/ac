@@ -146,11 +146,11 @@ export function makeFx(L, rnd, img) {
   if (L.nearGlass) { const [a, b, y1] = L.nearGlass; glass.rect(a * PW, WY1, (b - a) * PW, y1 * PH - WY1); } // the window band behind the back-right desk: only the water draws there (water-mask.png)
   const paneCount = (L.panes || [0]).length * 2;
   const wbox = L.masks.water ? [L.masks.water[0] * PW, L.masks.water[1] * PH, L.masks.water[2] * PW, L.masks.water[3] * PH] : null;
-  let waterC = null, waterG = null;
+  let waterC = null, waterG = null, waterAge = 1;
   // light paths on the water (David, 2026-11-10): under the painted sun a column of glitter that flickers and drifts on the swell, warm at
   // sunset, and under the moon a cooler one at night. Far glints are small and packed, near ones larger and spread wider (perspective).
   const lightPaths = [['sun', '255,196,118'], ['moon', '214,224,255']].filter(([k]) => L[k] && wbox).map(([k, c]) => ({ k, x: L[k][0] * PW, col: glowSprite(c, 32, 0.3), sheen: pathSprite(c),
-    gl: Array.from({ length: 110 }, () => { const v = Math.pow(rnd(), 0.8); return { v, u: (rnd() + rnd() + rnd() - 1.5) / 1.5, ph: rnd() * 7, sp: 1.2 + rnd() * 3.4, w: 0.7 + rnd() * 0.9 }; }) }));
+    gl: Array.from({ length: 40 }, () => { const v = Math.pow(rnd(), 0.8); return { v, u: (rnd() + rnd() + rnd() - 1.5) / 1.5, ph: rnd() * 7, sp: 1.2 + rnd() * 3.4, w: 0.7 + rnd() * 0.9 }; }) }));
   const vwake = vWakeSprite(), wakes = []; for (let i = 0; i < 48; i++) wakes.push({ on: false, x: 0, y: 0, age: 0, dir: 1, sc: 1 });
   const neon = (L.neon || []).map(([x0, y0, x1, y1, rgb]) => ({ x0: x0 * PW, y0: y0 * PH, x1: x1 * PW, y1: y1 * PH, glow: glowSprite(rgb.join(','), 64, 0.3), v: 1, t: 8 + rnd() * 30, buzz: 0, off: 0, ph: rnd() * 7 }));
   const darkBlob = glowSprite('22,14,34', 32, 0.5);
@@ -228,7 +228,7 @@ export function makeFx(L, rnd, img) {
     .map(([x, y0, y1, rgb], i) => ({ x, y0, y1, glow: glowSprite(rgb, 32, 0.25), ph: rnd(), sp: 26 + rnd() * 30, gap: 2.5 + rnd() * 5, i }));
   const beaconSpr = glowSprite('255,60,50', 32, 0.3);
   // city lights just above the water -> shimmering vertical reflections
-  const refl = wbox ? lights.filter(l => l.x > wbox[0] + 4 && l.x < wbox[2] - 4 && l.y > wbox[1] - 60 && l.y < wbox[1] + 30).slice(0, 34)
+  const refl = wbox ? lights.filter(l => l.x > wbox[0] + 4 && l.x < wbox[2] - 4 && l.y > wbox[1] - 60 && l.y < wbox[1] + 30).slice(0, 18)
     .map(l => ({ x: l.x, y: Math.max(l.y + 5, wbox[1] + 2), c: l.c, ph: rnd() * 7, h: 10 + rnd() * 16 })) : [];
   for (const n of (L.neon || [])) { const x = (n[0] + n[2]) / 2 * PW; if (wbox && x > wbox[0] && x < wbox[2]) refl.push({ x, y: wbox[1] + 3, c: 1, ph: rnd() * 7, h: 22 }); }
   const reflW = reflSprite('255,206,140'), reflC = reflSprite('170,210,255');
@@ -514,8 +514,13 @@ export function makeFx(L, rnd, img) {
     // painted water (water-mask.png) so nothing lands on bridges, piers or land
     water(ctx, t, dt, env) {
       if (!wbox || !img.water) return;
-      const m = ctx.getTransform(), k = m.a, [x0, y0, x1, y1] = wbox, W = Math.ceil((x1 - x0) * k) + 1, H = Math.ceil((y1 - y0) * k) + 1;
-      if (!waterC || waterC.width !== W || waterC.height !== H) { waterC = canvas(W, H); waterG = waterC.getContext('2d'); }
+      // kept light (David, 2026-11-11: it lagged): the layer is drawn at about plate resolution, not screen resolution, and refreshed at
+      // most 30 times a second; in between the last one is reused. Soft water hides the lower resolution.
+      const [x0, y0, x1, y1] = wbox, k = Math.min(1.25, ctx.getTransform().a), W = Math.ceil((x1 - x0) * k) + 1, H = Math.ceil((y1 - y0) * k) + 1;
+      if (!waterC || waterC.width !== W || waterC.height !== H) { waterC = canvas(W, H); waterG = waterC.getContext('2d'); waterAge = 1; }
+      waterAge += dt; for (const wk of wakes) if (wk.on) { wk.age += dt; if (wk.age > 3.2) wk.on = false; }
+      if (waterAge < 1 / 30) { ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(waterC, x0, y0, W / k, H / k); return; }
+      waterAge = 0;
       const g = waterG; g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
       g.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
       // ripples: 3 perspective bands (far = small and slow), two textures scrolling against each other
@@ -533,7 +538,7 @@ export function makeFx(L, rnd, img) {
       for (const P of lightPaths) {
         const A = P.k === 'sun' ? (1 - env.n) * (0.55 + 0.45 * env.golden) * 1.25 : env.n * 0.85; if (A < 0.02) continue;
         const top = y0 + 1, H = y1 - top, sway = Math.sin(t * 0.21) * 1.5;
-        g.globalAlpha = A * (P.k === 'sun' ? 0.32 : 0.22) * (0.9 + 0.1 * Math.sin(t * 0.7)); g.drawImage(P.sheen, P.x - 9 + sway, top, 18, H * 0.55); g.drawImage(P.sheen, P.x - 26 + sway, top + H * 0.15, 52, H * 0.85);
+        g.globalAlpha = A * (P.k === 'sun' ? 0.32 : 0.22) * (0.9 + 0.1 * Math.sin(t * 0.7)); g.drawImage(P.sheen, P.x - 18 + sway, top, 36, H);
         const ng = Math.round(P.gl.length * (0.45 + 0.55 * fxq));
         for (let i = 0; i < ng; i++) {
           const q = P.gl[i], f = Math.sin(t * q.sp + q.ph); if (f <= 0.2) continue;
@@ -565,7 +570,6 @@ export function makeFx(L, rnd, img) {
       g.globalCompositeOperation = 'lighter';
       for (const wk of wakes) {
         if (!wk.on) continue;
-        wk.age += dt; if (wk.age > 3.2) { wk.on = false; continue; }
         const L2 = (14 + wk.age * 22) * wk.sc * 4 * 0.25, Hh = (3 + wk.age * 9) * wk.sc * 4 * 0.25;
         g.globalAlpha = (1 - wk.age / 3.2) * (0.3 - 0.12 * env.n) * Math.min(1.7, 0.45 + (wk.s ?? 1));
         if (wk.dir > 0) g.drawImage(vwake, wk.x - L2, wk.y - Hh / 2, L2, Hh);

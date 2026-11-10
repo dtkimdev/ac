@@ -88,10 +88,10 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
   }
   log.push('floor');
   // ---- 1b. the kitchen corner drawn new (David, 2026-11-10): a retro two-door fridge and the wooden stand beside it in one consistent
-  // three-quarter view. Every receding edge runs along the same depth vector DV (a stand's depth: 14 px right, 22 px up), so the fridge
-  // shows its front, its right side and its top, and the stand its top and right end. The fridge is a little deeper than the stand and
+  // front-on view, flat against the back wall and parallel to the snack shelves (David, 2026-11-11): every receding edge runs straight
+  // up along DV, so the fridge and the stand show their fronts and a strip of their tops, no sides. The fridge is a little deeper than the stand and
   // both stand against the back wall. The coffee machine and the canisters are kept and stand on the new top; the floor lamp's pole is redrawn.
-  const krgb = (c, m = 1) => `rgb(${c.map(v => Math.max(0, Math.min(255, v * m)) | 0).join(",")})`, DV = [14, -22], FR = { x0: 3, x1: 79, top: 449, base: 565, d: 1.12 }, CT = { x0: 81, x1: 216, top: 500, lip: 505, kick: 556, base: 562 };
+  const krgb = (c, m = 1) => `rgb(${c.map(v => Math.max(0, Math.min(255, v * m)) | 0).join(",")})`, DV = [0, -16], FR = { x0: 3, x1: 79, top: 449, base: 565, d: 1.12 }, CT = { x0: 79, x1: 216, top: 500, lip: 505, kick: 556, base: 562 };
   const fd = [DV[0] * FR.d, DV[1] * FR.d], mv = (p, v, f = 1) => [p[0] + v[0] * f, p[1] + v[1] * f];
   const frFront = [[FR.x0, FR.top], [FR.x1, FR.top], [FR.x1, FR.base], [FR.x0, FR.base]];
   const frSide = [[FR.x1, FR.top], mv([FR.x1, FR.top], fd), mv([FR.x1, FR.base], fd), [FR.x1, FR.base]];
@@ -334,14 +334,7 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
     return { rect: [r[0] / PW, r[1] / PH, r[2] / PW, r[3] / PH], png: m.toDataURL('image/png') }; };
   const masksOut = { boss: frontMask('boss'), 'desk-fr': frontMask('numbers') };
 
-  // ---- 7. one small bamboo in the left corner: the old corner plant, half size, standing on the new floor ----
-  const plantRect = (() => { const [a, b, c, d] = L.masks['room-l']; return [a * PW, b * PH, (c - a) * PW, (d - b) * PH]; })(), PS = 0.34, px0 = 6, py1 = 717; // small, and below the fridge so its whole bottom stays in view
-  const pr = [px0, py1 - plantRect[3] * PS, plantRect[2] * PS, plantRect[3] * PS];
-  for (const k of ['dusk', 'night']) { const m = canvas(W3, H3), mg = ctx(m); mg.setTransform(S, 0, 0, S, 0, 0); drawMask(mg, 'room-l'); mg.globalCompositeOperation = 'source-in'; mg.setTransform(1, 0, 0, 1, 0, 0); mg.drawImage(O[k], 0, 0, W3, H3);
-    const g = ctx(hi[k]); g.save(); g.setTransform(S, 0, 0, S, 0, 0); g.fillStyle = 'rgba(6,3,2,.4)'; g.beginPath(); g.ellipse(pr[0] + pr[2] * 0.42, py1 - 2, pr[2] * 0.45, 5, 0, 0, 7); g.fill();
-    g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingQuality = 'high'; g.drawImage(m, plantRect[0] * S, plantRect[1] * S, plantRect[2] * S, plantRect[3] * S, pr[0] * S, pr[1] * S, pr[2] * S, pr[3] * S); g.restore(); }
-  const plantMask = (() => { const m = canvas(Math.round(pr[2] * 2), Math.round(pr[3] * 2)), g = ctx(m); g.drawImage(M['room-l'], 0, 0, m.width, m.height); return { rect: [pr[0] / PW, pr[1] / PH, (pr[0] + pr[2]) / PW, (pr[1] + pr[3]) / PH], png: m.toDataURL('image/png') }; })();
-  log.push('plant');
+  // ---- 7. (the small corner bamboo was taken out again: David, 2026-11-11) ----
 
   // ---- 7b. where the viewer animates water: the painted river (the old mask) and the new band, minus rail, posts, mullions and monitors ----
   const waterOut = (() => { const r = [392, 352, VB.x1, VB.sill], m = canvas((r[2] - r[0]) * 2, (r[3] - r[1]) * 2), g = ctx(m); g.setTransform(2, 0, 0, 2, -r[0] * 2, -r[1] * 2);
@@ -356,6 +349,7 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
 
   // ---- 8. the viewer's layout ----
   const lay = JSON.parse(JSON.stringify(L)), nav = L.nav.nodes.map(([x, y]) => [x * PW, y * PH]);
+  { const cur = await fetch(assets + 'layout.json').then(r => r.json()).catch(() => null); if (cur && cur.sprites) { lay.sprites = cur.sprites; lay.walkSide = cur.walkSide; } } // the character art's measurements (run-chars.js) stay as installed
   // a back-row seat joins the walkway behind the desks at the walkway point nearest to it (the seats moved since the template's own)
   const AISLE = L.nav.nodes.map((p, i) => [i, p]).filter(([, p]) => Math.abs(p[1] - 0.7861) < 0.004);
   const seatNode = (t, x) => t.feet[1] > 0.78 && t.feet[1] < 0.8 ? AISLE.reduce((b, a) => Math.abs(a[1][0] * PW - x) < Math.abs(b[1][0] * PW - x) ? a : b)[0] : t.node;
@@ -367,13 +361,13 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
   lay.boss.monitors = L.boss.monitors;
   lay.steam = L.steam.filter(c => c.x < 0.4); // the mugs on the boss and front-right desks are gone with the old desks
   lay.lamps = L.lamps.filter(l => l.desk !== 'boss'); // and so is the boss desk lamp
-  lay.masks.boss = masksOut.boss.rect; lay.masks['desk-fr'] = masksOut['desk-fr'].rect; lay.masks['plant-l'] = plantMask.rect;
+  lay.masks.boss = masksOut.boss.rect; lay.masks['desk-fr'] = masksOut['desk-fr'].rect; delete lay.masks['plant-l'];
   delete lay.masks['room-l']; delete lay.masks['room-r'];
   lay.masks.water = waterOut.rect; lay.nearGlass = [VB.x0 / PW, VB.x1 / PW, VB.sill / PH]; // the animated water reaches down into the window band
   lay.sun = [771 / PW, 304 / PH]; lay.moon = [634 / PW, 128 / PH]; // where the painted sun and moon are: their light paths on the water
   lay.note = (L.note || '') + '; v11: office rebuilt by portable/art/scene.js (clean floor, black four-leg desks, one monitor per bot, team desks)';
   const lo = {}; for (const k of ['dusk', 'night']) { lo[k] = canvas(2560, 1440); const g = ctx(lo[k]); g.imageSmoothingQuality = 'high'; g.drawImage(hi[k], 0, 0, 2560, 1440); }
   window.__sceneOut = { 'layout.json': JSON.stringify(lay), 'plate-dusk-hi.webp': hi.dusk.toDataURL('image/webp', 0.9), 'plate-night-hi.webp': hi.night.toDataURL('image/webp', 0.9), 'plate-dusk.webp': lo.dusk.toDataURL('image/webp', 0.9), 'plate-night.webp': lo.night.toDataURL('image/webp', 0.9),
-    'nochair-dusk.webp': atlas.dusk.toDataURL('image/webp', 0.92), 'nochair-night.webp': atlas.night.toDataURL('image/webp', 0.92), 'boss-mask.png': masksOut.boss.png, 'desk-fr-mask.png': masksOut['desk-fr'].png, 'plant-l-mask.png': plantMask.png, 'water-mask.png': waterOut.png };
+    'nochair-dusk.webp': atlas.dusk.toDataURL('image/webp', 0.92), 'nochair-night.webp': atlas.night.toDataURL('image/webp', 0.92), 'boss-mask.png': masksOut.boss.png, 'desk-fr-mask.png': masksOut['desk-fr'].png, 'water-mask.png': waterOut.png };
   return log;
 }

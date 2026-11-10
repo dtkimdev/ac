@@ -12,26 +12,29 @@ export const BOTS = {
 };
 
 // Behaviour. `default` applies to every bot; `byBot` overrides it per bot number. Times are [shortest, longest] seconds.
+// David, 2026-11-11: the bots move about 60% less (every interval below is 2.5 times what it was) and spend more time at their desks.
 export const BEHAVIOR = {
   default: {
     wanders: true,          // false: never leaves the desk for the lounge
-    tripEvery: [120, 360],  // how often an idle bot walks to the lounge
-    tripStay: [22, 62],     // how long it stays there
-    turnEvery: [30, 90],    // how often it turns round in its chair
-    fidgetEvery: [6, 26],   // how often it fidgets while seated
+    tripEvery: [300, 900],  // how often an idle bot walks to the lounge
+    tripStay: [14, 40],     // how long it stays there
+    turnEvery: [75, 225],   // how often it turns round in its chair
+    fidgetEvery: [15, 65],  // how often it fidgets while seated
     deskChat: ['…', 'haha', '👍', 'lunch?', '😂', 'nice', '👀', 'really?', '🙂', 'ok!', '☕?', 'hmm'], // said to a desk neighbour
     loungeChat: ['…', 'haha', '😂', '👍', '🙂', 'nice', '👀', '☕?'],                                 // said in the lounge
     snacks: ['☕', '🍪', '☕', '🍩', '🍎'],                                                           // shown while on a break
   },
   byBot: {
-    14: { tripEvery: [28, 83] }, // Dashboards roams far more often
+    14: { tripEvery: [70, 208] }, // Dashboards roams more often than the others
   },
 };
 export const behaviorOf = num => ({ ...BEHAVIOR.default, ...(BEHAVIOR.byBot[num] || {}) });
 
 // Bots with no desk (not listed on any desk in layout.json, for example Shopper and future bots) live in the kitchen. Between trips to
 // the coffee machine, fridge, bean bags, table and the dogs they idle at a kitchen spot. These override BEHAVIOR for them.
-export const LOITER = { tripEvery: [5, 18], tripStay: [10, 32] };
+export const LOITER = { tripEvery: [12, 45], tripStay: [10, 32] };
+// Desk neighbours turning to chat: how often a pair starts, in seconds (David, 2026-11-11: rarely).
+export const CHAT = { every: [150, 400] };
 
 // Corgi moods: bigger number = picked more often. David (2026-11-10): the dogs only act cute or ask a bot for attention, so the moods
 // aimed at a bot dominate. affection: trot up, happy wiggle. ask: beg at a bot until it answers. belly: roll over at a bot's feet.
