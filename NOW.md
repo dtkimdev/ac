@@ -9,3 +9,4 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
+- grokbot · wire live ↻ refresh_requested to Claude+Grok usage with 1h cooldown · bin/pages-pull.sh, lib/pages-refresh.js · 2026-11-10 16:21 Bangkok
