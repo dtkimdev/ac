@@ -23,6 +23,12 @@ sed -e 's#<a class="m" href="/logout">sign out</a>##' \
     -e "s#<script>window.AC = window.AC || {};#<script>window.AC = window.AC || {}; window.AC_STATIC = true; window.AC_REFRESH = '${FUNNEL}/api/pages-refresh';#" \
     -e 's#<meta charset="utf-8">#<meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">#' \
     public/office2d/index.html > "$OUT/index.html"
+# every publish gets its own code version: browsers may keep Pages files for 10 minutes, and an unversioned main.js or module
+# kept an old office on screen after a publish (David, 2026-11-10). The page itself still revalidates within 10 minutes.
+BID=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
+sed -i -e "s#src=\"office2d/main.js\"#src=\"office2d/main.js?b=$BID\"#; s#src=\"audio.js\"#src=\"audio.js?b=$BID\"#" "$OUT/index.html"
+sed -i -E "s#(from '\./[A-Za-z0-9_-]+\.js)'#\1?b=$BID'#g; s#import\('\./([A-Za-z0-9_-]+\.js)'\)#import('./\1?b=$BID')#g" "$OUT"/office2d/*.js
+grep -q "main.js?b=$BID" "$OUT/index.html" || { echo "index.html: code version not set"; exit 1; }
 grep -q 'AC_STATIC = true' "$OUT/index.html" || { echo "index.html: static flag not set"; exit 1; }
 if grep -Eq '(href|src)="/' "$OUT/index.html"; then echo "index.html: root path left"; exit 1; fi
 tmp=$(mktemp "$OUT/.state.XXXXXX")
