@@ -27,9 +27,10 @@ const BAMBOO = [
     zones: [
       { clip: 'bag-r', src: 'bag-r' },
       { clip: RUG, src: RUG, noBags: true },
-      { clip: [0, 500, 83, 556], stretch: [520, 526], base: 553 },       // the fridge's lower door (colour of rows 520-526, above its handle), continued down to its foot
-      { clip: [83, 500, 222, 556], src: [83, 466, 240, 556], noBags: true }, // the counter's drawers and plinth
-      { clip: null, floor: { shadow: [0, 222, 556], edge: [0, 150] }, src: [0, 557, 520, 717], noBags: true, noChairs: true, not: [RUG, [480, 540, 520, 720]] },
+      { clip: [16, 524, 50, 533], copy: [0, -21] },                     // the lower door's handle: a copy of the matching upper one
+      { clip: [0, 500, 83, 566], stretch: [520, 526], base: 562 },       // the fridge's lower door (colour of rows 520-526, above its handle), continued down to its foot
+      { clip: [83, 500, 222, 566], stretch: [519, 526], base: 562 },     // the counter's end panel and drawer front, continued down to its plinth
+      { clip: null, floor: { shadow: [0, 222, 566], edge: [0, 150] }, src: [0, 567, 520, 717], noBags: true, noChairs: true, not: [RUG, [480, 540, 520, 720]] },
     ] },
   { mask: 'room-r', win: [860, 380, 1280, 720], extra: [[[1186, 506], [1280, 498], [1280, 668], [1196, 668], [1182, 602]], [[1063, 632], [1100, 632], [1100, 690], [1280, 690], [1280, 720], [1063, 720]]],
     zones: [
@@ -76,6 +77,7 @@ function fill(cvs, w, hole, valid, keep) {
 // Wood floor where too little real floor is left to copy from: the floor's own colours spread smoothly over the hole (from the known floor
 // pixels only), then the painting's plank pattern on top: long boards running left-right, closer together further back, faint seams and
 // end joints, a little grain. Deterministic, so dusk and night get the same boards. The plate's dark bottom edge (y >= 717) is kept.
+const VP = [640, 330], BOARD = 15; // floor perspective, plate px: vanishing point, board width at the bottom edge
 function floorFill(cvs, w, hole, known, o = {}) {
   const W = (w[2] - w[0]) * S, H = (w[3] - w[1]) * S, R = 16;
   const hash = (a, b) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
@@ -113,13 +115,15 @@ function floorFill(cvs, w, hole, known, o = {}) {
       if (!hole[i]) continue;
       const px = w[0] + (i % W) / S, py = w[1] + ((i / W) | 0) / S;
       if (py >= 717.3) { D[i * 4] = 18; D[i * 4 + 1] = 10; D[i * 4 + 2] = 8; continue; }
-      const u = Math.log(3 + (py - 380) * 0.016) / 0.016, b = Math.floor(u), fr = u - b, sp = 3 + (py - 380) * 0.016;
-      let m = 1 + (hash(b, 7) - 0.5) * 0.07;                                   // each board a little lighter or darker
-      const seamW = 0.55 / sp; if (fr < seamW) m *= 0.9 + 0.1 * fr / seamW;     // the seam between boards
-      const jx = (px + hash(b, 3) * 140) / 140; if (jx - Math.floor(jx) < 0.6 / 140) m *= 0.95; // end joints
-      m *= 1 + 0.025 * Math.sin(px * 0.21 + hash(b, 5) * 40) * Math.sin(px * 0.047 + b);    // grain
+      // boards run front to back, towards the vanishing point VP, as in the painted floor; xb: where this board meets the bottom edge
+      const dy = Math.max(8, py - VP[1]), xb = VP[0] + (px - VP[0]) * (720 - VP[1]) / dy, u = xb / BOARD, b = Math.floor(u), fr = u - b;
+      const pxPerBoard = BOARD * dy / (720 - VP[1]);
+      let m = 1 + (hash(b, 7) - 0.5) * 0.1;                                     // each board a little lighter or darker
+      const seamW = 0.7 / pxPerBoard; if (fr < seamW) m *= 0.8 + 0.2 * fr / seamW; // the seam between boards
+      const z = 3600 / dy / 3 + hash(b, 3), dz = 3600 / dy / dy / 3; if (z - Math.floor(z) < dz * 0.8) m *= 0.86; // end joints
+      m *= 1 + 0.03 * Math.sin(xb * 0.9 + hash(b, 5) * 40) * (0.6 + 0.4 * Math.sin(z * 5.3 + b));          // grain along the board
       if (o.edge) m *= 1 - 0.3 * Math.max(0, 1 - Math.abs(px - o.edge[0]) / o.edge[1]); // the room darkens towards the picture's edge
-      if (o.shadow && px >= o.shadow[0] && px < o.shadow[1]) { const t = (py - o.shadow[2]) / 9; if (t < 1) m *= 0.55 + 0.45 * Math.max(0, t) ** 0.7; } // contact shadow under the counter and fridge
+      if (o.shadow && px >= o.shadow[0] && px < o.shadow[1]) { const d = py - o.shadow[2]; if (d < 3.2) m *= 0.3; else { const t = (d - 3.2) / 16; if (t < 1) m *= 0.5 + 0.5 * t ** 0.8; } } // recessed kick plate, then the contact shadow // contact shadow under the counter and fridge
       D[i * 4] = F[i * 3] * m; D[i * 4 + 1] = F[i * 3 + 1] * m; D[i * 4 + 2] = F[i * 3 + 2] * m;
     }
     ctx(c).putImageData(d, w[0] * S, w[1] * S);
