@@ -198,7 +198,7 @@ function rebuildBase(h) {
   free(nb); // a full-screen scratch canvas
   buildMonitors();
 }
-const blit = p => ctx.drawImage(p.c, p.x, p.y);
+const blit = p => { if (p) ctx.drawImage(p.c, p.x, p.y); }; // a seat without a chair-less patch (a new layout) simply skips it
 
 // ---------- data: seats, sprites, workers ----------
 let S = null;
@@ -296,7 +296,7 @@ function turnTo(w, to, dur, dir, done) { // ease the body from where it is to `t
   if (Math.abs(to - P.b) < 1e-3) { P.dur = 0; if (done) done(); }
 }
 function startTurn(w, hold, dir) {
-  if (!w || w.walk || w.seat.bag || w.seat.stand || w.seat.roam || w.chatting || w.pose.dur > 0 || w.pose.b > 0 || turnedNow() >= 2) return false;
+  if (!w || w.walk || w.seat.bag || w.seat.stand || w.seat.roam || w.chatting || w.pose.dur > 0 || w.pose.b > 0 || turnedNow() >= 2 || !L.turn.sprites[w.sprite]) return false; // no turn art (Dashboards): no idle turns
   const P = w.pose;
   turnTo(w, rnd() < 0.65 ? 4 : 3, TURN_T, dir || (rnd() < 0.5 ? 1 : -1), () => { P.hold = hold ?? 2 + rnd() * 3; P.after = () => turnTo(w, 0, TURN_T + 0.1 * rnd()); });
   return true;
@@ -997,8 +997,10 @@ const byKey = (a, b) => a.k - b.k;
 
 // ---------- drawing ----------
 const P = () => ctx.setTransform(k, 0, 0, k, offX, offY);
+// Dashboards has no turn-atlas row (she lived on the bean bag): at a desk her back picture (dash-back.png) sits like this
+const DASH_BUST = { sc: 0.86, neck: 128, axb: 0.5 };
 function drawBust(w, t) { // the default pose at the desk: the back bust behind the plate chair's backrest
-  const s = w.seat, b = w.bot, im = sprites[w.sprite], sp = L.turn.sprites[w.sprite], bs = s.hsc * sp.sc, ww = im.width * bs, hh = im.height * bs, top = s.neckY - sp.neck * bs, x = s.x;
+  const s = w.seat, b = w.bot, im = sprites[w.sprite], sp = L.turn.sprites[w.sprite] || DASH_BUST, bs = s.hsc * sp.sc, ww = im.width * bs, hh = im.height * bs, top = s.neckY - sp.neck * bs, x = s.x;
   const err = b.status === 'error', working = b.status === 'working', h = s.h, B = w.pose.b;
   let dx = 0, dy = Math.sin(t * 1.7 + w.ph) * h * 0.006, rot = 0, sy = 1 + Math.sin(t * 1.7 + w.ph) * 0.008;
   if (working) { dx = Math.sin(t * 23 + w.ph) * h * 0.005; dy += Math.abs(Math.sin(t * 11.5 + w.ph)) * h * 0.006; }
@@ -1026,7 +1028,7 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   // cross-fade (both half see-through), so the desk screen showed through faces and caps whenever a bot started or stopped talking.
   // head: anchored on the neck of the frame on show; the leading angle picks the painted head
   const FR = T.frames, Fa = FR[i], Fb = FR[i + 1], Fc = FR[5], lerp = (a, b, q) => a + (b - a) * q, m = win(f, 0.42, 0.58), hxB = lerp(Fa.head[0], Fb.head[0], m), nkB = lerp(Fa.neck, Fb.neck, m), hx = lerp(hxB, Fc.head[0], chatIn), nk = lerp(nkB, Fc.neck, chatIn) - 2;
-  const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * T.sprites[row].sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
+  const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * (T.sprites[row] || T.sprites[0]).sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
   ctx.save(); ctx.translate(hx - T.cx, nk); ctx.rotate(hr); ctx.translate(0, nod * 18);
   const dw = hw * hk, dh = hh * hk, [ax, ay] = T.anchor, ox = -ax * hk, oy = -ay * hk;
   const head = (j, a) => { if (a <= 0.004) return; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw * ATL, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side

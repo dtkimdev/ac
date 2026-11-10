@@ -10,7 +10,7 @@
 import { inpaint } from './inpaint.js';
 
 const PW = 1280, PH = 720, S = 3, SLAB = 4;
-const DESKS = [
+export const DESKS = [
   { id: 'video', top: [[268, 465], [491, 464], [493, 478], [492, 489], [259, 489], [259, 479]], peds: [[262, 488, 306, 536, 'L'], [444, 488, 490, 541, 'R']] },
   { id: 'sbp', top: [[541, 465], [752, 464], [761, 481], [761, 491], [531, 492], [531, 481]], peds: [[534, 490, 576, 513, 'L'], [716, 490, 757, 513, 'R']] },
   { id: 'messages', top: [[795, 460], [1012, 459], [1012, 488], [787, 488], [786, 476]], peds: [[790, 487, 837, 541, 'L'], [971, 487, 996, 506, 'R']] },
@@ -41,31 +41,31 @@ const BAMBOO = [
     ] },
 ];
 
-const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('load ' + src)); i.src = src; });
-const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
-const ctx = c => c.getContext('2d', { willReadFrequently: true });
+export const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('load ' + src)); i.src = src; });
+export const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+export const ctx = c => c.getContext('2d', { willReadFrequently: true });
 function rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; if (mx === mn) return [0, 0, l]; const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); let h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h * 60, s, l]; }
 function hsl2rgb(h, s, l) { h /= 360; const f = (p, q, t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; if (!s) return [l * 255, l * 255, l * 255]; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; return [f(p, q, h + 1 / 3) * 255, f(p, q, h) * 255, f(p, q, h - 1 / 3) * 255]; }
 const walnut = (r, g, b) => { const [, s, l] = rgb2hsl(r, g, b); return hsl2rgb(22, Math.min(0.5, s) * 0.85, l * 0.5 + 0.015); };
-const isWood = (r, g, b) => { const [h, s, l] = rgb2hsl(r, g, b); return h >= 8 && h <= 46 && s > 0.22 && l > 0.1 && l < 0.85; };
-const poly = (g, p) => { g.beginPath(); p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
+export const isWood = (r, g, b) => { const [h, s, l] = rgb2hsl(r, g, b); return h >= 8 && h <= 46 && s > 0.22 && l > 0.1 && l < 0.85; };
+export const poly = (g, p) => { g.beginPath(); p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
 
 // a bitmap over window w (plate px) at 3x, painted in plate coordinates
-function bitmap(w, paint, thr = 128) {
+export function bitmap(w, paint, thr = 128) {
   const W = (w[2] - w[0]) * S, H = (w[3] - w[1]) * S, c = canvas(W, H), g = ctx(c);
   g.setTransform(S, 0, 0, S, -w[0] * S, -w[1] * S); paint(g);
   const d = g.getImageData(0, 0, W, H).data, m = new Uint8Array(W * H);
   for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3] >= thr ? 1 : 0;
   return m;
 }
-function dilate(m, W, H, r) {
+export function dilate(m, W, H, r) {
   const t = new Uint8Array(W * H), o = new Uint8Array(W * H);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let a = 0; for (let d = -r; d <= r && !a; d++) { const xx = x + d; if (xx >= 0 && xx < W && m[y * W + xx]) a = 1; } t[y * W + x] = a; }
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let a = 0; for (let d = -r; d <= r && !a; d++) { const yy = y + d; if (yy >= 0 && yy < H && t[yy * W + x]) a = 1; } o[y * W + x] = a; }
   return o;
 }
 // fill `hole` inside window w of the given 3x canvases (all with the same fill); writes back unless `keep`
-function fill(cvs, w, hole, valid, keep) {
+export function fill(cvs, w, hole, valid, keep) {
   const W = (w[2] - w[0]) * S, H = (w[3] - w[1]) * S;
   const datas = cvs.map(c => ctx(c).getImageData(w[0] * S, w[1] * S, W, H)), F = datas.map(d => { const f = new Float32Array(W * H * 3); for (let i = 0; i < W * H; i++) { f[i * 3] = d.data[i * 4]; f[i * 3 + 1] = d.data[i * 4 + 1]; f[i * 3 + 2] = d.data[i * 4 + 2]; } return f; });
   inpaint(F, W, H, hole, valid);
@@ -78,7 +78,7 @@ function fill(cvs, w, hole, valid, keep) {
 // pixels only), then the painting's plank pattern on top: long boards running left-right, closer together further back, faint seams and
 // end joints, a little grain. Deterministic, so dusk and night get the same boards. The plate's dark bottom edge (y >= 717) is kept.
 const VP = [640, 330], BOARD = 15; // floor perspective, plate px: vanishing point, board width at the bottom edge
-function floorFill(cvs, w, hole, known, o = {}) {
+export function floorFill(cvs, w, hole, known, o = {}) {
   const W = (w[2] - w[0]) * S, H = (w[3] - w[1]) * S, R = 16;
   const hash = (a, b) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
   for (const c of cvs) {
