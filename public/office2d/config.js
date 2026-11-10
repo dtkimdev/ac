@@ -33,8 +33,12 @@ export const behaviorOf = num => ({ ...BEHAVIOR.default, ...(BEHAVIOR.byBot[num]
 // the coffee machine, fridge, bean bags, table and the dogs they idle at a kitchen spot. These override BEHAVIOR for them.
 export const LOITER = { tripEvery: [5, 18], tripStay: [10, 32] };
 
-// Corgi moods: bigger number = picked more often. begWithVisitors replaces beg while a bot is in the lounge.
-export const DOG_MOODS = { wander: 34, affection: 16, belly: 6, nap: 14, rest: 12, beg: 6, begWithVisitors: 40, zoomies: 5 };
+// Corgi moods: bigger number = picked more often. David (2026-11-10): the dogs only act cute or ask a bot for attention, so the moods
+// aimed at a bot dominate. affection: trot up, happy wiggle. ask: beg at a bot until it answers. belly: roll over at a bot's feet.
+// beg / begWithVisitors: beg near the lounge visitors. wander and zoomies (running about alone) are off; nap and rest are short breaks.
+export const DOG_MOODS = { wander: 0, affection: 30, ask: 26, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
+// Corgi size: 1 = the original size, 1.5 = 50% bigger (David, 2026-11-10).
+export const DOG = { size: 1.5 };
 
 // ---------- items ----------
 // Extra pictures placed in the room. Put the image in assets/, then add a line. x, y, w, h are in plate pixels (the room is 1280 x 720).

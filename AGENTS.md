@@ -37,9 +37,11 @@ David's decision, 2026-11-09: when Claude on DPro and another bot disagree, Clau
 
 ## Where things are
 
-- `docs/ART_BRIEFS.md`: what new art is wanted (minimalist desks, foreground bamboo, photorealistic boats) and how to fit it.
-- `public/office2d/config.js`: bot behaviour, chat lines, dog moods, extra items, speed settings. Try here first.
-- `public/office2d/`: the viewer. `main.js` runs the scene, `fx.js` the city, `screens.js` the monitor pictures.
+- `docs/ART_BRIEFS.md`: what new art is still wanted (foreground bamboo) and how to fit it.
+- `public/office2d/config.js`: bot behaviour, chat lines, dog moods and size (`DOG`), extra items, speed settings. Try here first.
+- `public/office2d/`: the viewer. `main.js` runs the scene, `fx.js` the city, `screens.js` the monitor pictures, `boats.js` the harbour boats (drawn in code; add a kind there).
+- In `main.js`: `KIT` (kitchen tasks: fridge door, coffee pour), `ERASE` (details painted out of the room pictures), the wall clock (`drawClock`).
+- `portable/art/`: one-off tools that repainted art in a headless browser: `run.js` (head holes, side-view walk bodies `walk-side.webp`), `run-desks.js` (dark walnut desks without drawers). Run them on the original pictures only.
 - `public/office2d/assets/`: art. Positions are in `layout.json`.
 - `bin/pages.sh`, `bin/pages-pull.sh`: the publisher. Change only with David's approval.
 - Pages auto-publish on the shared computer: `bin/pages-watch.sh start|stop|status` runs `bin/pages.sh tick` every 60 s. It does not touch Funnel.

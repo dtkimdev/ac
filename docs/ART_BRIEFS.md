@@ -1,5 +1,7 @@
 # Art briefs
 
+**Status 2026-11-10 (later):** briefs 1 and 3 were done in code instead. The desks are repainted dark walnut with slab legs and no drawers by `portable/art/run-desks.js`, and the boats are drawn by `public/office2d/boats.js` (no cargo ship; LED party catamaran and neon hydrofoil added). A painter may still improve either; brief 2 (bamboo) is open.
+
 Requested by David on 2026-11-10. These three need new painted art; code cannot make them convincingly. Each brief says what to make, the exact files and sizes, and how to check the result. Anyone may make the art with any image tool that can edit a masked area of a reference picture. Hand the files to Claude on DPro or push them to `main` following `AGENTS.md`; the code side is listed under each brief.
 
 The room is painted at 1280 x 720 "plate pixels". The files are 2x (`plate-*.webp`, 2560 x 1440) and 3x (`plate-*-hi.webp`, 3840 x 2160). Every room picture exists twice: dusk (`plate-dusk*`) and night (`plate-night*`), with the same layout and different lighting. Keep the painted style: soft, warm, slightly stylised 3D illustration, cozy cyberpunk Bangkok, the existing light direction (window behind, warm lamps inside).

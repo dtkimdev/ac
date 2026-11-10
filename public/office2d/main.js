@@ -7,10 +7,10 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { BOTS, behaviorOf, LOITER, DOG_MOODS, PROPS, QUALITY, LITE, REFRESH } from './config.js';
+import { BOTS, behaviorOf, LOITER, DOG_MOODS, DOG, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=20'; // V: busts the 1 h asset cache when the art set changes
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=21'; // V: busts the 1 h asset cache when the art set changes
 const q = new URLSearchParams(location.search);
 const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
 if (EMBED) document.body.classList.add('embed');
@@ -35,7 +35,7 @@ const SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans
 
 // ---------- assets ----------
 // ATL: pose-sheet scale (0.5 once lite shrinks them)
-let L, plates, sprites, fronts, dogImg, dogImg2, legImg, fx, bossMon, bossClip, nav, turnB, turnH, ATL = 1, nochair, dashImg = {}, masks = {}, seats = [], monitors = [], occluders = [], zones = [], standing = [], walkH = [], lng;
+let L, plates, sprites, fronts, sideImg = null, dogImg, dogImg2, legImg, fx, bossMon, bossClip, nav, turnB, turnH, ATL = 1, nochair, dashImg = {}, masks = {}, seats = [], monitors = [], occluders = [], zones = [], standing = [], walkH = [], lng;
 const redGlow = glowSprite('255,70,50'), screenGlow = glowSprite('150,190,255');
 async function load() {
   L = await fetch(A + 'layout.json' + V, { credentials: 'same-origin' }).then(r => r.json());
@@ -50,6 +50,8 @@ async function load() {
   fronts = r2.slice(ships.length * 2 + L.sprites.length);
   dogImg = dogI; dogImg2 = dog2I; legImg = legsI; turnB = tbI; turnH = thI; nochair = { dusk: ncD, night: ncN }; dashImg = { laptop: lapI, mug: mugI };
   D.assets = { legs: legsI.naturalWidth, corgi: dogI.naturalWidth, corgi2: dog2I.naturalWidth, turnBodies: tbI.naturalWidth, turnHeads: thI.naturalWidth, nochair: ncD.naturalWidth, dashLaptop: lapI.naturalWidth, dashMug: mugI.naturalWidth, dashFront: fronts[fronts.length - 1].naturalWidth, boats: boatI.naturalWidth, boatsLit: boatL.naturalWidth };
+  sideImg = L.walkSide ? await img(L.walkSide.file).catch(() => null) : null; // side-view walk bodies; without them sideways walkers keep the front/back body
+  buildErasers();
   initLounge();
   fx = makeFx(L, rnd, { ships: shipImgs, water: waterM, boats: boatI, boatsLit: boatL });
   D.city = () => fx.counts();
@@ -135,11 +137,24 @@ function cutPoly(poly) {
   polyPath(g, poly); g.clip(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(base, -bx, -by);
   return { c, x: bx, y: by };
 }
+// painted-out details of the room pictures: each is covered by a soft-edged copy of the picture taken dx plate px to the side.
+// The A-shaped frame at the foot of the mountain (a Ferris wheel stand without its wheel) is gone (David, 2026-11-10).
+const ERASE = [{ at: [682, 313, 36, 38], dx: -40 }];
+let erasers = { dusk: [], night: [] };
+function buildErasers() {
+  for (const key of ['dusk', 'night']) erasers[key] = ERASE.map(({ at: [x, y, w, h], dx }) => {
+    const im = plates[key], s = im.width / PW, c = mk(Math.round(w * s), Math.round(h * s)), g = c.getContext('2d');
+    g.drawImage(im, (x + dx) * s, y * s, w * s, h * s, 0, 0, c.width, c.height);
+    const m = g.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * 0.3, c.width / 2, c.height / 2, Math.max(c.width, c.height) * 0.52);
+    m.addColorStop(0, '#000'); m.addColorStop(1, 'rgba(0,0,0,0)'); g.globalCompositeOperation = 'destination-in'; g.fillStyle = m; g.fillRect(0, 0, c.width, c.height);
+    return { c, x, y, w, h };
+  });
+}
 function paintBase(g, n, G, nc) { // the plate + grade + bloom pipeline; nc = also lay the chair-less patches in, so they get the very same grade
   const PS = plates.hi && wantHi() ? plates.hi : plates; D.plates = PS === plates ? 'lo' : 'hi';
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.fillStyle = '#1c1622'; g.fillRect(0, 0, cv.width, cv.height);
   g.setTransform(k, 0, 0, k, offX, offY); g.imageSmoothingQuality = 'high';
-  const layer = (P2, im) => { g.drawImage(P2, 0, 0, PW, PH); if (nc) for (const s of seats) if (s.nc) { const [ax, ay, w, h, x, y] = s.nc; g.drawImage(im, ax, ay, w, h, x, y, w / 2, h / 2); } };
+  const layer = (P2, im) => { g.drawImage(P2, 0, 0, PW, PH); const er = erasers[P2 === PS.night ? 'night' : 'dusk']; for (const e of er) g.drawImage(e.c, e.x, e.y, e.w, e.h); if (nc) for (const s of seats) if (s.nc) { const [ax, ay, w, h, x, y] = s.nc; g.drawImage(im, ax, ay, w, h, x, y, w / 2, h / 2); } };
   if (n < 1) layer(PS.dusk, nochair.dusk);
   if (n > 0) { g.globalAlpha = n; layer(PS.night, nochair.night); g.globalAlpha = 1; }
   // grade: warm/cool wash; midday cools and lifts the golden-hour plate
@@ -477,12 +492,12 @@ function hAt(f) { // upper-body sprite height for a floor y (piecewise fit of th
   for (let i = 1; i < W.length; i++) if (f <= W[i][0] || i === W.length - 1) return W[i - 1][1] + (f - W[i - 1][0]) * (W[i][1] - W[i - 1][1]) / (W[i][0] - W[i - 1][0]);
   return W[W.length - 1][1];
 }
-function navPath(a, b) { // Dijkstra on the floor graph -> node ids after a, up to and including b
+function navPath(a, b, adj = navAdj()) { // Dijkstra on the floor graph -> node ids after a, up to and including b
   const n = nav.length, dist = new Array(n).fill(1e9), prev = new Array(n).fill(-1), done = new Array(n).fill(false); dist[a] = 0;
   for (;;) {
     let u = -1; for (let i = 0; i < n; i++) if (!done[i] && dist[i] < 1e9 && (u < 0 || dist[i] < dist[u])) u = i;
     if (u < 0 || u === b) break; done[u] = true;
-    for (const [v, d] of navAdj()[u]) if (dist[u] + d < dist[v]) { dist[v] = dist[u] + d; prev[v] = u; }
+    for (const [v, d] of adj[u]) if (dist[u] + d < dist[v]) { dist[v] = dist[u] + d; prev[v] = u; }
   }
   const p = []; for (let u = b; u >= 0 && u !== a; u = prev[u]) p.unshift(u); return p;
 }
@@ -550,9 +565,10 @@ function stepWalk(w, dt) {
   if (Math.abs(nx - g.x) > 0.01) g.face = nx > g.x ? 1 : -1;
   const ddx = Math.abs(nx - g.x), ddy = ny - g.y; // face the walk direction: front sprite toward the camera, back away
   if (Math.abs(ddy) > ddx * 0.35 && Math.abs(ddy) > 1e-3) g.front = ddy > 0;
-  if (oldF !== g.front || oldD !== g.face) { g.prev = { front: oldF, face: oldD }; g.fade = FADE; } // direction changes dissolve instead of snapping
-  // legs always match the torso: there is no side-view torso, so the side stride under a front-facing body looked twisted
-  if (ddx + Math.abs(ddy) > 1e-3) g.legs = g.front ? 'front' : 'back';
+  const oldS = g.side; if (sideImg && ddx + Math.abs(ddy) > 1e-3) g.side = ddx > Math.abs(ddy) * 1.4; // mostly sideways: the profile body (David, 2026-11-10)
+  if (oldF !== g.front || oldD !== g.face || oldS !== g.side) { g.prev = { front: oldF, face: oldD, side: oldS }; g.fade = FADE; } // direction changes dissolve instead of snapping
+  // legs always match the torso: side stride under the profile body, front or back stride under the front or back body
+  if (ddx + Math.abs(ddy) > 1e-3) g.legs = g.side ? 'side' : g.front ? 'front' : 'back';
   g.stride += Math.hypot(nx - g.x, ny - g.y) / Math.max(20, hu * 0.42) * Math.PI;
   g.x = nx; g.y = ny;
 }
@@ -588,40 +604,66 @@ function curl(x, y, s, ph, t) {
 }
 function drawSteam(t) {
   P(); for (const c of L.steam) curl(c.x * PW, c.y * PH, c.s, c.ph, t);
-  for (let i = 0; i < wl.length; i++) { const g = wl[i].walk; if (g && g.trip && g.trip.spot.id === 'coffee' && (g.phase === 'hang' || g.phase === 'petting')) curl(g.x + 9 * (g.face || 1), g.y - hAt(g.y) * 0.62, 0.8, wl[i].ph, t); } // the cup they just poured
 }
-// left-wall clock, top left on the painted wall beside the window: a small analog wall clock (brass rim, cream face, serif numerals) to
-// match the painted room. Bangkok time, repainted once a minute; dimmed at night, with a little warm lamp light on it.
-const CK = { x: 13, y: 34, w: 58, h: 58, c: null, m: -1, glow: glowSprite('255,200,140') };
-const SERIF = getComputedStyle(document.documentElement).getPropertyValue('--serif').trim() || 'Georgia, serif';
-function drawClock(t) {
-  const h = bkkHour(), m = Math.floor(h * 60);
-  if (m !== CK.m) {
-    CK.m = m; const S = 232, c = CK.c || (CK.c = mk(S, S)), g = c.getContext('2d'), R = S / 2, cx = R, cy = R; // drawn at 4x for big screens
-    g.clearRect(0, 0, S, S);
-    const rim = g.createLinearGradient(0, 0, S, S); rim.addColorStop(0, '#ecd29a'); rim.addColorStop(0.45, '#a9793a'); rim.addColorStop(1, '#5a3b19');
-    g.shadowColor = 'rgba(12,6,2,.5)'; g.shadowBlur = 14; g.shadowOffsetX = 4; g.shadowOffsetY = 7; // cast on the wall
-    g.fillStyle = rim; g.beginPath(); g.arc(cx, cy, R - 14, 0, 7); g.fill();
-    g.shadowColor = 'transparent';
-    g.fillStyle = '#3b2611'; g.beginPath(); g.arc(cx, cy, R - 27, 0, 7); g.fill();
-    const face = g.createRadialGradient(cx - 20, cy - 24, 8, cx, cy, R - 30); face.addColorStop(0, '#fcf3df'); face.addColorStop(1, '#dfcca7');
-    g.fillStyle = face; g.beginPath(); g.arc(cx, cy, R - 30, 0, 7); g.fill();
-    g.strokeStyle = '#4b3520'; g.lineCap = 'round';
-    for (let i = 0; i < 60; i++) { const a = i / 30 * Math.PI, big = i % 5 === 0, r1 = R - 37, r0 = big ? R - 49 : R - 41; g.lineWidth = big ? 4 : 1.6; g.beginPath(); g.moveTo(cx + Math.sin(a) * r0, cy - Math.cos(a) * r0); g.lineTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1); g.stroke(); }
-    g.fillStyle = '#3a2615'; g.font = `600 25px ${SERIF}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    for (const [s, f] of [['12', 0], ['3', 0.25], ['6', 0.5], ['9', 0.75]]) { const a = f * Math.PI * 2, r = R - 64; g.fillText(s, cx + Math.sin(a) * r, cy - Math.cos(a) * r + 1); }
-    const hand = (a, len, wd) => { g.save(); g.translate(cx, cy); g.rotate(a); g.beginPath(); g.moveTo(-wd / 2, 12); g.lineTo(-wd * 0.32, -len); g.lineTo(0, -len - 7); g.lineTo(wd * 0.32, -len); g.lineTo(wd / 2, 12); g.closePath(); g.fill(); g.restore(); };
-    g.fillStyle = '#26190d'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 4; g.shadowOffsetX = 0; g.shadowOffsetY = 2;
-    hand((h % 12) / 12 * Math.PI * 2, R * 0.38, 9); hand((m % 60) / 60 * Math.PI * 2, R * 0.56, 6);
-    g.shadowColor = 'transparent'; g.fillStyle = '#b08240'; g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
-    const gl = g.createLinearGradient(cx - R, cy - R, cx, cy); gl.addColorStop(0, 'rgba(255,255,255,.26)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); // glass
-    g.fillStyle = gl; g.beginPath(); g.ellipse(cx - 24, cy - 30, R * 0.42, R * 0.2, -0.65, 0, 7); g.fill();
-    D.clock = `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')}${m >= 720 ? 'pm' : 'am'}`;
+// ---------- wall clock: digital, in a walnut case like the kitchen shelves (David, 2026-11-10: digital, big, matching the room). The digits
+// are drawn as rounded amber segments, not a font, so they look the same on every screen and TV. Case and digits are two layers: at night
+// the case sits in the room's shade while the digits stay lit. ----------
+const CK = { x: 3, y: 36, w: 92, h: 50, c: null, d: null, m: -1, glow: glowSprite('255,170,90') };
+const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f]; // segments a..g per digit
+function segDigit(g, x, y, w, h, t, bits, on, off) { // one 7-segment digit, top-left x,y, stroke t, italic slant
+  const sl = 0.1 * h, P = (u, v) => [x + u * w + (1 - v) * sl, y + v * h], hv = 0.5;
+  const S = [[[0, 0], [1, 0]], [[1, 0], [1, hv]], [[1, hv], [1, 1]], [[0, 1], [1, 1]], [[0, hv], [0, 1]], [[0, 0], [0, hv]], [[0, hv], [1, hv]]];
+  g.lineCap = 'round'; g.lineWidth = t;
+  for (let i = 0; i < 7; i++) {
+    const [[u0, v0], [u1, v1]] = S[i], horiz = v0 === v1, gu = horiz ? t * 0.85 / w : 0, gv = horiz ? 0 : t * 0.85 / h;
+    const a = P(u0 + gu, v0 + gv), b = P(u1 - gu, v1 - gv);
+    g.strokeStyle = bits >> i & 1 ? on : off; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
   }
+}
+function drawClock(t) {
+  const h = bkkHour(), m = Math.floor(h * 60), S = 4, W = CK.w * S, H = CK.h * S; // drawn at 4x for big screens
+  if (!CK.c) { // the case, once
+    const c = CK.c = mk(W + 40, H + 40), g = c.getContext('2d'), o = 20;
+    g.shadowColor = 'rgba(10,5,2,.55)'; g.shadowBlur = 18; g.shadowOffsetX = 5; g.shadowOffsetY = 9; // cast on the wall
+    const wood = g.createLinearGradient(0, o, 0, o + H); wood.addColorStop(0, '#7a4f2a'); wood.addColorStop(0.5, '#5b3719'); wood.addColorStop(1, '#3a220e');
+    g.fillStyle = wood; g.beginPath(); g.roundRect(o, o, W, H, 22); g.fill(); g.shadowColor = 'transparent';
+    g.globalAlpha = 0.18; g.strokeStyle = '#2a1607'; g.lineWidth = 2; // grain
+    for (let i = 0; i < 9; i++) { const y = o + 10 + i * (H - 20) / 8; g.beginPath(); g.moveTo(o + 8, y); g.bezierCurveTo(o + W * 0.3, y + 5, o + W * 0.6, y - 5, o + W - 8, y + 2); g.stroke(); }
+    g.globalAlpha = 1; g.strokeStyle = 'rgba(255,214,160,.35)'; g.lineWidth = 3; g.beginPath(); g.roundRect(o + 2, o + 2, W - 4, H - 4, 20); g.stroke(); // lit top edge
+    const ix = o + 16, iy = o + 16, iw = W - 32, ih = H - 32, glass = g.createLinearGradient(0, iy, 0, iy + ih);
+    glass.addColorStop(0, '#1c1210'); glass.addColorStop(1, '#0c0807');
+    g.fillStyle = glass; g.beginPath(); g.roundRect(ix, iy, iw, ih, 10); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 4; g.stroke();
+    CK.inner = [ix, iy, iw, ih];
+  }
+  if (m !== CK.m) { // the digits, once a minute
+    CK.m = m; const d = CK.d || (CK.d = mk(W + 40, H + 40)), g = d.getContext('2d'), [ix, iy, iw, ih] = CK.inner;
+    g.clearRect(0, 0, d.width, d.height);
+    const h12 = Math.floor(m / 60) % 12 || 12, mm = m % 60, pm = m >= 720, digs = h12 >= 10 ? [1, h12 % 10, (mm / 10) | 0, mm % 10] : [h12, (mm / 10) | 0, mm % 10], nd = digs.length, ci = nd - 3; // ci: the colon follows this digit
+    const dh = ih * 0.66, dw = dh * 0.46, t = dh * 0.12, gap = dw * 0.36, col = dw * 0.42, ampm = dw * 0.62;
+    const total = (dw + gap) * nd + col + ampm, x0 = ix + (iw - total) / 2, y0 = iy + (ih - dh) / 2;
+    const on = '#ffc47a', off = 'rgba(255,170,90,.06)';
+    g.shadowColor = 'rgba(255,140,50,.85)'; g.shadowBlur = 14;
+    let x = x0;
+    for (let i = 0; i < nd; i++) {
+      segDigit(g, x, y0, dw, dh, t, SEG[digs[i]], on, off);
+      x += dw + gap;
+      if (i === ci) { const cx = x - gap / 2 + col / 2 - dh * 0.05; g.fillStyle = on; for (const v of [0.32, 0.7]) { g.beginPath(); g.arc(cx + (1 - v) * dh * 0.1, y0 + v * dh, t * 0.55, 0, 7); g.fill(); } x += col; }
+    }
+    g.shadowBlur = 8; g.font = `700 ${Math.round(dh * 0.27)}px ${SANS}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = on; g.fillText(pm ? 'PM' : 'AM', x + ampm / 2, y0 + dh * 0.78); g.fillStyle = off; g.fillText(pm ? 'AM' : 'PM', x + ampm / 2, y0 + dh * 0.22);
+    g.shadowBlur = 0;
+    const gl = g.createLinearGradient(ix, iy, ix + iw * 0.6, iy + ih); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.45, 'rgba(255,255,255,0)'); // glass sheen
+    g.fillStyle = gl; g.beginPath(); g.roundRect(ix, iy, iw, ih, 10); g.fill();
+    D.clock = `${h12}:${String(mm).padStart(2, '0')}${pm ? 'pm' : 'am'}`;
+  }
+  const s = 1 / S, o = 20 * s;
   P(); ctx.save(); ctx.translate(CK.x, CK.y); ctx.transform(1, 0.03, 0, 1, 0, 0); // follows the left wall a little
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.07 + 0.01 * Math.sin(t * 0.7)) * (0.3 + 0.7 * env.dark); ctx.drawImage(CK.glow, -16, -16, CK.w + 32, CK.h + 32);
-  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(CK.c, 0, 0, CK.w, CK.h);
-  if (env.n > 0) { ctx.globalAlpha = 0.55 * env.n; ctx.fillStyle = '#0d0a18'; ctx.beginPath(); ctx.arc(CK.w / 2, CK.h / 2, CK.w * 0.44, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } // night: the whole clock sits in the room's shade
+  ctx.drawImage(CK.c, -o, -o, CK.c.width * s, CK.c.height * s);
+  if (env.n > 0) { ctx.globalAlpha = 0.5 * env.n; ctx.fillStyle = '#0d0a18'; ctx.beginPath(); ctx.roundRect(0, 0, CK.w, CK.h, 5); ctx.fill(); ctx.globalAlpha = 1; } // night: the case sits in the room's shade
+  ctx.drawImage(CK.d, -o, -o, CK.d.width * s, CK.d.height * s); // the digits stay lit
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.1 + 0.015 * Math.sin(t * 0.7)) * (0.4 + 0.8 * env.dark); ctx.drawImage(CK.glow, -14, -12, CK.w + 28, CK.h + 24);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   ctx.restore();
 }
 const tripPhase = g => g.trip && g.phase !== 'back' && g.phase !== 'sit' && g.phase !== 'settle';
@@ -631,9 +673,9 @@ function pickSpot(w) {
   const list = bags.length && rnd() < 0.72 ? bags : free.length ? free : bags;
   return list.length ? list[(rnd() * list.length) | 0] : null;
 }
-function startTrip(w, force) {
+function startTrip(w, force, spotId) {
   if (!w || w.walk || w.seat.stand) return false;
-  const spot = pickSpot(w); if (!spot) return false;
+  const spot = spotId ? [...lng.spots, ...lng.bags].find(s => s.id === spotId) : pickSpot(w); if (!spot) return false;
   const pts = pathPts([w.seat.feet, ...navPath(w.seat.node, spot.node).map(n => nav[n]), [spot.x, spot.y]]), len = [];
   for (let i = 1; i < pts.length; i++) len.push(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   w.walk = { to: null, pts, len, i: 0, front: true, f: 0, dir: 1, phase: 'rise', t: 0, x: pts[0][0], y: pts[0][1], stride: 0, v: 0, face: 1, legs: 'side', prev: null, fade: 0, note: '', demo: false, say: null, sayT: 1 + rnd() * 2, sayOff: 0, stayT: span(...w.b.tripStay), pet: false, petted: false, sitK: 0, leaving: false,
@@ -650,6 +692,85 @@ function recall(w) { // back to the desk from wherever they are on the route
   g.phase = 'back'; g.t = 0; g.say = null; layoutDirty = true;
 }
 function say(g, text, dur) { g.say = text; g.sayOff = dur; layoutDirty = true; }
+// ---------- kitchen tasks (David, 2026-11-10): a bot at the fridge opens it and takes a snack; at the coffee machine it pulls a coffee
+// into a mug. Drawn over the painted fridge and machine, behind the bots; afterwards the bot holds what it got. Plate px, from the 3x plate. ----------
+const KIT = {
+  door: [1, 431, 81, 516],        // fridge top door: x0, y0, x1 (hinge side), y1
+  spout: [137, 472], tray: 482,   // espresso group head and drip tray top
+  screen: [110, 442, 124, 455],   // the machine's little display
+  fridgeT: [0.9, 3.4, 0.9],       // open, look inside, close (s)
+  coffeeT: [0.8, 3.2, 0.7],       // warm up, pour, hand-off (s)
+  snacks: ['🥪', '🍎', '🧃', '🍦', '🍩', '🥛'],
+  live: 0,                        // >0 while anything here moves (lite repaints the corner)
+};
+const kitTask = () => { for (let i = 0; i < wl.length; i++) { const g = wl[i].walk; if (g && g.task) return g.task; } return null; };
+function startKitchenTask(w, g, sp) { g.task = { kind: sp.id, t: 0, w }; g.front = false; g.face = sp.id === 'fridge' ? -1 : 1; g.say = null; }
+function stepKitchenTask(w, g, dt) { // true while the task runs
+  const k = g.task; k.t += dt; KIT.live = 0.6;
+  const T = k.kind === 'fridge' ? KIT.fridgeT : KIT.coffeeT, end = T[0] + T[1] + T[2];
+  g.front = false; g.face = k.kind === 'fridge' ? -1 : 1;
+  if (k.t < end) return true;
+  g.task = null; g.taskDone = true; g.front = true; g.prev = { front: false, face: g.face }; g.fade = FADE;
+  g.holding = k.kind === 'coffee' ? 'mug' : pick(KIT.snacks); g.stayT = Math.max(g.stayT, 6 + rnd() * 6);
+  say(g, k.kind === 'coffee' ? pick(['☕', 'ahh ☕', 'fresh!']) : g.holding, 2.4); layoutDirty = true;
+  return false;
+}
+function drawKitchen(t) {
+  const k = kitTask(); if (!k) return;
+  const [x0, y0, x1, y1] = KIT.door, dw = x1 - x0, dh = y1 - y0;
+  P();
+  if (k.kind === 'fridge') {
+    const [a, b, c] = KIT.fridgeT, u = k.t < a ? easeOut(k.t / a) : k.t < a + b ? 1 : 1 - easeOut(Math.min(1, (k.t - a - b) / c)), th = u * 1.9, cs = Math.cos(th), sn = Math.sin(th);
+    // inside: cool light, two shelves, a few things
+    const gi = ctx.createLinearGradient(0, y0, 0, y1); gi.addColorStop(0, '#e4ebf3'); gi.addColorStop(1, '#93a0b2');
+    ctx.globalAlpha = Math.min(1, u * 3); ctx.fillStyle = gi; ctx.beginPath(); ctx.roundRect(x0 + 2, y0 + 2, dw - 4, dh - 4, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(120,135,160,.55)'; for (const f of [0.38, 0.7]) ctx.fillRect(x0 + 4, y0 + dh * f, dw - 8, 1.6);
+    const things = [[0.18, 0.38, 7, 13, '#fbfbf6'], [0.32, 0.38, 6, 10, '#ff9d2e'], [0.5, 0.38, 9, 7, '#d8423a'], [0.72, 0.38, 6, 12, '#7cc46b'], [0.2, 0.7, 10, 8, '#f2d16b'], [0.45, 0.7, 7, 11, '#8fb7e8'], [0.68, 0.7, 11, 7, '#e8846b']];
+    for (const [fx, fy, w, h, col] of things) { ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(x0 + dw * fx, y0 + dh * fy - h, w, h, 2); ctx.fill(); }
+    ctx.globalAlpha = Math.min(1, u * 3) * (0.12 + 0.3 * env.n); ctx.fillStyle = '#1a1420'; ctx.fillRect(x0 + 2, y0 + 2, dw - 4, dh - 4); // the room's light level
+    ctx.globalAlpha = 1;
+    // the door swings out round its right-hand hinge, towards the room
+    { const fridgeCut = { c: base, sx: offX + x0 * k, sy: offY + y0 * k, sw: dw * k, sh: dh * k };
+      ctx.save(); ctx.translate(x1, y0);
+      if (cs > 0.02) { ctx.transform(cs, -0.08 * sn, 0, 1 + 0.06 * sn, 0, 0); ctx.drawImage(fridgeCut.c, fridgeCut.sx, fridgeCut.sy, fridgeCut.sw, fridgeCut.sh, -dw, 0, dw, dh); ctx.fillStyle = `rgba(0,0,0,${0.35 * sn})`; ctx.fillRect(-dw, 0, dw, dh); }
+      else if (cs < -0.02) { // past square: the inside of the door, light grey with its shelves
+        ctx.transform(-cs, 0.1 * sn, 0, 1 + 0.08 * sn, 0, 0);
+        const gd = ctx.createLinearGradient(0, 0, dw, 0); gd.addColorStop(0, '#d9dee6'); gd.addColorStop(1, '#a9b1bd');
+        ctx.fillStyle = gd; ctx.beginPath(); ctx.roundRect(0, 0, dw, dh, 5); ctx.fill();
+        ctx.fillStyle = 'rgba(90,100,120,.5)'; for (const f of [0.3, 0.55, 0.8]) ctx.fillRect(6, dh * f, dw - 12, 2.2);
+      }
+      ctx.restore();
+    }
+    // its light on the floor and on the bot (not in lite: lite repaints only the door)
+    if (!qual.lite) ctx.globalCompositeOperation = 'lighter'; else { ctx.globalAlpha = 1; return; }
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * u * (0.5 + 0.7 * env.dark);
+    ctx.drawImage(screenGlow, x0 - 20, y0 - 10, dw + 90, dh + 120); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  } else {
+    const [a, b, c] = KIT.coffeeT, [sx, sy] = KIT.spout, tray = KIT.tray, on = k.t < a + b + c * 0.5;
+    const [qx0, qy0, qx1, qy1] = KIT.screen; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 9);
+    ctx.drawImage(screenGlow, qx0 - 8, qy0 - 8, qx1 - qx0 + 16, qy1 - qy0 + 16); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    if (on) { // the mug under the spout, filling
+      const mw = 11, mh = 10, mx = sx - mw / 2, my = tray - mh, fill = Math.max(0, Math.min(1, (k.t - a) / b));
+      ctx.fillStyle = '#f4efe6'; ctx.beginPath(); ctx.roundRect(mx, my, mw, mh, 2); ctx.fill();
+      ctx.strokeStyle = '#f4efe6'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(mx + mw + 1, my + mh * 0.45, 2.4, -1.3, 1.3); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(mx + mw * 0.65, my + 1, mw * 0.35 - 1, mh - 2); // shade
+      if (fill > 0) { ctx.fillStyle = '#5a3418'; ctx.fillRect(mx + 1.2, my + 1.5, mw - 2.4, 1.6); }
+      if (k.t > a && k.t < a + b) { // the stream
+        ctx.strokeStyle = 'rgba(92,52,22,.95)'; ctx.lineWidth = 1.3 + 0.3 * Math.sin(t * 30); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.sin(t * 13) * 0.3, my + 1); ctx.stroke();
+      }
+      if (fill > 0.3) curl(sx, my - 2, 0.55, 1.3, t);
+    }
+  }
+}
+function drawHeld(w, g, x, hip, hu, t) { // what a bot carries back from the kitchen
+  if (!g.holding || !g.front) return;
+  const hx = x + (g.face || 1) * hu * 0.2, hy = hip - hu * 0.12;
+  if (g.holding === 'mug') {
+    const s = hu * 0.09; ctx.fillStyle = '#f4efe6'; ctx.beginPath(); ctx.roundRect(hx - s / 2, hy - s, s, s, s * 0.2); ctx.fill();
+    ctx.strokeStyle = '#f4efe6'; ctx.lineWidth = s * 0.18; ctx.beginPath(); ctx.arc(hx + s * 0.6, hy - s * 0.55, s * 0.26, -1.3, 1.3); ctx.stroke();
+    curl(hx, hy - s * 1.1, 0.6, w.ph, t);
+  } else { const s = hu * 0.16; ctx.font = `${s}px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(g.holding, hx, hy - s * 0.4); }
+}
 function stepHang(w, g, dt) {
   const sp = g.trip.spot;
   if (g.phase === 'petting') {
@@ -658,7 +779,9 @@ function stepHang(w, g, dt) {
     return;
   }
   if (g.leaving) { g.sitK -= dt / 0.65; if (g.sitK <= 0) { g.sitK = 0; g.leaving = false; recall(w); } return; }
-  if (sp.bag) { g.sitK = Math.min(1, g.sitK + dt / 0.7); g.front = true; } else { g.front = !sp.back; if (sp.face) g.face = sp.face; }
+  if (!g.task && !g.taskDone && (sp.id === 'fridge' || sp.id === 'coffee') && !kitTask()) startKitchenTask(w, g, sp);
+  if (g.task && stepKitchenTask(w, g, dt)) return;
+  if (sp.bag) { g.sitK = Math.min(1, g.sitK + dt / 0.7); g.front = true; } else { g.front = g.taskDone || !sp.back; if (sp.face && !g.taskDone) g.face = sp.face; }
   if (g.say && (g.sayOff -= dt) <= 0) { g.say = null; layoutDirty = true; }
   if ((g.stayT -= dt) <= 0 && !g.say) return recall(w);
   if ((g.sayT -= dt) > 0) return;
@@ -704,7 +827,8 @@ function stepAmbient(dt) {
     D.ambient = { away: wl.filter(w => w.walk?.trip).map(w => w.bot.name), lounge: wl.filter(w => w.walk?.phase === 'hang' || w.walk?.phase === 'petting').map(w => w.bot.name), onBag: wl.filter(w => w.walk?.sitK > 0.9).map(w => w.bot.name) };
   }
 }
-D.loungeTrip = i => { const w = typeof i === 'number' ? wl[i] : findWorker(i); return startTrip(w, true); };
+D.visit = (a, b) => { const w = findWorker(a), o = findWorker(b); if (!w || !o || w.walk || w.seat.bag || w.seat.roam) return false; startWalk(w, o, 'hi', false); return true; }; // test aid: walk a desk bot over to another
+D.loungeTrip = (i, spot) => { const w = typeof i === 'number' ? wl[i] : findWorker(i); return startTrip(w, true, spot); };
 
 // ---------- seated fidgets (idle only): lean, swivel, stretch, look around, head scratch; soft envelopes, no two alike ----------
 const FIDGETS = [['lean', 2.5, 5], ['stretch', 2, 3.2], ['look', 2.4, 4], ['scratch', 1.6, 2.6]];
@@ -733,7 +857,7 @@ const zoneKey = (x, y, hw = 0) => { for (let i = 0; i < zones.length; i++) { con
 // starts and stops, smooth turns; poses come from the painted atlas; depth-sorted by its feet ----------
 let dog = null, dogs = [], zSpr = null; // `dog` is the one being stepped; outside the step it is the primary (corgi), dogs[1] is its brown twin
 function newDog(start, im) {
-  const N = nav, adj = navAdj();
+  const N = nav, adj = dogAdj();
   return { im, N, adj, fr: L.corgi.frames, x: N[start][0], y: N[start][1], node: start, path: [], mood: 'nap', pose: DEMO ? 'sit' : 'sleep', t: DEMO ? 1.5 : 5 + rnd() * 6, face: 1, fs: 1, ph: 0, v: 0, pace: 1, seq: [], by: null, zoom: 0 };
 }
 function initDog() {
@@ -743,8 +867,12 @@ function initDog() {
     g.shadowColor = 'rgba(200,220,255,.9)'; g.shadowBlur = 8; g.fillStyle = 'rgba(250,246,255,.95)'; g.fillText('z', 24, 25); }
   dogs.forEach((d, i) => { d.out = { mode: d.pose, mood: d.mood, x: d.x, y: d.y, node: d.node, by: null }; D[i ? 'corgi2' : 'corgi'] = d.out; });
 }
-const dogPath = navPath;
-const nearestNode = (x, y) => { let best = 0, bd = 1e9; dog.N.forEach(([nx, ny], i) => { const d = Math.hypot(nx - x, ny - y); if (d < bd) { bd = d; best = i; } }); return [best, bd]; };
+// The dogs skip the walkers' corner node j3: it sits on the right end of the front-right desk, so a dog there (shorter than the desk) looked as
+// if it stood on the desktop. They reach the right aisle by the front corridor instead.
+const DOG_SKIP = ['j3'];
+let dogAdjC = null; const dogAdj = () => { if (dogAdjC) return dogAdjC; const skip = new Set(DOG_SKIP.map(n => L.nav.name[n])); dogAdjC = navAdj().map((a, i) => skip.has(i) ? [] : a.filter(([b]) => !skip.has(b))); return dogAdjC; };
+const dogPath = (a, b) => navPath(a, b, dogAdj());
+const nearestNode = (x, y) => { let best = 0, bd = 1e9; const adj = dogAdj(); dog.N.forEach(([nx, ny], i) => { if (!adj[i].length) return; const d = Math.hypot(nx - x, ny - y); if (d < bd) { bd = d; best = i; } }); return [best, bd]; };
 const span = (a, b) => a + rnd() * (b - a);
 function dogGo(node, pace, seq) { // walk to node at pace, then play seq = [[pose, seconds, fn?], ...]; an empty path plays seq right here
   const d = dog, o = dogs.find(x => x !== d), to = o.path.length ? o.path[o.path.length - 1] : o.node;
@@ -757,6 +885,12 @@ function dogSeq() {
   if (!s) return dogNext();
   d.pose = s[0]; d.t = s[1]; if (s[2]) s[2]();
 }
+function pickFriend() { // a bot the dog can reach: at a desk, in the kitchen or on a break, and not the one the other dog is with
+  const other = dogs.find(x => x !== dog), list = wl.filter(o => o !== other?.by && !o.seat.stand && !o.seat.bag && (!o.walk || o.walk.phase === 'hang') && nearestNode(...(o.walk ? [o.walk.x, o.walk.y] : o.seat.feet))[1] < 90);
+  const near = list.filter(o => o.walk || o.seat.roam); // bots on a break or in the kitchen are the favourites
+  const pool = near.length && rnd() < 0.6 ? near : list;
+  return pool[(rnd() * pool.length) | 0] || null;
+}
 function loungeBots() { const o = []; for (let i = 0; i < wl.length; i++) if (wl[i].walk?.phase === 'hang') o.push(wl[i]); return o; }
 function dogMood(m, w) {
   const d = dog, K = L.dog.beg; d.mood = m; d.by = null; d.zoom = 0;
@@ -765,15 +899,20 @@ function dogMood(m, w) {
       const slow = rnd() < 0.5, n = (rnd() * d.N.length) | 0;
       return dogGo(n, slow ? span(0.4, 0.6) : span(0.85, 1.15), rnd() < 0.65 ? [[rnd() < 0.5 ? 'sniff' : 'sit', span(1.5, 5)]] : []);
     }
-    case 'affection': case 'belly': {
-      const list = wl.filter(o => !o.seat.stand && (!o.walk || o.walk.phase === 'hang') && nearestNode(...(o.walk ? [o.walk.x, o.walk.y] : o.seat.feet))[1] < 80);
-      w = w || list[(rnd() * list.length) | 0];
-      if (!w) return dogMood('wander');
+    case 'affection': case 'belly': case 'ask': { // trot up to one bot and be cute at it; the bot turns round, looks down or answers
+      w = w || pickFriend();
+      if (!w) return dogMood('rest');
       d.by = w;
-      const seatSide = () => { d.face = (w.walk ? w.walk.x : w.seat.x) > d.x ? 1 : -1; };
-      const greet = () => { seatSide(); if (w.walk) say(w.walk, '🐶', 2.2); else startTurn(w, 3 + rnd() * 2, d.x < w.seat.x ? -1 : 1); };
-      const seq = m === 'belly' ? [['sit', span(1, 2), greet], ['belly', span(5, 10)], ['sit', span(1, 2)]] : [['sit', span(1.5, 3), greet], ['happy', span(2.5, 4.5)], ['sit', span(2, 5)]];
-      return dogGo(nearestNode(...(w.walk ? [w.walk.x, w.walk.y] : w.seat.feet))[0], span(1, 1.3), seq);
+      const at = () => w.walk ? [w.walk.x, w.walk.y] : w.seat.feet;
+      const seatSide = () => { d.face = at()[0] > d.x ? 1 : -1; };
+      const react = txt => { if (w.walk) say(w.walk, txt, 2.2); else if (w.seat.roam) w.dogLook = d.x > w.seat.feet[0] ? 1 : -1; else startTurn(w, 3 + rnd() * 2, d.x < w.seat.x ? -1 : 1); };
+      const greet = () => { seatSide(); react(['🐶', '🥰', 'good boy!', '❤️'][(rnd() * 4) | 0]); };
+      const treat = () => { seatSide(); react(['🍪', '❤️', 'hi buddy'][(rnd() * 3) | 0]); };
+      const seq = m === 'belly' ? [['sit', span(1, 2), greet], ['belly', span(5, 9)], ['happy', span(1.5, 2.5), seatSide], ['sit', span(1, 2)]]
+        : m === 'ask' ? [['sit', span(0.8, 1.5), seatSide], ['beg', span(2.5, 4), greet], ['happy', span(1.5, 2.5), treat], ['beg', span(2, 3.5)], ['sit', span(1, 2)]]
+        : [['sit', span(1, 2), greet], ['happy', span(2.5, 4.5), seatSide], ['beg', span(1.5, 2.5)], ['sit', span(1.5, 3)]];
+      const [node] = nearestNode(...at());
+      return dogGo(node, span(1, 1.3), seq);
     }
     case 'nap': { const c = L.dog.rest.filter(r => r[1] === 'sleep'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.9), [['sleep', span(30, 95)]]); }
     case 'rest': { const c = L.dog.rest.filter(r => r[1] === 'lie'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.95), [['lie', span(14, 42)]]); }
@@ -788,12 +927,14 @@ function dogMood(m, w) {
   }
 }
 function dogNext() {
-  const kb = loungeBots().length, M = DOG_MOODS, W = [['wander', M.wander], ['affection', DEMO ? 34 : M.affection], ['belly', M.belly], ['nap', M.nap], ['rest', M.rest], ['beg', kb ? M.begWithVisitors : M.beg], ['zoomies', M.zoomies]];
+  const kb = loungeBots().length, M = DOG_MOODS, W = [['wander', M.wander], ['affection', DEMO ? 34 : M.affection], ['ask', M.ask], ['belly', M.belly], ['nap', M.nap], ['rest', M.rest], ['beg', kb ? M.begWithVisitors : M.beg], ['zoomies', M.zoomies]];
   let r = rnd() * W.reduce((a, b) => a + b[1], 0);
   for (const [m, wt] of W) if ((r -= wt) <= 0) return dogMood(m);
   dogMood('wander');
 }
 function dogPetted(w) { const d = dog = w.walk.petDog; d.mood = 'happy'; d.by = w; d.path = []; d.v = 0; d.zoom = 0; d.face = w.walk.x > d.x ? 1 : -1; d.seq = [['happy', 3.6], ['sit', span(2, 4)]]; dogSeq(); dog = dogs[0]; }
+D.dogPut = (i, node) => { const d = dogs[i]; d.path = []; d.seq = []; d.v = 0; d.node = node; [d.x, d.y] = d.N[node]; d.pose = 'sit'; d.t = 600; return [d.x, d.y]; };
+D.dogAt = (i, x, y, pose = 'walk') => { const d = dogs[i]; d.path = []; d.seq = []; d.v = 0; d.x = x; d.y = y; d.pose = pose === 'walk' ? 'sniff' : pose; d.t = 600; return [d.x, d.y]; };
 D.dogMood = m => { if (!dog) return false; dog.path = []; dog.seq = []; dog.v = 0; dogMood(m); return true; };
 function stepDog(dt) {
   const d = dog;
@@ -818,7 +959,7 @@ function stepDog(dt) {
   const c = d.out; c.mode = d.pose === 'walk' && d.zoom ? 'zoomies' : d.pose; c.mood = d.mood; c.x = Math.round(d.x); c.y = Math.round(d.y); c.node = d.node; c.by = d.by ? d.by.bot.name : null;
 }
 function drawDog(d, t) {
-  const C = L.corgi, hu = hAt(d.y), [cw, ch] = C.cell, W = 0.507 * hu / C.bodyW, H = W * ch / cw; // same body length on screen as the old atlas
+  const C = L.corgi, hu = hAt(d.y), [cw, ch] = C.cell, W = 0.507 * DOG.size * hu / C.bodyW, H = W * ch / cw; // DOG.size: 1 = the old atlas body length
   const pose = d.pose, fi = pose === 'walk' ? C.walk[(d.ph | 0) % C.walk.length] : pose === 'sniff' ? C.walk[0] : C[pose] ?? C.sit, f = d.fr[fi];
   let sy = 1, rot = 0, hop = 0;
   if (pose === 'sleep' || pose === 'lie') sy = 1 + Math.sin(t * (pose === 'sleep' ? 1.6 : 2)) * 0.022;
@@ -869,6 +1010,7 @@ function buildItems() {
   for (const s of seats) if (s.chair) items.push({ k: s.clip + 0.2, t: 2, r: s });
   for (const w of workers.values()) items.push({ k: 0, t: 3, r: w });
   items.push({ k: 9997, t: 8, r: 'steam' }, { k: 9998, t: 4, r: 'room-l' }, { k: 9999, t: 4, r: 'room-r' });
+  items.push({ k: 590, t: 10, r: 'kitchen' }); // fridge door and coffee pour: over the painted kitchen, behind the bots standing there
   items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
   for (const d of dogs) items.push({ k: 0, t: 5, r: d });
   PROPS.forEach((p, i) => items.push({ k: p.depth, t: 9, r: { ...p, im: propImgs[i] } })); // extra pictures from config.js
@@ -952,9 +1094,15 @@ function drawLegSet(set, i, x, hip, floor, hu, ww, face) {
   else ctx.drawImage(legImg, c[0], c[1], cw, ch, x - W / 2, top, W, H);
 }
 const LEG_H = 0.33; // hip to sole, in upper-body heights
-function drawUpper(w, g, front, face, x, hip, hu0, sway, alpha) {
-  const sprite = L.sprites[w.sprite], im = front ? fronts[w.sprite] : sprites[w.sprite], hem = front ? sprite.hemF : sprite.hem, hu = hu0 * im.height / 216, ww = hu * im.width / im.height;
+function drawUpper(w, g, front, face, x, hip, hu0, sway, alpha, side) {
+  const sprite = L.sprites[w.sprite], S = side && sideImg && L.walkSide.hem[w.sprite];
   ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, hip + hu0 * 0.035); ctx.rotate(sway); if (face < 0) ctx.scale(-1, 1);
+  if (S) { // profile: one cell of walk-side.webp, painted facing right
+    const [cw, ch] = L.walkSide.cell, hu = hu0 * ch / 216, ww = hu * cw / ch;
+    ctx.drawImage(sideImg, w.sprite * cw, 0, cw, ch, -ww * S[2], -hu * S[0], ww, hu); ctx.restore();
+    return hip + hu0 * 0.035 - hu * S[0] + hu * 0.12; // the cell has headroom above the head
+  }
+  const im = front ? fronts[w.sprite] : sprites[w.sprite], hem = front ? sprite.hemF : sprite.hem, hu = hu0 * im.height / 216, ww = hu * im.width / im.height;
   ctx.drawImage(im, -ww * hem[2], -hu * hem[0], ww, hu);
   ctx.restore();
   return hip + hu0 * 0.035 - hu * hem[0];
@@ -972,8 +1120,9 @@ function drawWalker(w, t, alpha = 1) {
     P(); ctx.globalAlpha = 0.42 * alpha * (1 - sk); ctx.drawImage(shadowSpr, x - ww * 0.42, f - hu * 0.05, ww * 0.84, hu * 0.11);
     ctx.globalAlpha = alpha * (1 - sk); drawLegSet(set, i, x, hip, f, hu, ww, g.face);
     let top;
-    if (g.fade > 0 && g.prev) { const m = g.fade / FADE; drawUpper(w, g, g.prev.front, g.prev.face, x, hip, hu, sway, m); top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1 - m * 0.5); }
-    else top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1);
+    if (g.fade > 0 && g.prev) { const m = g.fade / FADE; drawUpper(w, g, g.prev.front, g.prev.face, x, hip, hu, sway, m, g.prev.side && moving); top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1 - m * 0.5, g.side && moving); }
+    else top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1, g.side && moving);
+    if (g.holding && !(g.side && moving)) drawHeld(w, g, x, hip, hu, t);
     ctx.globalAlpha = 1;
     w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = f;
     w.hx = x; w.hy = top;
@@ -996,7 +1145,7 @@ function drawWorker(w, t) {
   drawWalker(w, t);
 }
 function drawLoiter(w, t) { // a kitchen bot at its home spot between trips: the full standing body, breathing, now and then looking the other way
-  const s = w.seat, x = s.feet[0], f = s.feet[1], hu = hAt(f), ww = hu * 0.64, face = Math.sin(t * 0.11 + w.ph * 3) > 0 ? 1 : -1;
+  const s = w.seat, x = s.feet[0], f = s.feet[1], hu = hAt(f), ww = hu * 0.64, face = w.dogLook && dogs.some(d => d.by === w) ? w.dogLook : Math.sin(t * 0.11 + w.ph * 3) > 0 ? 1 : -1; // looks at a dog that came to say hi
   const hip = f - hu * LEG_H + Math.sin(t * 2 + w.ph) * hu * 0.004;
   P(); ctx.globalAlpha = 0.42; ctx.drawImage(shadowSpr, x - ww * 0.42, f - hu * 0.05, ww * 0.84, hu * 0.11); ctx.globalAlpha = 1;
   drawLegSet('front', 0, x, hip, f, hu, ww, face);
@@ -1195,7 +1344,7 @@ function sortItems() { // painter's order by plate depth; returns how many are o
     }
   }
   D.walking = walking;
-  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(items[i].r.x, items[i].r.y, hAt(items[i].r.y) * 0.25);
+  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(items[i].r.x, items[i].r.y, hAt(items[i].r.y) * 0.27 * DOG.size);
   items.sort(byKey);
   return walking;
 }
@@ -1211,6 +1360,7 @@ function drawItem(it, t, redraw) {
     case 7: drawLounge(t); break;
     case 8: drawSteam(t); break;
     case 9: { const p = it.r; P(); ctx.drawImage(p.im, p.x, p.y, p.w, p.h); break; }
+    case 10: drawKitchen(t); break;
   }
 }
 function drawErrorGlows(t, R) {
@@ -1262,6 +1412,7 @@ function staticBox(it) {
     case 4: return patchBox(over[r]);
     case 7: return dev(CK.x - 30, CK.y - 30, CK.x + CK.w + 30, CK.y + CK.h + 30);
     case 9: return dev(r.x, r.y, r.x + r.w, r.y + r.h);
+    case 10: return dev(0, 425, 180, 520);
     default: return null; // steam and monitor shimmer are left out of lite
   }
 }
@@ -1284,7 +1435,7 @@ function mergeDirty(list) { // overlapping or neighbouring rectangles become one
     if (size(u) <= (size(list[i]) + size(list[j])) * 1.25) { list[i] = u; list.splice(j, 1); j = list.length; }
   }
 }
-function dogBox(d) { const C = L.corgi, hu = hAt(d.y), W = 0.507 * hu / C.bodyW, H = W * C.cell[1] / C.cell[0]; return dev(d.x - W * 1.1, d.y - H * 1.6, d.x + W * 1.1, d.y + H * 0.25); }
+function dogBox(d) { const C = L.corgi, hu = hAt(d.y), W = 0.507 * DOG.size * hu / C.bodyW, H = W * C.cell[1] / C.cell[0]; return dev(d.x - W * 0.66, d.y - H * 1.18, d.x + W * 0.66, d.y + H * 0.14); } // the sprite, its hop and its shadow; lite repaints this every frame while the dog moves
 function labelBox(w) {
   const bm = labelBitmap(w), x = Math.round(w.lx - bm.pad), y = Math.round(w.ly - bm.pad); let b = [x - 1, y - 1, x + bm.width + 1, y + bm.height + 1];
   const text = bubbleText(w);
@@ -1338,15 +1489,23 @@ function renderLite(t, dt) {
     else if (w.db) { dirty.push(w.db); w.db = null; }
   }
   for (const d of dogs) {
+    if (d.pose === 'happy' && (d.lt = (d.lt || 0) + dt) < 0.1) continue; // lite: the happy wiggle updates 10 times a second, walking every frame
+    d.lt = 0;
     if (dogMoving(d)) { const b = dogBox(d); dirty.push(d.db ? union(d.db, b) : b); d.db = b; }
     else if (d.db) { dirty.push(d.db, dogBox(d)); d.db = null; }
+  }
+  if (KIT.live > 0) { // a kitchen task: only the fridge door or the mug change; the whole corner (with the bot turning) at the start and the end
+    KIT.live -= dt; const k = kitTask();
+    if (!k || k.t < 0.3) dirty.push(dev(0, 420, 185, 640)); else dirty.push(k.kind === 'fridge' ? dev(0, 426, 112, 526) : dev(100, 432, 156, 498));
   }
   cityDt += dt;
   if ((cityT -= dt) <= 0) { cityT = LITE.cityEvery; renderCity(t, cityDt); cityDt = 0; dirty.push(cityBox); }
   if ((sliceT -= dt) <= 0 && slices.length) {
     sliceT = LITE.sliceEvery;
     const s = slices[sliceI++ % slices.length];
-    for (const m of monitors) if (m.bx + m.wc.width / 2 >= s[0] && m.bx + m.wc.width / 2 < s[2] && m.by + m.wc.height / 2 >= s[1] && m.by + m.wc.height / 2 < s[3]) m.due = true;
+    // a screen whose centre is in this slice is redrawn whole: repainting only the slice left half of it new and half old (David saw
+    // screens "partially" updating on the TV)
+    for (const m of monitors) if (m.bx + m.wc.width / 2 >= s[0] && m.bx + m.wc.width / 2 < s[2] && m.by + m.wc.height / 2 >= s[1] && m.by + m.wc.height / 2 < s[3]) { m.due = true; dirty.push([m.bx - 1, m.by - 1, m.bx + m.wc.width + 1, m.by + m.wc.height + 1]); }
     dirty.push(s);
   }
   if (layoutDirty || movers) {

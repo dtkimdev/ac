@@ -4,9 +4,12 @@
 // vine mask, so nothing ever paints over the frame, the room or the vines. Every glow is a pre-rendered radial
 // sprite drawn with 'lighter'; colours are sampled from the plates (layout.palette) and re-tinted per time bucket;
 // far things are smaller, slower and lerped toward the local haze. Objects live in fixed pools (no per-frame allocs).
+import { BOAT_KINDS, buildBoat, drawLeds } from './boats.js';
 const PW = 1280, PH = 720;
 
 function canvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
+const ledDots = new Map(); // one soft dot per LED colour
+const ledDot = hex => { let c = ledDots.get(hex); if (!c) { const n = parseInt(hex.slice(1), 16); c = glowSprite([n >> 16, (n >> 8) & 255, n & 255].join(','), 16, 0.32); ledDots.set(hex, c); } return c; };
 export function glowSprite(rgb, size = 64, core = 0.25) {
   const c = canvas(size, size), g = c.getContext('2d'), r = size / 2;
   const gr = g.createRadialGradient(r, r, 0, r, r, r);
@@ -154,7 +157,14 @@ export function makeFx(L, rnd, img) {
   const starPts = (L.stars || []).map(([x, y]) => { const m = rnd(); return { x: x * PW, y: y * PH, ph: rnd() * 7, ph2: rnd() * 7, f1: 0.5 + rnd() * 1.3, f2: 1.9 + rnd() * 3.1, b: 0.3 + 0.7 * m * m, r: 1.6 + 2.2 * m, warm: rnd() < 0.3 }; });
   const starW = glowSprite('255,236,214', 16, 0.18), starC = glowSprite('214,226,255', 16, 0.18);
   const toggles = []; // pool of switching windows (fraction lit follows the darkness; fades are slow)
-  for (let i = 0; i < 96; i++) { const l = lights[(rnd() * lights.length) | 0]; toggles.push({ l, on: rnd() < 0.6 ? 1 : 0, v: rnd() < 0.6 ? 1 : 0, t: 2 + rnd() * 40 }); }
+  for (let i = 0; i < 150; i++) { const l = lights[(rnd() * lights.length) | 0]; toggles.push({ l, on: rnd() < 0.6 ? 1 : 0, v: rnd() < 0.6 ? 1 : 0, t: 2 + rnd() * 40 }); }
+  // tower LEDs (David, 2026-11-10: more life in the buildings). Plate px on the painted towers: red aviation beacons on the spire tips,
+  // and light pulses that run up the LED edges painted on the towers. Stronger at night; faint by day.
+  const BEACONS = [[155, 69], [270, 113], [331, 156], [410, 169], [477, 223], [868, 166], [950, 193], [1040, 129], [1140, 76]].map(([x, y], i) => ({ x, y, ph: i * 0.37 + rnd() }));
+  const RUNNERS = [[241, 130, 360, '120,235,255'], [303, 136, 330, '120,235,255'], [463, 234, 360, '140,225,255'], [490, 234, 360, '140,225,255'], [853, 206, 360, '150,240,255'],
+    [886, 206, 360, '255,225,140'], [952, 202, 360, '205,140,255'], [1046, 272, 350, '220,140,255'], [1107, 92, 245, '150,235,255'], [1164, 96, 245, '150,235,255']]
+    .map(([x, y0, y1, rgb], i) => ({ x, y0, y1, glow: glowSprite(rgb, 32, 0.25), ph: rnd(), sp: 26 + rnd() * 30, gap: 2.5 + rnd() * 5, i }));
+  const beaconSpr = glowSprite('255,60,50', 32, 0.3);
   // city lights just above the water -> shimmering vertical reflections
   const refl = wbox ? lights.filter(l => l.x > wbox[0] + 4 && l.x < wbox[2] - 4 && l.y > wbox[1] - 60 && l.y < wbox[1] + 30).slice(0, 34)
     .map(l => ({ x: l.x, y: Math.max(l.y + 5, wbox[1] + 2), c: l.c, ph: rnd() * 7, h: 10 + rnd() * 16 })) : [];
@@ -176,7 +186,8 @@ export function makeFx(L, rnd, img) {
     c.col = (rnd() * 6) | 0; c.len = 0.8 + rnd() * 0.45;
   };
   cars.forEach(c => spawnCar(c, true));
-  const BK = L.boats.kinds, boats = []; for (let i = 0; i < 10; i++) boats.push({ on: false, lane: 0, x: 0, dir: 1, v: 0, kind: 0, ph: 0 });
+  // boats.js: drawn in code; the painted sheet (and its cargo ship) is retired
+  const BK = BOAT_KINDS, boats = []; for (let i = 0; i < 10; i++) boats.push({ on: false, lane: 0, x: 0, dir: 1, v: 0, kind: 0, ph: 0 });
   let nextKind = (rnd() * BK.length) | 0;
   const laneRoom = (l, x, self) => boats.every(o => o === self || !o.on || o.lane !== l || Math.abs(o.x - x) > 70);
   const spawnBoat = (b, anywhere) => { // the kinds take turns, so the harbour is always a mix; one freighter at a time; never on top of a boat in the lane
@@ -223,12 +234,11 @@ export function makeFx(L, rnd, img) {
       const t = tinted(shipSrc[s.src], hz, haze);
       return s.d === 0 ? soften(t, 0.55) : s.d === 1 ? soften(t, 0.8) : t;
     });
-    const [bcw, bch] = L.boats.cell, bwater = L.boats.water + 2;
-    const boatT = BK.map((K, k) => [0.42, 0.24, 0.08].map((dz, z) => { // three depths: haze toward the sea, dusk gives a warm rim, night dims the hulls
-      // built at the largest size it is drawn on screen at this depth (it was half size, then stretched back up: soft and blocky on big screens)
-      const sc = Math.min(1, Math.max(0.2, K.w * (24 + [0.3, 0.6, 1][z] * 34) * dk * 1.15 / bcw));
-      const raw = boatCell(img.boats, k, bcw, bch, bwater, sc), nightA = 0.58 * n, sp = tinted(tinted(raw, mixc(city, [14, 16, 40], 0.6), nightA), mixc(seaC, horizon, 0.3), dz + 0.1 * (1 - n));
-      return { sp, lit: boatCell(img.boatsLit, k, bcw, bch, bwater, sc), ref: reflectionOf(sp, seaC) };
+    const boatT = BK.map(K => [0.42, 0.24, 0.08].map((dz, z) => { // three depths: haze toward the sea, dusk gives a warm rim, night dims the hulls
+      // drawn at the largest size it appears on screen at this depth, so it stays crisp on big screens
+      const W = Math.round(Math.min(720, Math.max(16, K.w * (24 + [0.3, 0.6, 1][z] * 34) * dk * 1.2)));
+      const B = buildBoat(K.id, W, canvas), nightA = 0.7 * n, tint = tinted(tinted(B.sp, mixc(city, [14, 16, 40], 0.6), nightA), mixc(seaC, horizon, 0.3), dz + 0.12 * (1 - n)), sp = z < 2 ? soften(tint, 0.8) : tint; // far boats a little soft, like the painting
+      return { sp, lit: B.lit, leds: B.leds, ref: reflectionOf(sp, seaC) };
     }));
     const cloudTop = mixc(mixc(horizon, [255, 236, 220], 0.5 * (1 - n)), [255, 190, 170], 0.35 * env.golden), cloudBase = mixc(sky, city, 0.25 + 0.3 * n);
     let cs = 11; const crnd = () => ((cs = Math.imul(cs, 1664525) + 1013904223 >>> 0) / 4294967296); // same shapes every bucket
@@ -328,7 +338,7 @@ export function makeFx(L, rnd, img) {
       const nt = Math.round(toggles.length * (0.35 + 0.65 * fxq) * share);
       for (let i = 0; i < nt; i++) {
         const o = toggles[i], l = o.l;
-        if ((o.t -= dt) <= 0) { const f = 0.25 + 0.65 * env.dark; o.on = rnd() < f ? 1 : 0; o.t = o.on ? 12 + rnd() * 50 : 6 + rnd() * 30; if (o.on && rnd() < 0.5) o.l = lights[(rnd() * lights.length) | 0]; }
+        if ((o.t -= dt) <= 0) { const f = 0.25 + 0.65 * env.dark; o.on = rnd() < f ? 1 : 0; o.t = o.on ? 8 + rnd() * 34 : 4 + rnd() * 20; if (o.on && rnd() < 0.5) o.l = lights[(rnd() * lights.length) | 0]; }
         o.v += ((o.on ? 1 : 0) - o.v) * Math.min(1, dt * 0.7);
         if (o.v < 0.98) { ctx.globalAlpha = (1 - o.v) * 0.8 * (0.3 + 0.7 * env.dark); ctx.fillStyle = o.l.off; ctx.fillRect(o.l.x - 1.3, o.l.y - 1.1, 2.6, 2.2); }
         if (o.v > 0.02) {
@@ -349,6 +359,21 @@ export function makeFx(L, rnd, img) {
         ctx.globalAlpha = o.v * a * 0.35; ctx.drawImage(o.glow, cx - w * 0.6, cy - h * 0.6, w * 1.2, h * 1.2);
         ctx.globalCompositeOperation = 'source-over';
       }
+      // tower LEDs: beacons blink in a slow, uneven rhythm; pulses climb the lit tower edges
+      ctx.globalCompositeOperation = 'lighter';
+      const la = 0.25 + 0.75 * env.dark;
+      for (const b of BEACONS) {
+        const p = (t * 0.55 + b.ph) % 1, on = p < 0.12 ? Math.sin(p / 0.12 * Math.PI) : 0;
+        if (on <= 0) continue;
+        ctx.globalAlpha = on * la; ctx.drawImage(beaconSpr, b.x - 4, b.y - 4, 8, 8); ctx.globalAlpha = on * la * 0.35; ctx.drawImage(beaconSpr, b.x - 9, b.y - 9, 18, 18);
+      }
+      if (share >= 1 || env.dark > 0.3) for (const r of RUNNERS) { // a bright head with a fading tail, then a pause
+        const len = r.y1 - r.y0, cyc = len / r.sp + r.gap, q = ((t + r.ph * cyc) % cyc) / (len / r.sp);
+        if (q > 1) continue;
+        const y = r.y1 - q * len;
+        for (let k = 0; k < 6; k++) { const yy = y + k * 5; if (yy > r.y1) break; ctx.globalAlpha = la * (1 - k / 6) * (k ? 0.45 : 0.95); const s = k ? 5 : 7; ctx.drawImage(r.glow, r.x - s / 2, yy - s / 2, s, s); }
+      }
+      ctx.globalCompositeOperation = 'source-over';
       this.water(ctx, t, dt, env);
       // sea glints (sun / city light on the swell)
       const [a0, b0, b1, a1] = sea;
@@ -378,6 +403,8 @@ export function makeFx(L, rnd, img) {
         if ((b.we = (b.we || 0) - dt) <= 0) { b.we = K.wake > 1 ? 0.14 : 0.3; for (const k of wakes) if (!k.on) { k.on = true; k.x = b.x + b.dir * w * 0.36; k.y = y + 0.3; k.age = 0; k.dir = b.dir; k.sc = w / 96 / K.w * 0.9; k.v = b.v; k.s = K.wake; break; } }
         ctx.save(); ctx.translate(b.x, y); ctx.rotate(rock * b.dir); ctx.scale(b.dir, 1); ctx.globalAlpha = edge; ctx.drawImage(sp, -w / 2, -h, w, h);
         if (env.dark > 0.1) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, env.dark * 1.15) * edge; ctx.drawImage(set.lit, -w / 2, -h, w, h); }
+        if (set.leds.length && share >= 1) { ctx.globalCompositeOperation = 'lighter'; drawLeds(ctx, set.leds, w, h, t, b.ph, edge * (0.35 + 0.65 * env.dark), ledDot); } // LED runs: every frame on the full picture, not in lite
+        ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
         if (env.dark > 0.15) { // soft warm pool: a glow on the hull + its long shimmer on the water
           ctx.globalCompositeOperation = 'lighter';
