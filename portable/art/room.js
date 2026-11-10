@@ -154,9 +154,9 @@ function prefill(cvs, w, hole) {
   }
 }
 
-export async function run(orig, assets, only) {
+export async function run(orig, assets, only, src = assets) { // src: the layout from before the scene build (run-room.js takes it from git)
   const t0 = performance.now(), log = [];
-  const L = await fetch(assets + 'layout.json').then(r => r.json());
+  const L = await fetch(src + 'layout.json').then(r => r.json());
   const masks = {}; for (const m of ['room-l', 'room-r', 'bag-r', 'bag-b', 'bag-m', 'table']) masks[m] = await img(assets + m + '-mask.png');
   const P = { dusk: await img(orig + 'plate-dusk-hi.webp'), night: await img(orig + 'plate-night-hi.webp') }, LO = { dusk: await img(orig + 'plate-dusk.webp'), night: await img(orig + 'plate-night.webp') };
   const NC = await img(orig + 'nochair-dusk.webp'); // the patch shapes (alpha); both atlases share them

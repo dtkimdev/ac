@@ -15,8 +15,11 @@ fs.mkdirSync(out, { recursive: true });
 node(path.join(root, 'portable', 'rebuild.js'));
 console.log(node(path.join(__dirname, 'run-room.js'), path.join(prev, 'scene-base'), 'bamboo').trim().split('\n').pop().slice(0, 80));
 fs.copyFileSync(path.join(__dirname, 'scene.js'), path.join(prev, 'scene.js'));
+// the layout and water mask from before the first scene build (74a4042), so the tool can be run again on top of its own output
+fs.mkdirSync(path.join(prev, 'scene-src'), { recursive: true });
+for (const f of ['layout.json', 'water-mask.png']) fs.writeFileSync(path.join(prev, 'scene-src', f), execFileSync('git', ['show', '74a4042:public/office2d/assets/' + f], { cwd: root, maxBuffer: 1 << 28 }));
 const res = node(path.join(root, 'portable', 'shot.js'), '--url', 'http://127.0.0.1:8791/?q=0&notags=1', '--size', '400x300', '--wait', '1',
-  '--js', "import('/scene.js').then(m => m.run('/scene-base/', '/orig/', '/office2d/assets/')).then(r => { window.__sceneDone = r; }, e => { window.__sceneDone = { error: String(e && e.stack || e) }; })",
+  '--js', "import('/scene.js').then(m => m.run('/scene-base/', '/orig/', '/office2d/assets/', '/scene-src/')).then(r => { window.__sceneDone = r; }, e => { window.__sceneDone = { error: String(e && e.stack || e) }; })",
   '--print', 'JSON.stringify({ done: window.__sceneDone, out: window.__sceneOut })', '--out', path.join(out, 'page.png'));
 const j = JSON.parse(JSON.parse(res.split('\n').find(l => l.startsWith('"{'))));
 console.log(JSON.stringify(j.done).slice(0, 300));

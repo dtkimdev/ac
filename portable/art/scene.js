@@ -15,7 +15,7 @@ const VP = [640, 330], BOARD = 15;
 export const DESKS = {
   // each desk just covers its monitors and seats, with a small margin (David, 2026-11-10: no empty desk space)
   video: { x0: 262, x1: 488, yb: 465, yf: 480, ye: 487, yfl: 545, leg: 4 },
-  sbp: { x0: 556, x1: 906, yb: 463, yf: 480, ye: 487, yfl: 545, leg: 4 },
+  sbp: { x0: 676, x1: 1026, yb: 463, yf: 480, ye: 487, yfl: 545, leg: 4 }, // 120 px right of where it was: Grok's view of the window stays clear
   housekeeping: { x0: 1026, x1: 1250, yb: 493, yf: 518, ye: 527, yfl: 600, leg: 5 },
   numbers: { x0: 828, x1: 1050, yb: 575, yf: 617, ye: 627, yfl: 691, leg: 6 },
   boss: { x0: 512, x1: 708, yb: 572, yf: 617, ye: 627, yfl: 688, leg: 6 },
@@ -24,7 +24,7 @@ export const DESKS = {
 // seats: [x, chair template seat id]; monitors: [centre x, monitor template] or 'keep' (the painted ones stay where they are)
 export const PLAN = [
   { id: 'video', label: 'Studio · Media · LF', theme: 'video', accent: '#e8806e', bots: [4, 5, 7], seats: [[302, 'v0'], [375, 'v0'], [448, 'v0']], mon: { from: ['video', 0], at: [302, 375, 448] } },
-  { id: 'sbp', label: 'Ops · Usage · Archives · Dash', theme: 'house', accent: '#6fbfd0', bots: [3, 0, 8, 14], seats: [[595, 's0'], [688, 's1'], [781, 's1'], [874, 's1']], mon: 'keep:sbp+add', add: { from: ['sbp', 1], at: [772, 865] } },
+  { id: 'sbp', label: 'Ops · Usage · Archives · Dash', theme: 'house', accent: '#6fbfd0', bots: [3, 0, 8, 14], seats: [[715, 's0'], [808, 's1'], [901, 's1'], [994, 's1']], mon: { from: ['sbp', 1], at: [715, 808, 901, 994] } },
   { id: 'housekeeping', label: 'SB Pallet', theme: 'sbp', accent: '#a6d67e', bots: [6, 9], seats: [[1094, 'h0'], [1208, 'h0']], mon: 'keep:housekeeping' },
   { id: 'numbers', label: 'Numbers', theme: 'numbers', accent: '#f2b85c', bots: [2, 10], seats: [[884.7, 'n0'], [992, 'n1']], mon: 'paste:numbers' },
   { id: 'boss', label: 'Boss', theme: 'boss', accent: '#ecc67c', bots: [1], seats: [[638, 'b0']], mon: 'paste:boss' },
@@ -41,8 +41,8 @@ function solve(A, b) { const n = b.length, M = A.map((r, i) => [...r, b[i]]); fo
 // a gentle fit (quadratic plus the light pools), evaluated only inside the area the painted floor was sampled from, so it cannot run off at the edges
 const basis = (x0, y0) => { const x = Math.max(120, Math.min(1010, x0)), y = Math.max(472, Math.min(714, y0)), u = x / PW, v = (y - 460) / 260; return [1, u, v, u * u, u * v, v * v, ...LIGHTS.map(([cx, cy, r]) => Math.exp(-((x - cx) ** 2 + ((y - cy) * 1.8) ** 2) / (r * r)))]; };
 
-export async function run(base, orig, assets) {
-  const L = await fetch(assets + 'layout.json').then(r => r.json());
+export async function run(base, orig, assets, src = assets) { // src: the layout from before this tool (run-scene.js takes it from git), so it can run again
+  const L = await fetch(src + 'layout.json').then(r => r.json()), waterOld = await img(src + 'water-mask.png');
   const P = { dusk: await img(base + 'plate-dusk-hi.webp'), night: await img(base + 'plate-night-hi.webp') };
   const O = { dusk: await img(orig + 'plate-dusk-hi.webp'), night: await img(orig + 'plate-night-hi.webp') };
   const M = {}; for (const m of ['bag-r', 'bag-b', 'bag-m', 'table', 'room-l']) M[m] = await img(assets + m + '-mask.png');
@@ -87,22 +87,89 @@ export async function run(base, orig, assets) {
     g.putImageData(id, 0, 0);
   }
   log.push('floor');
+  // ---- 1b. the kitchen corner drawn new (David, 2026-11-10): a retro two-door fridge and the wooden stand beside it in one consistent
+  // three-quarter view. Every receding edge runs along the same depth vector DV (a stand's depth: 14 px right, 22 px up), so the fridge
+  // shows its front, its right side and its top, and the stand its top and right end. The fridge is a little deeper than the stand and
+  // both stand against the back wall. The coffee machine and the canisters are kept and stand on the new top; the floor lamp's pole is redrawn.
+  const krgb = (c, m = 1) => `rgb(${c.map(v => Math.max(0, Math.min(255, v * m)) | 0).join(",")})`, DV = [14, -22], FR = { x0: 3, x1: 79, top: 449, base: 565, d: 1.12 }, CT = { x0: 81, x1: 216, top: 500, lip: 505, kick: 556, base: 562 };
+  const fd = [DV[0] * FR.d, DV[1] * FR.d], mv = (p, v, f = 1) => [p[0] + v[0] * f, p[1] + v[1] * f];
+  const frFront = [[FR.x0, FR.top], [FR.x1, FR.top], [FR.x1, FR.base], [FR.x0, FR.base]];
+  const frSide = [[FR.x1, FR.top], mv([FR.x1, FR.top], fd), mv([FR.x1, FR.base], fd), [FR.x1, FR.base]];
+  const frTop = [[FR.x0, FR.top], [FR.x1, FR.top], mv([FR.x1, FR.top], fd), mv([FR.x0, FR.top], fd)];
+  const ctTop = [[CT.x0, CT.top], [CT.x1, CT.top], mv([CT.x1, CT.top], DV), mv([CT.x0, CT.top], DV)];
+  const ctSide = [[CT.x1, CT.top], mv([CT.x1, CT.top], DV), mv([CT.x1, CT.base], DV), [CT.x1, CT.base]];
+  const ctFront = [[CT.x0, CT.top], [CT.x1, CT.top], [CT.x1, CT.base], [CT.x0, CT.base]];
+  const ITEMS = [ // what stands on the stand, traced on the painting (plate px)
+    [[107, 428], [111, 421], [119, 420], [121, 409], [141, 409], [143, 420], [163, 420], [167, 426], [167, 447], [163, 452], [163, 480], [166, 482], [166, 492], [112, 492], [112, 482], [115, 480], [115, 452], [108, 449]],
+    [[168, 452], [176, 446], [190, 446], [199, 451], [203, 458], [203, 491], [168, 491]],
+  ];
+  const POLE = { x: 229.3, y0: 457, y1: 547 };
+  const kitWin = [0, 404, 246, 572], newKit = g => { for (const p of [frFront, frSide, frTop, ctTop, ctSide, ctFront, ...ITEMS]) { poly(g, p); g.fill(); } g.fillRect(203, 404, 50, 54); }; // + the lamp shade
+  const itemsCut = {};
+  for (const k of ['dusk', 'night']) { const m = canvas(W3, H3), mg = ctx(m); mg.setTransform(S, 0, 0, S, 0, 0); mg.fillStyle = '#fff'; for (const p of ITEMS) { poly(mg, p); mg.fill(); }
+    mg.globalCompositeOperation = 'source-in'; mg.setTransform(1, 0, 0, 1, 0, 0); mg.drawImage(hi[k], 0, 0); itemsCut[k] = m; }
+  const kpal = {}; // the painting's own fridge and wood colours
+  for (const k of ['dusk', 'night']) { const g = ctx(hi[k]), avg = (x0, y0, x1, y1) => { const d = g.getImageData(x0 * S, y0 * S, (x1 - x0) * S, (y1 - y0) * S).data; let r = 0, gg = 0, b = 0, n = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; } return [r / n, gg / n, b / n]; };
+    kpal[k] = { fr: avg(48, 458, 72, 486), wood: avg(150, 512, 206, 534), top: avg(176, 486, 212, 496) }; }
+  { // whatever of the old fridge, stand, jar and pole the new ones do not cover: filled from the wall and floor round them
+    const W = (kitWin[2] - kitWin[0]) * S, H = (kitWin[3] - kitWin[1]) * S;
+    const hole = bitmap(kitWin, g => { g.fillStyle = '#fff'; g.fillRect(0, 426, 86, 141); poly(g, [[82, 474], [236, 474], [236, 567], [82, 567]]); g.fill(); g.fillRect(222, 455, 16, 96); g.globalCompositeOperation = 'destination-out'; newKit(g); });
+    fill([hi.dusk, hi.night], kitWin, hole, hole.map(v => v ? 0 : 1)); }
   for (const k of ['dusk', 'night']) {
-    const g = ctx(hi[k]), id = g.getImageData(0, 0, 84 * S, 610 * S), D = id.data, Wd = 84 * S, top = 552, door = 590, base = 597;
-    for (let X = 0; X < 83 * S; X++) {
-      let r = 0, gg = 0, b = 0, n = 0; for (let Y = 538 * S; Y < 550 * S; Y++) { const o = (Y * Wd + X) * 4; r += D[o]; gg += D[o + 1]; b += D[o + 2]; n++; }
-      r /= n; gg /= n; b /= n;
-      for (let Y = top * S; Y < base * S; Y++) { const y = Y / S, o = (Y * Wd + X) * 4;
-        const m = y < door ? 1 - 0.14 * (y - top) / (door - top) - (y > door - 2.5 ? 0.25 : 0) : 0.38; // the door darkens a little towards its bottom edge, then the recessed kick plate
-        D[o] = r * m; D[o + 1] = gg * m; D[o + 2] = b * m * (y < door ? 1 : 1.08); }
-    }
-    g.putImageData(id, 0, 0);
+    const g = ctx(hi[k]), p = kpal[k], nt = k === 'night', F = p.fr, Wd = p.wood, warm = nt ? 0.75 : 1;
     g.save(); g.setTransform(S, 0, 0, S, 0, 0);
-    const sh = g.createLinearGradient(0, base, 0, base + 14); sh.addColorStop(0, 'rgba(6,3,2,.55)'); sh.addColorStop(1, 'rgba(6,3,2,0)'); g.fillStyle = sh; g.fillRect(0, base, 88, 14); // its shadow on the floor
-    const side = g.createLinearGradient(83, 0, 104, 0); side.addColorStop(0, 'rgba(6,3,2,.5)'); side.addColorStop(1, 'rgba(6,3,2,0)'); g.fillStyle = side; g.fillRect(83, 567, 21, base - 567 + 6); // and beside it, where it stands forward of the counter
-    g.fillStyle = k === 'night' ? '#1a1718' : '#2b2523'; for (const fx2 of [6, 74]) { g.beginPath(); g.roundRect(fx2 - 3, base - 1, 6, 4, 1.5); g.fill(); } // feet
+    const lin = (x0, y0, x1, y1, stops) => { const gr = g.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
+    // floor shadows: the fridge and the stand sit on the boards
+    g.fillStyle = lin(0, FR.base - 3, 0, FR.base + 12, [[0, 'rgba(6,3,2,.6)'], [1, 'rgba(6,3,2,0)']]); poly(g, [[FR.x0 - 3, FR.base - 2], [FR.x1 + fd[0], FR.base - 2], [FR.x1 + fd[0] + 10, FR.base + 12], [FR.x0, FR.base + 12]]); g.fill();
+    g.fillStyle = lin(0, CT.base - 3, 0, CT.base + 10, [[0, 'rgba(6,3,2,.5)'], [1, 'rgba(6,3,2,0)']]); poly(g, [[CT.x0, CT.base - 2], [CT.x1 + DV[0], CT.base - 2 + DV[1] * 0.2], [CT.x1 + DV[0] + 8, CT.base + 10], [CT.x0, CT.base + 10]]); g.fill();
+    // fridge: side (warmed by the floor lamp beside the stand), top, then the front with its two doors, chrome handles and kick plate
+    g.fillStyle = lin(FR.x1, 0, FR.x1 + fd[0], 0, [[0, krgb(F, 0.86)], [1, krgb(F, 0.62)]]); poly(g, frSide); g.fill();
+    g.fillStyle = `rgba(255,178,110,${0.16 * warm})`; poly(g, frSide); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.35)'; poly(g, [mv([FR.x1, FR.base - 7], fd, 0), mv([FR.x1, FR.base - 7], fd), mv([FR.x1, FR.base], fd), [FR.x1, FR.base]]); g.fill(); // its kick plate runs round the side
+    g.fillStyle = lin(0, FR.top + fd[1], 0, FR.top, [[0, krgb(F, 0.98)], [1, krgb(F, 1.18)]]); poly(g, frTop); g.fill();
+    const fh = FR.base - FR.top, split = FR.top + Math.round(fh * 0.36), kick = FR.base - 7;
+    g.fillStyle = lin(FR.x0, 0, FR.x1, 0, [[0, krgb(F, 0.84)], [0.55, krgb(F, 1)], [1, krgb(F, 1.1)]]); g.beginPath(); g.roundRect(FR.x0, FR.top, FR.x1 - FR.x0, kick - FR.top, [5, 5, 1, 1]); g.fill();
+    g.fillStyle = lin(0, FR.top, 0, kick, [[0, 'rgba(255,240,228,.14)'], [0.3, 'rgba(255,240,228,0)'], [0.7, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.18)']]); g.beginPath(); g.roundRect(FR.x0, FR.top, FR.x1 - FR.x0, kick - FR.top, [5, 5, 1, 1]); g.fill();
+    g.fillStyle = 'rgba(255,236,220,.22)'; g.beginPath(); g.roundRect(FR.x0 + 3, FR.top + 0.6, FR.x1 - FR.x0 - 6, 1.2, 0.6); g.fill(); // light along the rounded top edge
+    g.fillStyle = `rgba(255,196,140,${0.3 * warm})`; g.fillRect(FR.x1 - 1.6, FR.top + 4, 1.6, kick - FR.top - 5); // rim light on the right edge
+    g.fillStyle = krgb(F, 0.32); g.fillRect(FR.x0 + 1, split - 0.8, FR.x1 - FR.x0 - 2, 1.6); g.fillStyle = 'rgba(255,240,228,.16)'; g.fillRect(FR.x0 + 1, split + 0.9, FR.x1 - FR.x0 - 2, 0.7); // the door gap
+    g.fillStyle = krgb(F, 0.3); g.fillRect(FR.x0, kick, FR.x1 - FR.x0, FR.base - kick); g.fillStyle = krgb(F, 0.22); g.fillRect(FR.x0 + 2, kick + 1.5, FR.x1 - FR.x0 - 4, FR.base - kick - 1.5);
+    for (const [x, y] of [[6, FR.base - 1.5], [FR.x1 - 6, FR.base - 1.5]]) { g.fillStyle = '#17120f'; g.beginPath(); g.roundRect(x - 3, y - 1, 6, 3, 1); g.fill(); }
+    for (const hy of [split - 8, split + 9]) { // chrome bar handles on the left of each door
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.roundRect(11, hy + 1.4, 22, 3, 1.5); g.fill();
+      g.fillStyle = lin(0, hy - 1.5, 0, hy + 1.5, [[0, nt ? '#b9b6c4' : '#efe2d6'], [0.5, nt ? '#7c7886' : '#a8978c'], [1, nt ? '#4c4854' : '#6e5f58']]); g.beginPath(); g.roundRect(11, hy - 1.5, 22, 3, 1.5); g.fill();
+      g.fillStyle = nt ? '#5c5864' : '#7d6c62'; g.fillRect(12.5, hy - 1, 2, 3.4); g.fillRect(29.5, hy - 1, 2, 3.4); }
+    // the stand: right end, top, front with nine drawers, kick
+    g.fillStyle = lin(CT.x1, 0, CT.x1 + DV[0], 0, [[0, krgb(Wd, 0.72)], [1, krgb(Wd, 0.52)]]); poly(g, ctSide); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.3)'; poly(g, [[CT.x1, CT.kick], mv([CT.x1, CT.kick], DV), mv([CT.x1, CT.base], DV), [CT.x1, CT.base]]); g.fill();
+    g.fillStyle = lin(0, CT.top + DV[1], 0, CT.top, [[0, krgb(p.top, 0.8)], [1, krgb(p.top, 1.06)]]); poly(g, ctTop); g.fill();
+    for (let i = 1; i < 6; i++) { g.strokeStyle = `rgba(40,18,8,${0.06 + 0.03 * (i % 2)})`; g.lineWidth = 0.5; const f = i / 6; g.beginPath(); g.moveTo(CT.x0 + DV[0] * f, CT.top + DV[1] * f); g.lineTo(CT.x1 + DV[0] * f, CT.top + DV[1] * f); g.stroke(); } // grain along the top
+    g.fillStyle = lin(0, CT.top, 0, CT.lip, [[0, krgb(p.top, 1.3)], [0.35, krgb(p.top, 1.08)], [1, krgb(Wd, 0.7)]]); g.fillRect(CT.x0, CT.top, CT.x1 - CT.x0, CT.lip - CT.top);
+    g.fillStyle = krgb(Wd, 0.9); g.fillRect(CT.x0, CT.lip, CT.x1 - CT.x0, CT.kick - CT.lip);
+    g.fillStyle = lin(0, CT.lip, 0, CT.lip + 3, [[0, 'rgba(0,0,0,.35)'], [1, 'rgba(0,0,0,0)']]); g.fillRect(CT.x0, CT.lip, CT.x1 - CT.x0, 3);
+    const cols = 3, rows = 3, cw = (CT.x1 - CT.x0 - 4) / cols, rh = (CT.kick - CT.lip - 3) / rows;
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) {
+      const x = CT.x0 + 2 + c * cw + 1, y = CT.lip + 2 + r * rh + 0.8, w = cw - 2, h = rh - 1.6, lit = 0.94 + 0.08 * c / (cols - 1);
+      g.fillStyle = krgb(Wd, 0.55); g.fillRect(x - 0.7, y - 0.7, w + 1.4, h + 1.4);
+      g.fillStyle = lin(0, y, 0, y + h, [[0, krgb(Wd, 1.08 * lit)], [1, krgb(Wd, 0.9 * lit)]]); g.fillRect(x, y, w, h);
+      g.fillStyle = 'rgba(255,226,190,.12)'; g.fillRect(x, y, w, 0.8);
+      for (let j = 0; j < 3; j++) { g.fillStyle = 'rgba(50,22,8,.08)'; g.fillRect(x + 1, y + 2 + j * h / 3.2 + ((c * 7 + r * 3 + j) % 3) * 0.6, w - 2, 0.5); }
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.roundRect(x + w / 2 - 4.5, y + h * 0.42 + 0.6, 9, 2.2, 1); g.fill();
+      g.fillStyle = nt ? '#9a8a6a' : '#d9b77a'; g.beginPath(); g.roundRect(x + w / 2 - 4.5, y + h * 0.42 - 0.4, 9, 2, 1); g.fill(); }
+    g.fillStyle = krgb(Wd, 0.32); g.fillRect(CT.x0, CT.kick, CT.x1 - CT.x0, CT.base - CT.kick);
+    g.fillStyle = `rgba(255,178,110,${0.1 * warm})`; poly(g, ctSide); g.fill();
+    // what stands on top, with a soft contact shadow
+    g.fillStyle = 'rgba(20,8,2,.35)'; for (const [cx, cy, rx] of [[139, 492, 30], [186, 491, 19]]) { g.beginPath(); g.ellipse(cx, cy, rx, 3, 0, 0, 7); g.fill(); }
+    g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(itemsCut[k], 0, 0); g.setTransform(S, 0, 0, S, 0, 0);
+    // the floor lamp's brass pole and foot, beside the stand's right end
+    g.fillStyle = 'rgba(6,3,2,.4)'; g.beginPath(); g.ellipse(POLE.x + 3, POLE.y1 + 1, 12, 3, 0, 0, 7); g.fill();
+    g.fillStyle = lin(POLE.x - 1.6, 0, POLE.x + 1.6, 0, [[0, nt ? '#4a3a26' : '#6b4d2a'], [0.6, nt ? '#a8865a' : '#e2b678'], [1, nt ? '#6a5236' : '#9b7244']]); g.fillRect(POLE.x - 1.6, POLE.y0, 3.2, POLE.y1 - POLE.y0);
+    g.fillStyle = nt ? '#3c2f20' : '#5a4024'; g.beginPath(); g.ellipse(POLE.x, POLE.y1, 8, 2.4, 0, 0, 7); g.fill(); g.fillStyle = nt ? '#8a6e4a' : '#c89c62'; g.beginPath(); g.ellipse(POLE.x, POLE.y1 - 0.8, 7, 1.6, 0, 0, 7); g.fill();
     g.restore();
+    // the bean bags stand in front of the stand: put them back over it
+    const bb = canvas(W3, H3), bg = ctx(bb); bg.setTransform(S, 0, 0, S, 0, 0); for (const n of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(bg, n); bg.globalCompositeOperation = 'source-in'; bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(P[k], 0, 0, W3, H3); g.drawImage(bb, 0, 0);
   }
+  log.push('kitchen');
 
   // ---- 2. the back-left desk gets three monitors: the two painted ones are cleared off the window sill first ----
   const vMon = deskById.video.monitors.map(q => q.map(([x, y]) => [x * PW, y * PH]));
@@ -116,6 +183,54 @@ export async function run(base, orig, assets) {
       [[1220, 480, 1275, 500], g => g.fillRect(1250, 488, 20, 10)],
     ]) { const W = (w[2] - w[0]) * S, H = (w[3] - w[1]) * S, hole = dilate(bitmap(w, paint), W, H, 3); fill([hi.dusk, hi.night], w, hole, hole.map(v => v ? 0 : 1)); } }
   log.push('sill');
+  // ---- 2b. the window's lower band behind the back-right desk, painted new (David, 2026-11-10: it was smeared where the old desks had
+  // been cut out). The river runs on from the painted water down to an outdoor balcony rail and the window's bottom frame: each column
+  // carries the colour and the light streaks of the painted water above it, spreading and darkening towards the viewer, with fine
+  // horizontal ripple lines. The mullions run down to the frame. The viewer animates this water as well (water-mask.png). ----
+  const VB = { x0: 515, x1: 1040, rail: 442, mid: 453.5, sill: 464, floor: 470, posts: 42 };
+  const vbTop = x => x < 720 ? 398 : x < 760 ? 398 + (x - 720) / 40 * 7 : 405;
+  const MULL = [[552, 560], [732, 740], [896, 904]], inMull = x => MULL.some(([a, b]) => x >= a - 0.5 && x < b + 0.5);
+  const vbPoly = [[VB.x0, 398], [720, 398], [760, 405], [VB.x1, 405], [VB.x1, VB.floor], [VB.x0, VB.floor]];
+  for (const k of ['dusk', 'night']) {
+    const g = ctx(hi[k]), X0 = VB.x0 * S, X1 = VB.x1 * S, Y0 = 380 * S, Y1 = VB.floor * S, Wb = X1 - X0, Hb = Y1 - Y0;
+    const id = g.getImageData(X0, Y0, Wb, Hb), D = id.data, old = new Uint8ClampedArray(D);
+    // the painted water's colour just above the band, per column (mullion columns bridged from their neighbours)
+    const top = new Float32Array(Wb * 3);
+    for (let X = 0; X < Wb; X++) { const x = (X0 + X) / S, ty = vbTop(x); let r = 0, gg = 0, b = 0, n = 0;
+      for (let Y = Math.round((ty - 6) * S) - Y0; Y < Math.round((ty - 1) * S) - Y0; Y++) { const o = (Y * Wb + X) * 4; r += D[o]; gg += D[o + 1]; b += D[o + 2]; n++; }
+      top[X * 3] = r / n; top[X * 3 + 1] = gg / n; top[X * 3 + 2] = b / n; }
+    for (const [a, b] of MULL) { const A = Math.round((a - 2) * S) - X0, B = Math.round((b + 2) * S) - X0; if (A < 0 || B >= Wb) continue;
+      for (let X = A + 1; X < B; X++) { const f = (X - A) / (B - A); for (let c = 0; c < 3; c++) top[X * 3 + c] = top[A * 3 + c] * (1 - f) + top[B * 3 + c] * f; } }
+    const cum = new Float64Array((Wb + 1) * 3); for (let X = 0; X < Wb; X++) for (let c = 0; c < 3; c++) cum[(X + 1) * 3 + c] = cum[X * 3 + c] + top[X * 3 + c];
+    const blurAt = (X, r, c) => { const a = Math.max(0, X - r), b = Math.min(Wb, X + r + 1); return (cum[b * 3 + c] - cum[a * 3 + c]) / (b - a); };
+    const deep = [0, 1, 2].map(c => blurAt(Wb >> 1, Wb, c) * (k === 'night' ? 0.62 : 0.56));
+    const mullC = MULL.map(([a, b]) => { const cols = []; for (let X = Math.round(a * S) - X0; X < Math.round(b * S) - X0; X++) { let r = 0, gg = 0, bb = 0, n = 0; for (let Y = 384 * S - Y0; Y < 396 * S - Y0; Y++) { const o = (Y * Wb + X) * 4; r += D[o]; gg += D[o + 1]; bb += D[o + 2]; n++; } cols.push([r / n, gg / n, bb / n]); } return { a, cols }; });
+    for (let Y = 0; Y < Hb; Y++) for (let X = 0; X < Wb; X++) {
+      const x = (X0 + X) / S, y = (Y0 + Y) / S, ty = vbTop(x); if (y < ty) continue;
+      const o = (Y * Wb + X) * 4, t = Math.min(1, (y - ty) / (VB.sill - ty));
+      const r = Math.round((1 + 9 * t) * S), mix = 0.12 + 0.5 * t;
+      const rip = 1 + 0.07 * Math.sin(y * 2 * Math.PI / (2 + 2.6 * t) + Math.sin(x * 0.045 + y * 0.3) * 2.2) * (0.55 + 0.45 * Math.sin(x * 0.11 + y * 1.7));
+      let c = [0, 1, 2].map(ch => (blurAt(X, r, ch) * (1 - mix) + deep[ch] * mix) * rip);
+      const fe = Math.min(1, (y - ty) / 3, (x - VB.x0) / 8, (VB.x1 - x) / 8); // blend into the painting at the top and the ends
+      for (let ch = 0; ch < 3; ch++) D[o + ch] = old[o + ch] * (1 - fe) + c[ch] * fe;
+    }
+    // mullions down to the frame
+    for (const { a, cols } of mullC) for (let i = 0; i < cols.length; i++) { const X = Math.round(a * S) - X0 + i; if (X < 0 || X >= Wb) continue;
+      for (let Y = 396 * S - Y0; Y < VB.floor * S - Y0; Y++) { const o = (Y * Wb + X) * 4, f = 1 - 0.18 * (Y - (396 * S - Y0)) / (Hb - (396 * S - Y0)); for (let c = 0; c < 3; c++) D[o + c] = cols[i][c] * f; } }
+    g.putImageData(id, X0, Y0);
+    // the balcony rail outside the glass, then the window's bottom frame; mullions stay in front of the rail
+    const ml = mullC[1].cols[Math.floor(mullC[1].cols.length / 2)], frame = ml.map(v => v * 0.85), nt = k === 'night';
+    g.save(); g.setTransform(S, 0, 0, S, 0, 0); g.beginPath(); g.rect(VB.x0, 380, VB.x1 - VB.x0, 100); g.clip();
+    const railC = `rgb(${frame.map(v => v * 0.9 | 0)})`;
+    for (let x = VB.x0 + 6; x < VB.x1; x += VB.posts) if (!inMull(x) && !inMull(x + 2)) { g.fillStyle = railC; g.fillRect(x, VB.rail, 2, VB.sill - VB.rail); g.fillStyle = 'rgba(255,220,180,.08)'; g.fillRect(x + 1.3, VB.rail, 0.7, VB.sill - VB.rail); }
+    g.fillStyle = railC; g.fillRect(VB.x0, VB.mid, VB.x1 - VB.x0, 1.4);
+    g.fillRect(VB.x0, VB.rail, VB.x1 - VB.x0, 3); g.fillStyle = nt ? 'rgba(170,180,230,.22)' : 'rgba(255,196,140,.42)'; g.fillRect(VB.x0, VB.rail, VB.x1 - VB.x0, 0.8); // the rail's top catches the sky
+    g.fillStyle = `rgb(${frame.map(v => v | 0)})`; g.fillRect(VB.x0, VB.sill, VB.x1 - VB.x0, VB.floor - VB.sill);
+    g.fillStyle = nt ? 'rgba(160,170,220,.12)' : 'rgba(255,200,150,.2)'; g.fillRect(VB.x0, VB.sill, VB.x1 - VB.x0, 0.8);
+    g.restore();
+    g.save(); g.setTransform(S, 0, 0, S, 0, 0); for (const { a, cols } of mullC) { g.fillStyle = `rgb(${cols[Math.floor(cols.length / 2)].map(v => v * 0.92 | 0)})`; g.fillRect(a, VB.rail - 1, cols.length / S, VB.sill - VB.rail + 1); } g.restore();
+  }
+  log.push('window band');
 
   // ---- 3. desks ----
   const pal = {}; // the boss desk's own colours in each picture
@@ -228,12 +343,25 @@ export async function run(base, orig, assets) {
   const plantMask = (() => { const m = canvas(Math.round(pr[2] * 2), Math.round(pr[3] * 2)), g = ctx(m); g.drawImage(M['room-l'], 0, 0, m.width, m.height); return { rect: [pr[0] / PW, pr[1] / PH, (pr[0] + pr[2]) / PW, (pr[1] + pr[3]) / PH], png: m.toDataURL('image/png') }; })();
   log.push('plant');
 
+  // ---- 7b. where the viewer animates water: the painted river (the old mask) and the new band, minus rail, posts, mullions and monitors ----
+  const waterOut = (() => { const r = [392, 352, VB.x1, VB.sill], m = canvas((r[2] - r[0]) * 2, (r[3] - r[1]) * 2), g = ctx(m); g.setTransform(2, 0, 0, 2, -r[0] * 2, -r[1] * 2);
+    const [a, b, c, d] = L.masks.water; g.drawImage(waterOld, a * PW, b * PH, (c - a) * PW, (d - b) * PH);
+    g.fillStyle = '#fff'; poly(g, [[VB.x0, 398], [720, 398], [760, 405], [VB.x1, 405], [VB.x1, VB.sill], [VB.x0, VB.sill]]); g.fill();
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.strokeStyle = '#000';
+    g.fillRect(r[0], VB.rail - 0.6, r[2] - r[0], 4.2); g.fillRect(r[0], VB.mid - 0.6, r[2] - r[0], 2.6);
+    for (let x = VB.x0 + 6; x < VB.x1; x += VB.posts) g.fillRect(x - 0.6, VB.rail, 3.2, VB.sill - VB.rail);
+    for (const [a2, b2] of MULL) g.fillRect(a2 - 0.6, 396, b2 - a2 + 1.2, VB.sill - 396);
+    g.lineWidth = 5; g.lineJoin = 'round'; for (const qs of Object.values(quadsOut)) for (const q of qs) { poly(g, q); g.fill(); g.stroke(); }
+    return { rect: [r[0] / PW, r[1] / PH, r[2] / PW, r[3] / PH], png: m.toDataURL('image/png') }; })();
+
   // ---- 8. the viewer's layout ----
   const lay = JSON.parse(JSON.stringify(L)), nav = L.nav.nodes.map(([x, y]) => [x * PW, y * PH]);
-  const seatNode = t => t.node;
+  // a back-row seat joins the walkway behind the desks at the walkway point nearest to it (the seats moved since the template's own)
+  const AISLE = L.nav.nodes.map((p, i) => [i, p]).filter(([, p]) => Math.abs(p[1] - 0.7861) < 0.004);
+  const seatNode = (t, x) => t.feet[1] > 0.78 && t.feet[1] < 0.8 ? AISLE.reduce((b, a) => Math.abs(a[1][0] * PW - x) < Math.abs(b[1][0] * PW - x) ? a : b)[0] : t.node;
   lay.desks = PLAN.map(d => ({ id: d.id, label: d.label, theme: d.theme, accent: d.accent, bots: d.bots,
     monitors: quadsOut[d.id].map(q => q.map(([x, y]) => [+(x / PW).toFixed(4), +(y / PH).toFixed(4)])),
-    seats: seatsOut.filter(s => s.desk === d.id).map(s => ({ ...JSON.parse(JSON.stringify(s.t)), id: `${d.id[0]}${s.i}`, x: s.x / PW, chair: s.back.map(([x, y]) => [x / PW, y / PH]), feet: [s.t.feet[0] + s.dx / PW, s.t.feet[1]], node: seatNode(s.t), nc: `${d.id[0]}${s.i}` })) }));
+    seats: seatsOut.filter(s => s.desk === d.id).map(s => ({ ...JSON.parse(JSON.stringify(s.t)), id: `${d.id[0]}${s.i}`, x: s.x / PW, chair: s.back.map(([x, y]) => [x / PW, y / PH]), feet: [s.t.feet[0] + s.dx / PW, s.t.feet[1]], node: seatNode(s.t, s.x), nc: `${d.id[0]}${s.i}` })) }));
   lay.desks.push({ ...JSON.parse(JSON.stringify(deskById.lounge)), bots: [] });
   lay.nochair = Object.fromEntries(atlasParts.map(p => [`${p.s.desk[0]}${p.s.i}`, [p.ax, 0, p.w * 2, p.h * 2, p.x0, p.y0]]));
   lay.boss.monitors = L.boss.monitors;
@@ -241,9 +369,11 @@ export async function run(base, orig, assets) {
   lay.lamps = L.lamps.filter(l => l.desk !== 'boss'); // and so is the boss desk lamp
   lay.masks.boss = masksOut.boss.rect; lay.masks['desk-fr'] = masksOut['desk-fr'].rect; lay.masks['plant-l'] = plantMask.rect;
   delete lay.masks['room-l']; delete lay.masks['room-r'];
+  lay.masks.water = waterOut.rect; lay.nearGlass = [VB.x0 / PW, VB.x1 / PW, VB.sill / PH]; // the animated water reaches down into the window band
+  lay.sun = [771 / PW, 304 / PH]; lay.moon = [634 / PW, 128 / PH]; // where the painted sun and moon are: their light paths on the water
   lay.note = (L.note || '') + '; v11: office rebuilt by portable/art/scene.js (clean floor, black four-leg desks, one monitor per bot, team desks)';
   const lo = {}; for (const k of ['dusk', 'night']) { lo[k] = canvas(2560, 1440); const g = ctx(lo[k]); g.imageSmoothingQuality = 'high'; g.drawImage(hi[k], 0, 0, 2560, 1440); }
   window.__sceneOut = { 'layout.json': JSON.stringify(lay), 'plate-dusk-hi.webp': hi.dusk.toDataURL('image/webp', 0.9), 'plate-night-hi.webp': hi.night.toDataURL('image/webp', 0.9), 'plate-dusk.webp': lo.dusk.toDataURL('image/webp', 0.9), 'plate-night.webp': lo.night.toDataURL('image/webp', 0.9),
-    'nochair-dusk.webp': atlas.dusk.toDataURL('image/webp', 0.92), 'nochair-night.webp': atlas.night.toDataURL('image/webp', 0.92), 'boss-mask.png': masksOut.boss.png, 'desk-fr-mask.png': masksOut['desk-fr'].png, 'plant-l-mask.png': plantMask.png };
+    'nochair-dusk.webp': atlas.dusk.toDataURL('image/webp', 0.92), 'nochair-night.webp': atlas.night.toDataURL('image/webp', 0.92), 'boss-mask.png': masksOut.boss.png, 'desk-fr-mask.png': masksOut['desk-fr'].png, 'plant-l-mask.png': plantMask.png, 'water-mask.png': waterOut.png };
   return log;
 }

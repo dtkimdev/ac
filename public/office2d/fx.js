@@ -16,6 +16,12 @@ export function glowSprite(rgb, size = 64, core = 0.25) {
   gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(core, `rgba(${rgb},.5)`); gr.addColorStop(0.6, `rgba(${rgb},.12)`); gr.addColorStop(1, `rgba(${rgb},0)`);
   g.fillStyle = gr; g.fillRect(0, 0, size, size); return c;
 }
+// soft vertical column of light for the water (sun / moon path): strong just under the horizon, fading towards the viewer
+function pathSprite(rgb) {
+  const c = canvas(48, 128), g = c.getContext('2d');
+  for (let x = 0; x < 48; x++) { const h = Math.exp(-(((x + 0.5) / 48 - 0.5) ** 2) / 0.03), gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, `rgba(${rgb},${h})`); gr.addColorStop(0.35, `rgba(${rgb},${0.55 * h})`); gr.addColorStop(1, `rgba(${rgb},${0.12 * h})`); g.fillStyle = gr; g.fillRect(x, 0, 1, 128); }
+  return c;
+}
 // horizontal light trail: bright at the left end, fading to the right, soft top/bottom
 function streakSprite(rgb, w = 128, h = 16) {
   const c = canvas(w, h), g = c.getContext('2d');
@@ -137,9 +143,14 @@ export function makeFx(L, rnd, img) {
   // frame / vines / interior are redrawn from the plate on top (fg mask) -> nothing city-related over a mullion
   const glass = new Path2D(), TR0 = (L.transom || [0.34, 0.354])[0] * PH, TR1 = (L.transom || [0.34, 0.354])[1] * PH;
   for (const [a, b] of (L.panes || [[WX0 / PW, WX1 / PW]])) { glass.rect(a * PW, WY0, (b - a) * PW, TR0 - WY0); glass.rect(a * PW, TR1, (b - a) * PW, WY1 - TR1); }
+  if (L.nearGlass) { const [a, b, y1] = L.nearGlass; glass.rect(a * PW, WY1, (b - a) * PW, y1 * PH - WY1); } // the window band behind the back-right desk: only the water draws there (water-mask.png)
   const paneCount = (L.panes || [0]).length * 2;
   const wbox = L.masks.water ? [L.masks.water[0] * PW, L.masks.water[1] * PH, L.masks.water[2] * PW, L.masks.water[3] * PH] : null;
   let waterC = null, waterG = null;
+  // light paths on the water (David, 2026-11-10): under the painted sun a column of glitter that flickers and drifts on the swell, warm at
+  // sunset, and under the moon a cooler one at night. Far glints are small and packed, near ones larger and spread wider (perspective).
+  const lightPaths = [['sun', '255,196,118'], ['moon', '214,224,255']].filter(([k]) => L[k] && wbox).map(([k, c]) => ({ k, x: L[k][0] * PW, col: glowSprite(c, 32, 0.3), sheen: pathSprite(c),
+    gl: Array.from({ length: 110 }, () => { const v = Math.pow(rnd(), 0.8); return { v, u: (rnd() + rnd() + rnd() - 1.5) / 1.5, ph: rnd() * 7, sp: 1.2 + rnd() * 3.4, w: 0.7 + rnd() * 0.9 }; }) }));
   const vwake = vWakeSprite(), wakes = []; for (let i = 0; i < 48; i++) wakes.push({ on: false, x: 0, y: 0, age: 0, dir: 1, sc: 1 });
   const neon = (L.neon || []).map(([x0, y0, x1, y1, rgb]) => ({ x0: x0 * PW, y0: y0 * PH, x1: x1 * PW, y1: y1 * PH, glow: glowSprite(rgb.join(','), 64, 0.3), v: 1, t: 8 + rnd() * 30, buzz: 0, off: 0, ph: rnd() * 7 }));
   const darkBlob = glowSprite('22,14,34', 32, 0.5);
@@ -515,6 +526,19 @@ export function makeFx(L, rnd, img) {
           g.globalCompositeOperation = op; g.globalAlpha = a * (0.6 + 0.4 * i / bands);
           const off = ((t * (3 + 4 * i) * dir) % tw + tw) % tw;
           for (let x = x0 - off; x < x1; x += tw) g.drawImage(tex, x, ya, tw, hb);
+        }
+      }
+      // the sun's and the moon's paths: a soft column, then glitter that comes and goes on the swell
+      g.globalCompositeOperation = 'lighter';
+      for (const P of lightPaths) {
+        const A = P.k === 'sun' ? (1 - env.n) * (0.55 + 0.45 * env.golden) * 1.25 : env.n * 0.85; if (A < 0.02) continue;
+        const top = y0 + 1, H = y1 - top, sway = Math.sin(t * 0.21) * 1.5;
+        g.globalAlpha = A * (P.k === 'sun' ? 0.32 : 0.22) * (0.9 + 0.1 * Math.sin(t * 0.7)); g.drawImage(P.sheen, P.x - 9 + sway, top, 18, H * 0.55); g.drawImage(P.sheen, P.x - 26 + sway, top + H * 0.15, 52, H * 0.85);
+        const ng = Math.round(P.gl.length * (0.45 + 0.55 * fxq));
+        for (let i = 0; i < ng; i++) {
+          const q = P.gl[i], f = Math.sin(t * q.sp + q.ph); if (f <= 0.2) continue;
+          const y = top + H * q.v, half = 2.5 + 26 * q.v, x = P.x + sway + q.u * half + Math.sin(t * 0.5 + q.ph) * (0.5 + 2 * q.v), w = (1.6 + 6 * q.v) * q.w, h = 0.7 + 1.3 * q.v;
+          g.globalAlpha = A * f * f * f * (0.95 - 0.35 * Math.abs(q.u)); g.drawImage(P.col, x - w, y - h, w * 2, h * 2);
         }
       }
       // shimmering vertical reflections of the city lights (stronger at night)
