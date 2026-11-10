@@ -1,0 +1,40 @@
+name: wake-on-push
+# The shared computer is suspended while no bot works, so the publisher sleeps and pushes wait (2026-11-10: about 50 minutes).
+# This rings the Agent City usage-refresh routine on a push that changes what the site shows. The routine wakes that computer,
+# refreshes the Grok usage and publishes. Approved by David on 2026-11-10, filtered so that baton and docs pushes cost nothing.
+# Secrets (repo Settings > Secrets and variables > Actions), set by David:
+#   AC_USAGE_WEBHOOK_URL, AC_USAGE_WEBHOOK_KEY, and optionally AC_USAGE_WEBHOOK_HEADER (a header name; default: Authorization: Bearer)
+# Neither the URL nor the key is ever printed; GitHub also masks secrets in logs. Workflows started by other people's pull requests
+# do not get these secrets.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'bin/**'
+      - 'lib/**'
+      - 'server.js'
+permissions: {}
+concurrency:
+  group: wake-on-push
+  cancel-in-progress: true   # a burst of pushes rings once, for the newest
+jobs:
+  ring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Wait for follow-up pushes
+        run: sleep 60
+      - name: Ring the usage-refresh routine
+        env:
+          URL: ${{ secrets.AC_USAGE_WEBHOOK_URL }}
+          KEY: ${{ secrets.AC_USAGE_WEBHOOK_KEY }}
+          HEADER: ${{ secrets.AC_USAGE_WEBHOOK_HEADER }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then echo "::notice::webhook secrets not set; nothing rung"; exit 0; fi
+          if [ -n "$HEADER" ]; then AUTH="$HEADER: $KEY"; else AUTH="Authorization: Bearer $KEY"; fi
+          BODY=$(printf '{"source":"agent-city-push","sha":"%s","ts":"%s"}' "$SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' -m 20 -X POST -H 'Content-Type: application/json' -H "$AUTH" --data "$BODY" "$URL" 2>/dev/null || echo 000)
+          echo "routine answered HTTP $CODE"
+          case "$CODE" in 2??) ;; *) echo "::warning::routine did not accept the ring (HTTP $CODE)";; esac
