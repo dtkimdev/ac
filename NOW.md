@@ -9,4 +9,3 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
-- grokbot · wire ↻ to refresh Claude (haiku) and Grok (webhook) then publish · server.js, AGENTS.md/README.md · 2026-11-10 16:10 Bangkok

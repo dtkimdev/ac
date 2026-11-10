@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const lib = require('./lib/city');
+const { runPagesRefreshJobs } = require('./lib/pages-refresh');
 
 const ROOT = __dirname;
 const PORT = +process.env.AGENT_CITY_PORT || 8787;
@@ -261,12 +262,10 @@ function handlePagesRefresh(req, res) {
   }
   pagesRefreshRunning = true;
   try { fs.writeFileSync(PAGES_REFRESH_LOCK, String(now)); } catch {}
-  const cp = require('child_process').spawn('bash', [path.join(ROOT, 'bin', 'pages.sh'), 'publish'], {
-    cwd: ROOT, stdio: 'ignore', detached: true, env: process.env,
-  });
-  cp.on('exit', () => { pagesRefreshRunning = false; try { fs.unlinkSync(PAGES_REFRESH_LOCK); } catch {} });
-  cp.on('error', () => { pagesRefreshRunning = false; try { fs.unlinkSync(PAGES_REFRESH_LOCK); } catch {} });
-  cp.unref();
+  // after the 202: Claude ping + usage, Grok usage webhook, then bin/pages.sh publish (lib/pages-refresh.js)
+  setImmediate(() => runPagesRefreshJobs({ root: ROOT, log })
+    .catch(e => log(`pages-refresh: ${e.message}`))
+    .finally(() => { pagesRefreshRunning = false; try { fs.unlinkSync(PAGES_REFRESH_LOCK); } catch {} }));
   return send(res, 202, JSON.stringify({ ok: true, publishing: true }), 'application/json', cors);
 }
 
