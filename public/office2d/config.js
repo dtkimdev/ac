@@ -41,7 +41,9 @@ export const DOG_MOODS = { wander: 0, affection: 30, ask: 26, belly: 12, nap: 6,
 export const DOG = { size: 1.5 };
 // Walking: at most this many bots move about the room at once (David, 2026-11-10: no more than 3). Others wait their turn: a trip, a visit
 // or the walk home starts when someone else has arrived. Real interactions from the feed wait too (up to 90 s).
-export const WALK = { maxMoving: 3 };
+// quietShare: only this share of the bots, those with the lowest usage, take breaks, loiter or roam (0.5 = the bottom half). Busy bots stay at
+// their desks; walks for real interactions from the feed still happen.
+export const WALK = { maxMoving: 3, quietShare: 0.5 };
 
 // ---------- items ----------
 // Extra pictures placed in the room. Put the image in assets/, then add a line. x, y, w, h are in plate pixels (the room is 1280 x 720).

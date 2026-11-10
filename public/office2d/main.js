@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { BOTS, behaviorOf, LOITER, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=23'; // V: busts the 1 h asset cache when the art set changes
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=24'; // V: busts the 1 h asset cache when the art set changes
 const q = new URLSearchParams(location.search);
 const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
 if (EMBED) document.body.classList.add('embed');
@@ -44,6 +44,7 @@ async function load() {
     img('water-mask.png'), img(L.corgi.file), img(L.corgi2), img(L.legs.file), img(L.turn.bodies), img(L.turn.heads), img('nochair-dusk.webp'), img('nochair-night.webp'), img(L.dash.laptop), img(L.dash.mug), img(L.boats.file), img(L.boats.lit),
     ...occ.map(m => img(m + '-mask.png')), ...ships.flatMap(f => [img(f + '-dusk.png'), img(f + '-night.png')]), ...L.sprites.map(s => img(s.file)), ...L.sprites.map(s => img(s.front))]);
   plates = { dusk, night }; masks = { fg: fgM, sky: skyM };
+  for (const n of FRONT()) { masks[n] = await img(n + '-mask.png'); over[n] = null; } // front plants: cut from the room picture, drawn over everyone
   occ.forEach((m, i) => { masks[m] = rest[i]; }); const r2 = rest.slice(occ.length);
   const shipImgs = ships.map((_, i) => ({ dusk: r2[i * 2], night: r2[i * 2 + 1] }));
   sprites = r2.slice(ships.length * 2, ships.length * 2 + L.sprites.length);
@@ -54,7 +55,7 @@ async function load() {
   buildErasers();
   initLounge();
   fx = makeFx(L, rnd, { ships: shipImgs, water: waterM, boats: boatI, boatsLit: boatL });
-  D.city = () => fx.counts();
+  D.city = () => fx.counts(); D.fireworks = () => fx.fireworks(); D.fw = () => fx.fwCount();
   D.glassClip = { panes: fx.glassPanes(), masks: ['fg', 'sky'], water: !!waterM };
   bossMon = L.boss.monitors.map(px); bossClip = L.boss.clip.map((c, i) => c ? px(c) : bossMon[i]);
   walkH = L.walk.h.map(([f, h]) => [f * PH, h * PH]);
@@ -123,6 +124,7 @@ let env = envAt(12);
 // overlays cut from the base: window frame + vines (fg), skyline (sky); patches for chairs/occluders. The foreground bamboo is gone from
 // the room pictures (David, 2026-11-10; portable/art/room.js), so there are no front plant overlays any more.
 const over = { fg: null, sky: null };
+const FRONT = () => Object.keys(L.masks).filter(n => n.startsWith('plant-')); // e.g. plant-l: the small bamboo in the lounge corner (layout v11)
 function cutMasked(name) {
   const [x0, y0, x1, y1] = L.masks[name], X = offX + x0 * PW * k, Y = offY + y0 * PH * k, W = (x1 - x0) * PW * k, H = (y1 - y0) * PH * k;
   const bx = Math.floor(X), by = Math.floor(Y), c = mk(W + 2, H + 2), g = c.getContext('2d');
@@ -202,12 +204,15 @@ const blit = p => { if (p) ctx.drawImage(p.c, p.x, p.y); }; // a seat without a 
 
 // ---------- data: seats, sprites, workers ----------
 let S = null;
+const QUIET = new Set(); // bot ids allowed to wander (see assign)
 const workers = new Map(), wl = []; // bot id -> worker; wl = the same workers as an array (no per-frame iterators)
 function demoize(bots) {
   return bots.map(b => b.num === 1 ? { ...b, status: 'working', task: 'routing a request' } : b.num === 3 ? { ...b, status: 'working', task: 'triaging inbox' } : b.num === 9 ? { ...b, status: 'error', error: 'heartbeat stale' } : b.num === 2 ? { ...b, status: 'working', task: 'market-desk brief' } : b.num === 14 ? { ...b, status: 'working', task: 'charting usage' } : b); // preview only
 }
 function assign(bots) {
   const live = bots.filter(b => b.status !== 'moved_out' && !HIDDEN_IDS.has(b.id)).sort((a, b) => (a.num ?? 999) - (b.num ?? 999));
+  // who may take breaks: the quieter part of the office by usage (WALK.quietShare; David, 2026-11-10: the bottom 50%, never the busy ones)
+  const byUse = [...live].sort((a, b) => (a.usage_pct ?? 0) - (b.usage_pct ?? 0)); QUIET.clear(); for (const b of byUse.slice(0, Math.ceil(byUse.length * WALK.quietShare))) QUIET.add(b.id); D.quiet = byUse.filter(b => QUIET.has(b.id)).map(b => b.name);
   for (const s of [...seats, ...standing]) s.bot = null;
   const deskOf = want => L.desks.find(d => d.id === want || d.label.toLowerCase() === want.toLowerCase());
   const homeless = [];
@@ -785,13 +790,13 @@ function stepAmbient(dt) {
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], g = w.walk;
     // Dashboards keeps roaming even while her status is working (laptop life in the kitchen)
-    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if (busy(w) && !isDash(w.bot) && !w.seat.roam && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || (g.phase === 'hang' || g.phase === 'petting') && freeWalkers())) recall(w); }
+    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if ((busy(w) && !isDash(w.bot) && !w.seat.roam || !QUIET.has(w.bot.id)) && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || (g.phase === 'hang' || g.phase === 'petting') && freeWalkers())) recall(w); }
   }
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], dash = isDash(w.bot);
     if (w.walk || w.seat.stand || w.chatting) continue;
     if (busy(w) && !dash && !w.seat.roam) continue; // only Dashboards and the kitchen bots wander while working
-    if (!w.b.wanders || (w.tripT -= dt) > 0) continue;
+    if (!w.b.wanders || !QUIET.has(w.bot.id) || (w.tripT -= dt) > 0) continue; // only the quieter bots go on breaks
     w.tripT = span(...w.b.tripEvery);
     if (!(w.pose.b === 0 && w.pose.dur === 0 && !visiting(w))) continue;
     if (dash) {
@@ -986,7 +991,7 @@ function buildItems() {
   for (const o of occluders) items.push({ k: o.depth, t: 1, r: o });
   for (const s of seats) if (s.chair) items.push({ k: s.clip + 0.2, t: 2, r: s });
   for (const w of workers.values()) items.push({ k: 0, t: 3, r: w });
-  items.push({ k: 9997, t: 8, r: 'steam' });
+  items.push({ k: 9997, t: 8, r: 'steam' }); for (const n of FRONT()) items.push({ k: 9998, t: 4, r: n });
   items.push({ k: 590, t: 10, r: 'kitchen' }); // the coffee pour: over the painted kitchen, behind the bots standing there
   items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
   for (const d of dogs) items.push({ k: 0, t: 5, r: d });
@@ -1015,6 +1020,15 @@ function drawBust(w, t) { // the default pose at the desk: the back bust behind 
   w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = s.base;
   w.hx = x; w.hy = top;
 }
+// The body pictures have an open neck hole under the hood: facing round, it showed whatever was behind the bot (the dark chair and desk) as a
+// black band under the chin (David, 2026-11-10). A neck is drawn behind the body, so the hole shows skin, shaded under the chin.
+function neck(T, i, f, chatIn, alpha, row) {
+  const FR = T.frames, a = FR[i], b = FR[Math.min(5, i + 1)], m = win(f, 0.42, 0.58), lerp = (p, q, u) => p + (q - p) * u;
+  const hx = lerp(lerp(a.head[0], b.head[0], m), FR[5].head[0], chatIn) - T.cx, nk = lerp(lerp(a.neck, b.neck, m), FR[5].neck, chatIn), face = Math.min(1, Math.max(0, (i + f - 1.3) / 1.2) + chatIn);
+  if (face <= 0.02 || row >= T.sprites.length) return;
+  const g = ctx.createLinearGradient(0, nk - 18, 0, nk + 20); g.addColorStop(0, '#9c6a52'); g.addColorStop(0.35, '#c4896a'); g.addColorStop(1, '#d9a080');
+  ctx.globalAlpha = alpha * face; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(hx - 13, nk - 18, 26, 40, 9); ctx.fill(); ctx.globalAlpha = alpha;
+}
 const win = (v, a, b) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
 function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atlas; the head is its own layer so it can lead the turn. Poses step (a quick wipe of opaque art over opaque art), they never dissolve through each other
   const s = w.seat, T = L.turn, P2 = w.pose, [cw, ch] = T.cell, [hw, hh] = T.head, row = w.sprite, ts = s.ts, B = Math.min(4, P2.b), i = Math.min(3, B | 0), f = B - i;
@@ -1023,6 +1037,7 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   ctx.translate(0, T.floor * 0.5); ctx.rotate(swing * 0.03 * sign); ctx.translate(0, -T.floor * 0.5); // the weight shifts with the turn
   const stepIn = win(f, 0.4, 0.52), stepOut = win(f, 0.5, 0.62), chatIn = win(P2.chat, 0.44, 0.5), chatOut = win(P2.chat, 0.5, 0.56), sx = j => j * cw, sy = row * ch;
   const body = (j, a) => { if (a > 0.004) { ctx.globalAlpha = alpha * a; ctx.drawImage(turnB, sx(j) * ATL, sy * ATL, cw * ATL, ch * ATL, -T.cx, 0, cw, ch); } };
+  neck(T, i, f, chatIn, alpha, w.sprite);
   body(i, (1 - stepOut) * (1 - chatOut)); body(i + 1, stepIn * (1 - chatOut)); body(5, chatIn);
   // the talking pose (5) steps in like the turn frames: it is fully drawn over an opaque old pose before the old one fades. It used to
   // cross-fade (both half see-through), so the desk screen showed through faces and caps whenever a bot started or stopped talking.

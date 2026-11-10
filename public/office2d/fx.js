@@ -151,6 +151,57 @@ export function makeFx(L, rnd, img) {
   const trailW = streakSprite('255,236,200'), trailR = streakSprite('255,60,45'), foam = streakSprite('255,245,235', 96, 12);
   const fly = glowSprite('220,255,150', 32);
 
+  // ---------- fireworks over the river at night (David, 2026-11-10): now and then a short show of one to three shells. Soft glowing
+  // sparks in the city's own colours (warm gold, rose, cyan, violet), drawn behind the skyline so buildings stand in front, with a faint
+  // shimmer on the water. Bursts: peony (round), willow (gold, long drooping trails), ring. ----------
+  const FW = { x: [470, 820], launch: 352, apex: [190, 285], every: [16, 48] };
+  const fwCols = ['255,206,128', '255,140,178', '128,222,255', '196,150,255', '255,236,210'].map(c => ({ c, g: glowSprite(c, 32, 0.5), h: glowSprite(c, 32, 0.08) }));
+  const fwFlash = glowSprite('255,220,190', 64, 0.05), fwShells = [], fwSparks = [];
+  let fwNext = 6 + rnd() * 10, fwQueue = 0, fwQT = 0;
+  function fwLaunch() {
+    const kind = rnd() < 0.3 ? 'willow' : rnd() < 0.25 ? 'ring' : 'peony', col = kind === 'willow' ? fwCols[0] : fwCols[(rnd() * fwCols.length) | 0];
+    const x = FW.x[0] + rnd() * (FW.x[1] - FW.x[0]), apex = FW.apex[0] + rnd() * (FW.apex[1] - FW.apex[0]), T = 1.15 + rnd() * 0.45;
+    fwShells.push({ x, y: FW.launch, x0: x, vx: (rnd() - 0.5) * 6, apex, T, t: 0, kind, col, col2: fwCols[(rnd() * fwCols.length) | 0] });
+  }
+  function fwBurst(sh) {
+    const n = Math.round((sh.kind === 'ring' ? 36 : 54) * (share < 1 ? 0.5 : 1)), sp = sh.kind === 'willow' ? 58 : 78, tilt = rnd() * 6.28;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 6.283 + rnd() * 0.12, r = sh.kind === 'ring' ? 1 : 0.55 + 0.45 * Math.sqrt(rnd()), v = sp * r * (0.9 + rnd() * 0.2);
+      const vx = Math.cos(a) * v, vy = sh.kind === 'ring' ? Math.sin(a) * v * (0.35 + 0.3 * Math.abs(Math.cos(tilt))) : Math.sin(a) * v;
+      fwSparks.push({ x: sh.x, y: sh.y, vx, vy, t: 0, life: (sh.kind === 'willow' ? 2.8 : 1.9) + rnd() * 0.7, col: i % 5 === 0 ? sh.col2 : sh.col, willow: sh.kind === 'willow', tr: [] });
+    }
+    fwSparks.push({ flash: true, x: sh.x, y: sh.y, t: 0, life: 0.5 });
+  }
+  function drawFireworks(ctx, t, dt, env) {
+    const night = Math.max(0, (env.dark - 0.55) / 0.45);
+    if (night > 0 && (fwNext -= dt) <= 0) { fwNext = FW.every[0] + rnd() * (FW.every[1] - FW.every[0]); fwQueue = 1 + (rnd() * 3 | 0); fwQT = 0; }
+    if (fwQueue > 0 && (fwQT -= dt) <= 0) { fwLaunch(); fwQueue--; fwQT = 0.5 + rnd() * 1.1; }
+    if (!fwShells.length && !fwSparks.length) return;
+    const A = Math.max(night, 0.35);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = fwShells.length - 1; i >= 0; i--) { // the rising shell: a small warm light with a short fading tail
+      const s = fwShells[i]; s.t += dt; const u = Math.min(1, s.t / s.T), e = 1 - (1 - u) * (1 - u);
+      s.y = FW.launch + (s.apex - FW.launch) * e; s.x = s.x0 + s.vx * s.t;
+      for (let k = 0; k < 5; k++) { const back = k * 0.035, yy = FW.launch + (s.apex - FW.launch) * (1 - (1 - Math.max(0, u - back)) ** 2); ctx.globalAlpha = A * 0.55 * (1 - k / 5); ctx.drawImage(fwCols[4].g, s.x - 1.6, yy - 1.6, 3.2, 3.2); }
+      if (u >= 1) { fwBurst(s); fwShells.splice(i, 1); }
+    }
+    for (let i = fwSparks.length - 1; i >= 0; i--) {
+      const p = fwSparks[i]; p.t += dt; const q = p.t / p.life;
+      if (q >= 1) { fwSparks.splice(i, 1); continue; }
+      if (p.flash) { // the burst lights the sky round it, and its reflection shimmers on the river
+        const a = A * 0.3 * (1 - q); ctx.globalAlpha = a; ctx.drawImage(fwFlash, p.x - 110, p.y - 110, 220, 220);
+        ctx.globalAlpha = a * 0.6; ctx.drawImage(fwFlash, p.x - 18, FW.launch + 6, 36, 60 * (1 - q * 0.5)); continue; }
+      const drag = Math.pow(p.willow ? 0.42 : 0.3, dt); p.vx *= drag; p.vy = p.vy * drag + (p.willow ? 22 : 15) * dt;
+      p.tr.unshift(p.x, p.y); if (p.tr.length > (p.willow ? 16 : 8)) p.tr.length = p.willow ? 16 : 8;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const fade = (1 - q) * (1 - q) * (q < 0.06 ? q / 0.06 : 1), tw = q > 0.6 ? 0.6 + 0.4 * Math.sin(t * 40 + i) : 1, sz = 4.4 * (1 - q * 0.45);
+      for (let k = 0; k < p.tr.length; k += 2) { ctx.globalAlpha = A * fade * 0.5 * (1 - k / p.tr.length); ctx.drawImage(p.col.g, p.tr[k] - sz * 0.35, p.tr[k + 1] - sz * 0.35, sz * 0.7, sz * 0.7); }
+      ctx.globalAlpha = A * fade * 0.3; ctx.drawImage(p.col.h, p.x - sz * 1.6, p.y - sz * 1.6, sz * 3.2, sz * 3.2); // soft halo
+      ctx.globalAlpha = A * fade * tw; ctx.drawImage(p.col.g, p.x - sz / 2, p.y - sz / 2, sz, sz);
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+
   // window lights sampled from the night plate: [x, y, cool, offR, offG, offB]
   const lights = L.lights.map(([x, y, c, r, g, b]) => ({ x: x * PW, y: y * PH, c, off: `rgb(${r},${g},${b})`, ph: rnd() * 7, sp: 0.4 + rnd() * 1.4 }));
   // stars: each has its own steady brightness (magnitude) and colour, and shimmers gently through the air; they never switch off
@@ -329,8 +380,11 @@ export function makeFx(L, rnd, img) {
         ctx.globalCompositeOperation = 'source-over';
       }
       for (let i = 0; i < 2; i++) drawShip(ctx, ships[i], T.ships[i], t, env, dt);
+      drawFireworks(ctx, t, dt, env);
       ctx.restore(); ctx.globalAlpha = 1;
     },
+    fireworks() { fwNext = 0; }, // test aid: start a show now (at night)
+    fwCount: () => fwShells.length + fwSparks.length,
     // near layer: under the window-frame / vine mask
     near(ctx, t, dt, env) {
       ctx.save(); if (share === 1) ctx.clip(glass);
