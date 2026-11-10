@@ -39,6 +39,9 @@ export const LOITER = { tripEvery: [5, 18], tripStay: [10, 32] };
 export const DOG_MOODS = { wander: 0, affection: 30, ask: 26, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
 // Corgi size: 1 = the original size, 1.5 = 50% bigger (David, 2026-11-10).
 export const DOG = { size: 1.5 };
+// Walking: at most this many bots move about the room at once (David, 2026-11-10: no more than 3). Others wait their turn: a trip, a visit
+// or the walk home starts when someone else has arrived. Real interactions from the feed wait too (up to 90 s).
+export const WALK = { maxMoving: 3 };
 
 // ---------- items ----------
 // Extra pictures placed in the room. Put the image in assets/, then add a line. x, y, w, h are in plate pixels (the room is 1280 x 720).

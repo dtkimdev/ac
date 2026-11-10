@@ -7,10 +7,10 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { BOTS, behaviorOf, LOITER, DOG_MOODS, DOG, PROPS, QUALITY, LITE, REFRESH } from './config.js';
+import { BOTS, behaviorOf, LOITER, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=21'; // V: busts the 1 h asset cache when the art set changes
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=22'; // V: busts the 1 h asset cache when the art set changes
 const q = new URLSearchParams(location.search);
 const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
 if (EMBED) document.body.classList.add('embed');
@@ -40,10 +40,10 @@ const redGlow = glowSprite('255,70,50'), screenGlow = glowSprite('150,190,255');
 async function load() {
   L = await fetch(A + 'layout.json' + V, { credentials: 'same-origin' }).then(r => r.json());
   const ships = L.airships.map(a => a.file), occ = L.occluders.map(o => o.mask);
-  const [dusk, night, fgM, skyM, rlM, rrM, waterM, dogI, dog2I, legsI, tbI, thI, ncD, ncN, lapI, mugI, boatI, boatL, ...rest] = await Promise.all([img('plate-dusk.webp'), img('plate-night.webp'), img('fg-mask.png'), img('sky-mask.png'), img('room-l-mask.png'), img('room-r-mask.png'),
+  const [dusk, night, fgM, skyM, waterM, dogI, dog2I, legsI, tbI, thI, ncD, ncN, lapI, mugI, boatI, boatL, ...rest] = await Promise.all([img('plate-dusk.webp'), img('plate-night.webp'), img('fg-mask.png'), img('sky-mask.png'),
     img('water-mask.png'), img(L.corgi.file), img(L.corgi2), img(L.legs.file), img(L.turn.bodies), img(L.turn.heads), img('nochair-dusk.webp'), img('nochair-night.webp'), img(L.dash.laptop), img(L.dash.mug), img(L.boats.file), img(L.boats.lit),
     ...occ.map(m => img(m + '-mask.png')), ...ships.flatMap(f => [img(f + '-dusk.png'), img(f + '-night.png')]), ...L.sprites.map(s => img(s.file)), ...L.sprites.map(s => img(s.front))]);
-  plates = { dusk, night }; masks = { fg: fgM, sky: skyM, 'room-l': rlM, 'room-r': rrM };
+  plates = { dusk, night }; masks = { fg: fgM, sky: skyM };
   occ.forEach((m, i) => { masks[m] = rest[i]; }); const r2 = rest.slice(occ.length);
   const shipImgs = ships.map((_, i) => ({ dusk: r2[i * 2], night: r2[i * 2 + 1] }));
   sprites = r2.slice(ships.length * 2, ships.length * 2 + L.sprites.length);
@@ -120,8 +120,9 @@ function resize() {
 }
 addEventListener('resize', resize);
 let env = envAt(12);
-// overlays cut from the base: window frame + vines (fg), skyline (sky), floor plants (room-l / room-r); patches for chairs/occluders
-const over = { fg: null, sky: null, 'room-l': null, 'room-r': null };
+// overlays cut from the base: window frame + vines (fg), skyline (sky); patches for chairs/occluders. The foreground bamboo is gone from
+// the room pictures (David, 2026-11-10; portable/art/room.js), so there are no front plant overlays any more.
+const over = { fg: null, sky: null };
 function cutMasked(name) {
   const [x0, y0, x1, y1] = L.masks[name], X = offX + x0 * PW * k, Y = offY + y0 * PH * k, W = (x1 - x0) * PW * k, H = (y1 - y0) * PH * k;
   const bx = Math.floor(X), by = Math.floor(Y), c = mk(W + 2, H + 2), g = c.getContext('2d');
@@ -371,6 +372,7 @@ D.navShow = () => { // draws the walking graph (yellow), behind-desk zones (red)
   g.fillStyle = '#4af'; for (const s of seats) if (s.feet) g.fillRect(s.feet[0] - 4, s.feet[1] - 4, 8, 8);
   document.body.appendChild(c); return nav.length;
 };
+D.rush = () => { for (const w of wl) w.tripT = 0; }; // test aid: every idle bot wants a break at once (the walking cap still holds)
 D.walkers = () => wl.filter(w => w.walk && (w.walk.phase === 'go' || w.walk.phase === 'back')).map(w => w.bot.name);
 D.walkInfo = () => items.filter(it => it.t === 3 && it.r.walk).map(it => ({ name: it.r.bot.name, phase: it.r.walk.phase, x: Math.round(it.r.walk.x), y: Math.round(it.r.walk.y), key: +it.k.toFixed(1) }));
 
@@ -478,12 +480,16 @@ function pump(now) {
   for (let i = pending.length - 1; i >= 0; i--) {
     const p = pending[i], a = findWorker(p.from), b = findWorker(p.to);
     if (!a || !b || a === b || a.seat.stand || b.seat.stand || now - p.at > 90e3) { pending.splice(i, 1); continue; }
+    if (!freeWalkers()) continue; // the walking cap: wait for a free slot
     if (a.walk?.trip) recall(a); if (b.walk?.trip) recall(b); // real interactions outrank the cosmetic ones
     if (a.walk || b.walk || visiting(b)) continue;
     if (a.chatting) endChat(a.chatting); if (b.chatting) endChat(b.chatting);
     pending.splice(i, 1); startWalk(a, b, p.note, false);
   }
 }
+// the walking cap (WALK.maxMoving): bots getting up, walking out or walking home count; bots standing, sitting or talking somewhere do not
+const MOVING = { rise: 1, stand: 1, go: 1, back: 1 };
+const freeWalkers = () => { let n = 0; for (let i = 0; i < wl.length; i++) if (wl[i].walk && MOVING[wl[i].walk.phase]) n++; D.moving = n; return Math.max(0, WALK.maxMoving - n); };
 const visiting = w => { for (let i = 0; i < wl.length; i++) if (wl[i].walk && wl[i].walk.to === w) return true; return false; };
 
 // ---------- walking: stand up, walk the walkway to the other desk, talk, walk back, sit ----------
@@ -521,7 +527,7 @@ function startWalk(w, to, note, demo) {
 }
 let nextDemo = 1.2 + rnd() * 0.8;
 function maybeDemo(t) {
-  if (!DEMO || t < nextDemo) return;
+  if (!DEMO || t < nextDemo || !freeWalkers()) return;
   nextDemo = t + 8 + rnd() * 4;
   const ws = [...workers.values()].filter(w => !w.seat.stand && !w.walk && !visiting(w)); // bag seat (Dashboards) may walk too
   if (ws.length < 2) return;
@@ -640,8 +646,8 @@ function drawClock(t) {
     CK.m = m; const d = CK.d || (CK.d = mk(W + 40, H + 40)), g = d.getContext('2d'), [ix, iy, iw, ih] = CK.inner;
     g.clearRect(0, 0, d.width, d.height);
     const h12 = Math.floor(m / 60) % 12 || 12, mm = m % 60, pm = m >= 720, digs = h12 >= 10 ? [1, h12 % 10, (mm / 10) | 0, mm % 10] : [h12, (mm / 10) | 0, mm % 10], nd = digs.length, ci = nd - 3; // ci: the colon follows this digit
-    const dh = ih * 0.66, dw = dh * 0.46, t = dh * 0.12, gap = dw * 0.36, col = dw * 0.42, ampm = dw * 0.62;
-    const total = (dw + gap) * nd + col + ampm, x0 = ix + (iw - total) / 2, y0 = iy + (ih - dh) / 2;
+    const dh = ih * 0.66, dw = dh * 0.46, t = dh * 0.12, gap = dw * 0.36, col = dw * 0.42, margin = dw * 0.45, ampm = dw * 0.52; // margin: the space before A / P
+    const total = (dw + gap) * nd - gap + col + margin + ampm, x0 = ix + (iw - total) / 2, y0 = iy + (ih - dh) / 2;
     const on = '#ffc47a', off = 'rgba(255,170,90,.06)';
     g.shadowColor = 'rgba(255,140,50,.85)'; g.shadowBlur = 14;
     let x = x0;
@@ -650,8 +656,9 @@ function drawClock(t) {
       x += dw + gap;
       if (i === ci) { const cx = x - gap / 2 + col / 2 - dh * 0.05; g.fillStyle = on; for (const v of [0.32, 0.7]) { g.beginPath(); g.arc(cx + (1 - v) * dh * 0.1, y0 + v * dh, t * 0.55, 0, 7); g.fill(); } x += col; }
     }
-    g.shadowBlur = 8; g.font = `700 ${Math.round(dh * 0.27)}px ${SANS}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillStyle = on; g.fillText(pm ? 'PM' : 'AM', x + ampm / 2, y0 + dh * 0.78); g.fillStyle = off; g.fillText(pm ? 'AM' : 'PM', x + ampm / 2, y0 + dh * 0.22);
+    // one letter, A or P (David, 2026-11-10), set off from the minutes by a small margin and sitting on the digits' baseline
+    g.shadowBlur = 8; g.font = `800 ${Math.round(dh * 0.5)}px ${SANS}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    g.fillStyle = on; g.fillText(pm ? 'P' : 'A', x - gap + margin + ampm / 2, y0 + dh);
     g.shadowBlur = 0;
     const gl = g.createLinearGradient(ix, iy, ix + iw * 0.6, iy + ih); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.45, 'rgba(255,255,255,0)'); // glass sheen
     g.fillStyle = gl; g.beginPath(); g.roundRect(ix, iy, iw, ih, 10); g.fill();
@@ -674,7 +681,7 @@ function pickSpot(w) {
   return list.length ? list[(rnd() * list.length) | 0] : null;
 }
 function startTrip(w, force, spotId) {
-  if (!w || w.walk || w.seat.stand) return false;
+  if (!w || w.walk || w.seat.stand || (!force && !freeWalkers())) return false;
   const spot = spotId ? [...lng.spots, ...lng.bags].find(s => s.id === spotId) : pickSpot(w); if (!spot) return false;
   const pts = pathPts([w.seat.feet, ...navPath(w.seat.node, spot.node).map(n => nav[n]), [spot.x, spot.y]]), len = [];
   for (let i = 1; i < pts.length; i++) len.push(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
@@ -692,60 +699,30 @@ function recall(w) { // back to the desk from wherever they are on the route
   g.phase = 'back'; g.t = 0; g.say = null; layoutDirty = true;
 }
 function say(g, text, dur) { g.say = text; g.sayOff = dur; layoutDirty = true; }
-// ---------- kitchen tasks (David, 2026-11-10): a bot at the fridge opens it and takes a snack; at the coffee machine it pulls a coffee
-// into a mug. Drawn over the painted fridge and machine, behind the bots; afterwards the bot holds what it got. Plate px, from the 3x plate. ----------
+// ---------- kitchen task (David, 2026-11-10): at the coffee machine a bot pulls a coffee into a mug, drawn over the painted machine, behind
+// the bots; afterwards the bot carries the mug. The fridge animation was removed (David, 2026-11-10). Plate px, from the 3x plate. ----------
 const KIT = {
-  door: [1, 431, 81, 516],        // fridge top door: x0, y0, x1 (hinge side), y1
   spout: [137, 472], tray: 482,   // espresso group head and drip tray top
   screen: [110, 442, 124, 455],   // the machine's little display
-  fridgeT: [0.9, 3.4, 0.9],       // open, look inside, close (s)
   coffeeT: [0.8, 3.2, 0.7],       // warm up, pour, hand-off (s)
-  snacks: ['🥪', '🍎', '🧃', '🍦', '🍩', '🥛'],
   live: 0,                        // >0 while anything here moves (lite repaints the corner)
 };
 const kitTask = () => { for (let i = 0; i < wl.length; i++) { const g = wl[i].walk; if (g && g.task) return g.task; } return null; };
-function startKitchenTask(w, g, sp) { g.task = { kind: sp.id, t: 0, w }; g.front = false; g.face = sp.id === 'fridge' ? -1 : 1; g.say = null; }
+function startKitchenTask(w, g, sp) { g.task = { kind: sp.id, t: 0, w }; g.front = false; g.face = 1; g.say = null; }
 function stepKitchenTask(w, g, dt) { // true while the task runs
   const k = g.task; k.t += dt; KIT.live = 0.6;
-  const T = k.kind === 'fridge' ? KIT.fridgeT : KIT.coffeeT, end = T[0] + T[1] + T[2];
-  g.front = false; g.face = k.kind === 'fridge' ? -1 : 1;
+  const T = KIT.coffeeT, end = T[0] + T[1] + T[2];
+  g.front = false; g.face = 1;
   if (k.t < end) return true;
   g.task = null; g.taskDone = true; g.front = true; g.prev = { front: false, face: g.face }; g.fade = FADE;
-  g.holding = k.kind === 'coffee' ? 'mug' : pick(KIT.snacks); g.stayT = Math.max(g.stayT, 6 + rnd() * 6);
-  say(g, k.kind === 'coffee' ? pick(['☕', 'ahh ☕', 'fresh!']) : g.holding, 2.4); layoutDirty = true;
+  g.holding = 'mug'; g.stayT = Math.max(g.stayT, 6 + rnd() * 6);
+  say(g, pick(['☕', 'ahh ☕', 'fresh!']), 2.4); layoutDirty = true;
   return false;
 }
 function drawKitchen(t) {
   const k = kitTask(); if (!k) return;
-  const [x0, y0, x1, y1] = KIT.door, dw = x1 - x0, dh = y1 - y0;
   P();
-  if (k.kind === 'fridge') {
-    const [a, b, c] = KIT.fridgeT, u = k.t < a ? easeOut(k.t / a) : k.t < a + b ? 1 : 1 - easeOut(Math.min(1, (k.t - a - b) / c)), th = u * 1.9, cs = Math.cos(th), sn = Math.sin(th);
-    // inside: cool light, two shelves, a few things
-    const gi = ctx.createLinearGradient(0, y0, 0, y1); gi.addColorStop(0, '#e4ebf3'); gi.addColorStop(1, '#93a0b2');
-    ctx.globalAlpha = Math.min(1, u * 3); ctx.fillStyle = gi; ctx.beginPath(); ctx.roundRect(x0 + 2, y0 + 2, dw - 4, dh - 4, 4); ctx.fill();
-    ctx.fillStyle = 'rgba(120,135,160,.55)'; for (const f of [0.38, 0.7]) ctx.fillRect(x0 + 4, y0 + dh * f, dw - 8, 1.6);
-    const things = [[0.18, 0.38, 7, 13, '#fbfbf6'], [0.32, 0.38, 6, 10, '#ff9d2e'], [0.5, 0.38, 9, 7, '#d8423a'], [0.72, 0.38, 6, 12, '#7cc46b'], [0.2, 0.7, 10, 8, '#f2d16b'], [0.45, 0.7, 7, 11, '#8fb7e8'], [0.68, 0.7, 11, 7, '#e8846b']];
-    for (const [fx, fy, w, h, col] of things) { ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(x0 + dw * fx, y0 + dh * fy - h, w, h, 2); ctx.fill(); }
-    ctx.globalAlpha = Math.min(1, u * 3) * (0.12 + 0.3 * env.n); ctx.fillStyle = '#1a1420'; ctx.fillRect(x0 + 2, y0 + 2, dw - 4, dh - 4); // the room's light level
-    ctx.globalAlpha = 1;
-    // the door swings out round its right-hand hinge, towards the room
-    { const fridgeCut = { c: base, sx: offX + x0 * k, sy: offY + y0 * k, sw: dw * k, sh: dh * k };
-      ctx.save(); ctx.translate(x1, y0);
-      if (cs > 0.02) { ctx.transform(cs, -0.08 * sn, 0, 1 + 0.06 * sn, 0, 0); ctx.drawImage(fridgeCut.c, fridgeCut.sx, fridgeCut.sy, fridgeCut.sw, fridgeCut.sh, -dw, 0, dw, dh); ctx.fillStyle = `rgba(0,0,0,${0.35 * sn})`; ctx.fillRect(-dw, 0, dw, dh); }
-      else if (cs < -0.02) { // past square: the inside of the door, light grey with its shelves
-        ctx.transform(-cs, 0.1 * sn, 0, 1 + 0.08 * sn, 0, 0);
-        const gd = ctx.createLinearGradient(0, 0, dw, 0); gd.addColorStop(0, '#d9dee6'); gd.addColorStop(1, '#a9b1bd');
-        ctx.fillStyle = gd; ctx.beginPath(); ctx.roundRect(0, 0, dw, dh, 5); ctx.fill();
-        ctx.fillStyle = 'rgba(90,100,120,.5)'; for (const f of [0.3, 0.55, 0.8]) ctx.fillRect(6, dh * f, dw - 12, 2.2);
-      }
-      ctx.restore();
-    }
-    // its light on the floor and on the bot (not in lite: lite repaints only the door)
-    if (!qual.lite) ctx.globalCompositeOperation = 'lighter'; else { ctx.globalAlpha = 1; return; }
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * u * (0.5 + 0.7 * env.dark);
-    ctx.drawImage(screenGlow, x0 - 20, y0 - 10, dw + 90, dh + 120); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  } else {
+  {
     const [a, b, c] = KIT.coffeeT, [sx, sy] = KIT.spout, tray = KIT.tray, on = k.t < a + b + c * 0.5;
     const [qx0, qy0, qx1, qy1] = KIT.screen; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 9);
     ctx.drawImage(screenGlow, qx0 - 8, qy0 - 8, qx1 - qx0 + 16, qy1 - qy0 + 16); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
@@ -779,18 +756,18 @@ function stepHang(w, g, dt) {
     return;
   }
   if (g.leaving) { g.sitK -= dt / 0.65; if (g.sitK <= 0) { g.sitK = 0; g.leaving = false; recall(w); } return; }
-  if (!g.task && !g.taskDone && (sp.id === 'fridge' || sp.id === 'coffee') && !kitTask()) startKitchenTask(w, g, sp);
+  if (!g.task && !g.taskDone && sp.id === 'coffee' && !kitTask()) startKitchenTask(w, g, sp);
   if (g.task && stepKitchenTask(w, g, dt)) return;
   if (sp.bag) { g.sitK = Math.min(1, g.sitK + dt / 0.7); g.front = true; } else { g.front = g.taskDone || !sp.back; if (sp.face && !g.taskDone) g.face = sp.face; }
   if (g.say && (g.sayOff -= dt) <= 0) { g.say = null; layoutDirty = true; }
-  if ((g.stayT -= dt) <= 0 && !g.say) return recall(w);
+  if ((g.stayT -= dt) <= 0 && !g.say) { if (freeWalkers()) return recall(w); g.stayT = 0.5 + rnd(); } // the walk home waits for a free slot
   if ((g.sayT -= dt) > 0) return;
   g.sayT = 4 + rnd() * 5;
   const others = wl.filter(o => o !== w && o.walk && o.walk.phase === 'hang'), r = rnd();
   if (others.length && r < 0.55) { // alternating small talk
     say(g, pick(w.b.loungeChat), 2);
     const o = others[(rnd() * others.length) | 0]; if (o.walk.sayT > 2.4) o.walk.sayT = 2.2 + rnd() * 0.5;
-  } else if (!g.petted && !sp.bag && r > 0.6 && (g.petDog = dogNear(g))) { // walk over and pet the dog (the way home retraces this leg)
+  } else if (!g.petted && !sp.bag && r > 0.6 && freeWalkers() && (g.petDog = dogNear(g))) { // walk over and pet the dog (the way home retraces this leg)
     const pd = g.petDog, dx = pd.x > g.x ? -1 : 1, tx = pd.x + dx * 36, ty = pd.y + 3;
     g.petted = g.pet = true; g.pts.push([tx, ty]); g.len.push(Math.hypot(tx - g.x, ty - g.y)); g.i = g.len.length - 1; g.f = 0; g.dir = 1; g.phase = 'go'; g.t = 0; g.say = null;
   } else say(g, pick(w.b.snacks), 2.2);
@@ -799,7 +776,7 @@ const dogNear = g => dogs.filter(d => d.y > 590 && d.x > 60 && d.x < 480).sort((
 let ambT = 0;
 function dashVisit(w) { // Dashboards leaves the bean bag to check in at a desk, then walks back
   const targets = wl.filter(o => o !== w && !o.seat.stand && !o.seat.bag && !o.walk && !visiting(o) && !busy(o) && !o.chatting);
-  if (!targets.length) return false;
+  if (!targets.length || !freeWalkers()) return false;
   startWalk(w, targets[(rnd() * targets.length) | 0], '☕ check-in', false);
   return true;
 }
@@ -808,7 +785,7 @@ function stepAmbient(dt) {
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], g = w.walk;
     // Dashboards keeps roaming even while her status is working (laptop life in the kitchen)
-    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if (busy(w) && !isDash(w.bot) && !w.seat.roam && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || g.phase === 'hang' || g.phase === 'petting')) recall(w); }
+    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if (busy(w) && !isDash(w.bot) && !w.seat.roam && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || (g.phase === 'hang' || g.phase === 'petting') && freeWalkers())) recall(w); }
   }
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], dash = isDash(w.bot);
@@ -1009,8 +986,8 @@ function buildItems() {
   for (const o of occluders) items.push({ k: o.depth, t: 1, r: o });
   for (const s of seats) if (s.chair) items.push({ k: s.clip + 0.2, t: 2, r: s });
   for (const w of workers.values()) items.push({ k: 0, t: 3, r: w });
-  items.push({ k: 9997, t: 8, r: 'steam' }, { k: 9998, t: 4, r: 'room-l' }, { k: 9999, t: 4, r: 'room-r' });
-  items.push({ k: 590, t: 10, r: 'kitchen' }); // fridge door and coffee pour: over the painted kitchen, behind the bots standing there
+  items.push({ k: 9997, t: 8, r: 'steam' });
+  items.push({ k: 590, t: 10, r: 'kitchen' }); // the coffee pour: over the painted kitchen, behind the bots standing there
   items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
   for (const d of dogs) items.push({ k: 0, t: 5, r: d });
   PROPS.forEach((p, i) => items.push({ k: p.depth, t: 9, r: { ...p, im: propImgs[i] } })); // extra pictures from config.js
@@ -1494,9 +1471,9 @@ function renderLite(t, dt) {
     if (dogMoving(d)) { const b = dogBox(d); dirty.push(d.db ? union(d.db, b) : b); d.db = b; }
     else if (d.db) { dirty.push(d.db, dogBox(d)); d.db = null; }
   }
-  if (KIT.live > 0) { // a kitchen task: only the fridge door or the mug change; the whole corner (with the bot turning) at the start and the end
+  if (KIT.live > 0) { // the coffee task: only the mug changes; the whole corner (with the bot turning) at the start and the end
     KIT.live -= dt; const k = kitTask();
-    if (!k || k.t < 0.3) dirty.push(dev(0, 420, 185, 640)); else dirty.push(k.kind === 'fridge' ? dev(0, 426, 112, 526) : dev(100, 432, 156, 498));
+    if (!k || k.t < 0.3) dirty.push(dev(0, 420, 185, 640)); else dirty.push(dev(100, 432, 156, 498));
   }
   cityDt += dt;
   if ((cityT -= dt) <= 0) { cityT = LITE.cityEvery; renderCity(t, cityDt); cityDt = 0; dirty.push(cityBox); }

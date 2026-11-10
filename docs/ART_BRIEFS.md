@@ -1,6 +1,6 @@
 # Art briefs
 
-**Status 2026-11-10 (later):** briefs 1 and 3 were done in code instead. The desks are repainted dark walnut with slab legs and no drawers by `portable/art/run-desks.js`, and the boats are drawn by `public/office2d/boats.js` (no cargo ship; LED party catamaran and neon hydrofoil added). A painter may still improve either; brief 2 (bamboo) is open.
+**Status 2026-11-10 (evening):** all three are settled in code. Desks: `portable/art/run-room.js` repaints them dark walnut with slim legs and open space where the drawers were (it replaced the first repaint, which had painted drawer boxes over the bean bags). Bamboo: David asked for the corner plants to be removed, not replaced; the same tool fills both corners with floor, rug, fridge, desk and chair, and the site no longer draws the plant overlays (`room-l` / `room-r` masks are kept only as input for the tool). Boats: drawn by `public/office2d/boats.js`. A painter may still improve any of them; the briefs below say how to fit new art.
 
 Requested by David on 2026-11-10. These three need new painted art; code cannot make them convincingly. Each brief says what to make, the exact files and sizes, and how to check the result. Anyone may make the art with any image tool that can edit a masked area of a reference picture. Hand the files to Claude on DPro or push them to `main` following `AGENTS.md`; the code side is listed under each brief.
 
