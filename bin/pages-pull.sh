@@ -46,6 +46,8 @@ refresh_requested() {
   echo "$id" > logs/refresh-last
   [ -n "$last" ] || return 1
   log "refresh button pressed (run $id), publishing now"
+  # fresh Claude usage for the bars: the collector reads local files only (no model calls); the server re-reads its output by mtime
+  node bin/claude-usage.js >/dev/null 2>&1 || log "claude-usage collector failed (bars keep the last reading)"
   return 0
 }
 
