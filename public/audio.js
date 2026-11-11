@@ -126,10 +126,11 @@ function swap() { // the next player starts from the top and fades in while this
 function musicTick() { // 20 times a second: volume ramps, and the hand-over near the end of the track
   if (!players) return;
   for (const a of players) { if (a.volume !== a.target) { const d = a.target - a.volume, st = a.rate * 0.05; a.volume = Math.abs(d) <= st ? a.target : Math.max(0, Math.min(1, a.volume + Math.sign(d) * st)); }
-    if (a.volume === 0 && a.target === 0 && !a.paused) a.pause(); }
+    if (a.volume === 0 && a.target === 0 && !a.paused && !a.seeking) a.pause(); }
   const a = players[cur]; if (AC.music.on && a.duration && !a.paused && a.currentTime >= a.duration - TRACK.fade - 0.3) swap();
 }
-function fail(e) { if (failed) return; failed = true; failWhy = String(e && (e.message || e.type) || e); if (players) for (const a of players) a.pause(); if (AC.music.on) { if (!synth.on) synth.toggle(); showLabel(true, SYNTH_NAME); } }
+// AbortError: a start interrupted by pressing the button again, not a broken file
+function fail(e) { if (failed || (e && e.name === 'AbortError')) return; failed = true; failWhy = String(e && (e.message || e.type) || e); if (players) for (const a of players) a.pause(); if (AC.music.on) { if (!synth.on) synth.toggle(); showLabel(true, SYNTH_NAME); } }
 const SYNTH_NAME = 'Agent City Lofi · generated live';
 AC.music = {
   on: false,
@@ -138,7 +139,7 @@ AC.music = {
     if (failed) { if (synth.on !== this.on) synth.toggle(); showLabel(this.on, SYNTH_NAME); return this.on; }
     if (!players) { players = [player(), player()]; ticker = setInterval(musicTick, 50); }
     const a = players[cur];
-    if (this.on) { a.play().then(() => fade(a, TRACK.vol, 1.5), fail); showLabel(true, TRACK.name); }
+    if (this.on) { fade(a, TRACK.vol, 1.5); a.play().catch(fail); showLabel(true, TRACK.name); } // the fade target first: the ticker pauses a player that is meant to be silent
     else { for (const p of players) fade(p, 0, 0.8); showLabel(false, TRACK.name); }
     return this.on;
   },
