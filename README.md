@@ -264,7 +264,7 @@ The app source itself isn't on this box, so the diff is additive only:
 ## Files
 - `server.js`: http server, auth, SSE.
 - `lib/city.js`: discovery, status, schedules, usage, portfolio.
-- `public/office2d/`: `index.html`, `main.js` (workers, walks, ambient life, corgi, kitchen, render loop), `fx.js` (city FX), `screens.js`, `time.js`, `ui.js` (KPI strip, card, roster, clock), `assets/`.
+- `public/office2d/`: `index.html`, `main.js` (workers, walks, ambient life, corgi, kitchen, render loop), `fx.js` (city FX), `screens.js`, `time.js`, `ui.js` (KPI strip, card, roster, clock), `art/` (the art pack: start with `art/README.md`).
 - `public/`: `audio.js` (an original WebAudio piano loop, off by default), `style.css`, `login.html`, `favicon.svg`.
 - `bin/`: `start.sh`, `stop.sh`, `public.sh`, `agentcity`, `heartbeat.sh`, `interact.sh`, `verify.js`, `fpsbench.js`, `preprocess_v7.py` (`preprocess.py` is kept for reference only).
 - `design/v7/`: v7 source art and `orig/`.

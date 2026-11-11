@@ -105,11 +105,14 @@ const synth = {
     const buf = await c.startRendering(); ctx = keep[0]; nextT = keep[1]; bar = keep[2]; return buf;
   },
 };
-// The button (David, 2026-11-11): plays David's track (assets/ac-music.mp3, used with the creator's permission, credited in the label)
+// The button (David, 2026-11-11): plays David's track (office2d/art/music/ac-music.mp3, used with the creator's permission, credited in the label)
 // on an endless loop with no gap: two players take turns, the next one fading in from the start while the current one fades out over
 // its last seconds. No video and no pop-up; a small line of text above the button names the track while it plays. If the file cannot
 // play, the generated lofi above plays instead.
-const TRACK = { src: (window.AC_STATIC ? '' : '/') + 'office2d/assets/ac-music.mp3?v=1', name: 'Lofi Trance Mix · Velvet Vinyl', vol: 0.6, fade: 7 };
+// The file and its title come from the art pack (office2d/art/music, listed in art/pack.json): swap the file there and it goes live.
+const TRACK = { file: 'ac-music.mp3', name: 'Lofi Trance Mix · Velvet Vinyl', vol: 0.6, fade: 7,
+  get src() { const art = window.AC && AC.art; return art ? art.url(this.file) : (window.AC_STATIC ? '' : '/') + 'office2d/art/music/' + this.file + '?v=1'; },
+  get title() { const art = window.AC && AC.art; return (art && art.title(this.file)) || this.name; } };
 let label = null, players = null, cur = 0, ticker = null, failed = false, failWhy = "";
 function showLabel(on, text) {
   if (!label) { label = document.createElement('div'); label.id = 'track'; label.setAttribute('aria-live', 'polite');
@@ -139,13 +142,13 @@ AC.music = {
     if (failed) { if (synth.on !== this.on) synth.toggle(); showLabel(this.on, SYNTH_NAME); return this.on; }
     if (!players) { players = [player(), player()]; ticker = setInterval(musicTick, 50); }
     const a = players[cur];
-    if (this.on) { fade(a, TRACK.vol, 1.5); a.play().catch(fail); showLabel(true, TRACK.name); } // the fade target first: the ticker pauses a player that is meant to be silent
-    else { for (const p of players) fade(p, 0, 0.8); showLabel(false, TRACK.name); }
+    if (this.on) { fade(a, TRACK.vol, 1.5); a.play().catch(fail); showLabel(true, TRACK.title); } // the fade target first: the ticker pauses a player that is meant to be silent
+    else { for (const p of players) fade(p, 0, 0.8); showLabel(false, TRACK.title); }
     return this.on;
   },
   _render: synth._render,
   _state: () => players ? { cur, t: players.map(a => +a.currentTime.toFixed(1)), vol: players.map(a => +a.volume.toFixed(2)), paused: players.map(a => a.paused), failed, failWhy } : { failed, failWhy }, // check aid
   _seek: s => { if (players) players[cur].currentTime = s; }, // check aid: jump near the end to hear the hand-over
-  track: TRACK.name,
+  track: TRACK.title,
 };
 })();

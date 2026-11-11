@@ -4,11 +4,12 @@
  * The office rebuilt (portable/art/scene.js): clean floor, black four-leg desks, one monitor per bot, team desks, small corner bamboo.
  *   node portable/art/run-scene.js <out-dir> [--install]
  * 1. room.js (bamboo step only) fixes the corners from the seed pictures, 2. scene.js builds the room on top, 3. the result is put into
- * the preview and shot at dusk and night (<out-dir>/render-*.png). --install copies the files into public/office2d/assets as well.
+ * the preview and shot at dusk and night (<out-dir>/render-*.png). --install copies the files into the art pack (public/office2d/art) as well.
  * Needs the preview server (node portable/serve.js).
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path');
+const pack = require(path.join(__dirname, '..', '..', 'bin', 'art-pack.js')); // the art pack: where each file lives
 const out = path.resolve(process.argv[2] || 'scene'), install = process.argv.includes('--install'), root = path.resolve(__dirname, '..', '..'), prev = path.join(root, 'portable', 'preview'), pa = path.join(prev, 'office2d', 'assets');
 const node = (...a) => execFileSync(process.execPath, a, { cwd: root, maxBuffer: 1 << 30 }).toString();
 fs.mkdirSync(out, { recursive: true });
@@ -25,6 +26,6 @@ const j = JSON.parse(JSON.parse(res.split('\n').find(l => l.startsWith('"{'))));
 console.log(JSON.stringify(j.done).slice(0, 300));
 if (!j.out) process.exit(1);
 for (const [k, v] of Object.entries(j.out)) fs.writeFileSync(path.join(out, k), k.endsWith('.json') ? v : Buffer.from(v.split(',')[1], 'base64'));
-for (const k of Object.keys(j.out)) fs.copyFileSync(path.join(out, k), path.join(pa, k));
-if (install) for (const k of Object.keys(j.out)) fs.copyFileSync(path.join(out, k), path.join(root, 'public', 'office2d', 'assets', k));
+for (const k of Object.keys(j.out)) pack.previewPut(k, path.join(out, k));
+if (install) { for (const k of Object.keys(j.out)) fs.copyFileSync(path.join(out, k), pack.artPath(k)); console.log('installed; now: node bin/art-pack.js check'); }
 for (const t of (process.env.TIMES || '18:30,22:30').split(',')) console.log(node(path.join(root, 'portable', 'shot.js'), '--url', `http://127.0.0.1:8791/?q=0&notags=1&t=${t}`, '--size', '1600x900', '--dpr', '1.5', '--wait', '9', '--out', path.join(out, `render-${t.replace(':', '')}.png`)).trim().split('\n').slice(-2).join(' '));

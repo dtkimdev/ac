@@ -4,7 +4,7 @@
  * Runs portable/art/heads-fix.js in headless Chrome against the preview and writes the results to a folder for review:
  *   node portable/art/run.js <out-dir>        -> <out-dir>/turn-heads.webp, walk-side.webp, walk-side.json
  * Needs the preview server (node portable/serve.js) and a fresh node portable/rebuild.js. Copy the files into
- * public/office2d/assets yourself after checking them, and raise ?v= in main.js.
+ * the art pack (node bin/art-pack.js find <file> says where) yourself after checking them.
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path');

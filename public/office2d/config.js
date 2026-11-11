@@ -1,5 +1,5 @@
 // Agent City settings. Change behaviour, speed and items here; no drawing code needed. Recipes: AGENTS.md, "Common edits".
-// Art and positions live in assets/layout.json.
+// Art and positions live in the art pack: art/README.md (find anything: node bin/art-pack.js find <word>), positions in art/layout.json.
 
 // ↻ button on the live site: rings a GitHub workflow that the publisher watches (see main.js setupPagesRefresh).
 export const REFRESH = { repo: 'dtkimdev/ac', workflow: 'refresh.yml', ref: 'main', waitSeconds: 300 };
@@ -35,12 +35,14 @@ export const behaviorOf = num => ({ ...BEHAVIOR.default, ...(BEHAVIOR.byBot[num]
 export const LOITER = { tripEvery: [12, 45], tripStay: [10, 32] };
 // Desk neighbours turning to chat: how often a pair starts, in seconds (David, 2026-11-11: rarely).
 export const CHAT = { every: [150, 400] };
+// Speech bubbles over the bots: 1 = the old size (David, 2026-11-12: 20% smaller). Text, padding and tail all scale with it.
+export const BUBBLE = { size: 0.8 };
 
 // Corgi moods: bigger number = picked more often. David (2026-11-10): the dogs only act cute or ask a bot for attention, so the moods
 // aimed at a bot dominate. affection: trot up, happy wiggle. ask: beg at a bot until it answers. belly: roll over at a bot's feet.
-// feed: ask a bot for food; it reaches into its pocket and feeds the dog a biscuit (David, 2026-11-10).
+// (The snack-feeding mood was removed, David 2026-11-12.)
 // beg / begWithVisitors: beg near the lounge visitors. wander and zoomies (running about alone) are off; nap and rest are short breaks.
-export const DOG_MOODS = { wander: 0, affection: 24, ask: 10, feed: 24, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
+export const DOG_MOODS = { wander: 0, affection: 24, ask: 10, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
 // Corgi size: 1 = the original size, 1.5 = 50% bigger (David, 2026-11-10).
 export const DOG = { size: 1.5 };
 // Walking: at most this many bots move about the room at once (David, 2026-11-10: no more than 3). Others wait their turn: a trip, a visit
@@ -50,7 +52,7 @@ export const DOG = { size: 1.5 };
 export const WALK = { maxMoving: 3, quietShare: 0.5 };
 
 // ---------- items ----------
-// Extra pictures placed in the room. Put the image in assets/, then add a line. x, y, w, h are in plate pixels (the room is 1280 x 720).
+// Extra pictures placed in the room. Put the image in art/props/ and list it in art/pack.json, then add a line here. x, y, w, h are in plate pixels (the room is 1280 x 720).
 // depth is the floor line: things lower on screen (bigger y) draw in front. Use the item's bottom edge, y + h, unless it should sit behind something.
 // Example: { file: 'plant-new.png', x: 600, y: 560, w: 60, h: 90, depth: 650 },
 export const PROPS = [];

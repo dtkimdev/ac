@@ -6,12 +6,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PORT=${AGENT_CITY_PUBLIC_PORT:-8789}; OUT=build/pages
+# the art pack (public/office2d/art, see its README.md): every file listed, none missing, sizes as listed. A broken pack never goes live.
+node bin/art-pack.js check public/office2d/art || { echo "art pack check failed: run node bin/art-pack.js check"; exit 1; }
 mkdir -p "$OUT"
 find "$OUT" -mindepth 1 ! -name state.json -delete
-mkdir -p "$OUT/office2d/assets"
+mkdir -p "$OUT/office2d"
 cp public/style.css public/favicon.svg public/audio.js "$OUT/"
 cp public/office2d/*.js "$OUT/office2d/"
-cp public/office2d/assets/* "$OUT/office2d/assets/"
+cp -r public/office2d/art "$OUT/office2d/art"
+rm -f "$OUT/office2d/art/README.md"
+# each file gets a content stamp in the published pack.json: browsers fetch again only the pictures that changed
+node bin/art-pack.js stamp "$OUT/office2d/art"
 touch "$OUT/.nojekyll"
 FUNNEL=$(tr -d '\n' < data/public_url.txt 2>/dev/null || true)
 FUNNEL=${FUNNEL:-https://agentcity.tailacdee6.ts.net}

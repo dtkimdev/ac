@@ -5,7 +5,7 @@
  *   node portable/art/run-room.js <out-dir> [bamboo,desks,nochair]
  *   -> plate-dusk(-hi).webp, plate-night(-hi).webp, nochair-dusk.webp, nochair-night.webp
  * Always starts from the ORIGINAL pictures of the seed commit (83b9edb), so it can be run again after a change.
- * Needs the preview server (node portable/serve.js). Copy the files into public/office2d/assets yourself after checking them,
+ * Needs the preview server (node portable/serve.js). Copy the files into the art pack (node bin/art-pack.js find <file> says where) yourself after checking them,
  * and raise ?v= in main.js.
  */
 const { execFileSync } = require('child_process');

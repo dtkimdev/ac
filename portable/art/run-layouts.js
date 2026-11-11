@@ -9,6 +9,7 @@
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path');
+const pack = require(path.join(__dirname, '..', '..', 'bin', 'art-pack.js')); // the art pack: where each file lives
 const out = path.resolve(process.argv[2] || 'layouts'), root = path.resolve(__dirname, '..', '..'), prev = path.join(root, 'portable', 'preview'), pa = path.join(prev, 'office2d', 'assets');
 const shot = (...a) => execFileSync(process.execPath, [path.join(root, 'portable', 'shot.js'), ...a], { maxBuffer: 1 << 30 }).toString();
 fs.mkdirSync(out, { recursive: true });
@@ -29,7 +30,7 @@ const t = process.env.T || '18:30';
 try {
   for (const id of opts) {
     const dir = path.join(out, 'opt' + id);
-    for (const f of fs.readdirSync(dir)) if (/\.(webp|png|json)$/.test(f)) fs.copyFileSync(path.join(dir, f), path.join(pa, f));
+    for (const f of fs.readdirSync(dir)) if (/\.(webp|png|json)$/.test(f)) pack.previewPut(f, path.join(dir, f));
     console.log(shot('--url', `http://127.0.0.1:8791/?q=0&t=${t}${process.env.TAGS ? '' : '&notags=1'}`, '--size', '1600x900', '--dpr', '1.5', '--wait', '9', '--out', path.join(out, `option-${id}.png`)).trim().split('\n').pop());
   }
 } finally { execFileSync(process.execPath, [path.join(root, 'portable', 'rebuild.js')], { cwd: root }); }

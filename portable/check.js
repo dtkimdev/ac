@@ -66,10 +66,10 @@ async function main() {
   } catch (e) { fails.push('state json parse'); }
 
   // sample assets from layout/public
-  const assetsDir = path.join(PREVIEW, 'office2d', 'assets');
-  const samples = fs.readdirSync(assetsDir).filter((n) => /\.(webp|png|jpg|json)$/i.test(n)).slice(0, 12);
+  // every file of the art pack, at the path the viewer asks for (office2d/art/<folder>/<file>)
+  const samples = Object.keys(require(path.join(__dirname, '..', 'bin', 'art-pack.js')).files(JSON.parse(fs.readFileSync(path.join(PREVIEW, 'office2d', 'art', 'pack.json'), 'utf8'))));
   for (const name of samples) {
-    const r = await get('/office2d/assets/' + encodeURIComponent(name));
+    const r = await get('/office2d/art/' + name.split('/').map(encodeURIComponent).join('/'));
     if (r.status !== 200) fails.push('asset ' + name + ' ' + r.status);
   }
 

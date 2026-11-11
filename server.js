@@ -127,7 +127,7 @@ function broadcast(ev, data) { for (const c of clients) { try { sse(c, ev, data)
 setInterval(() => { for (const c of clients) { try { c.write(': ping\n\n'); } catch {} } }, 25000);
 
 // ---------- http ----------
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.json': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 function send(res, code, body, type = 'text/plain; charset=utf-8', extra = {}) {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra });
   res.end(body);
@@ -135,7 +135,7 @@ function send(res, code, body, type = 'text/plain; charset=utf-8', extra = {}) {
 function serveFile(res, f) {
   fs.readFile(path.join(PUB, f), (err, buf) => {
     if (err) return send(res, 404, 'not found');
-    send(res, 200, buf, MIME[path.extname(f)] || 'application/octet-stream', f.startsWith('office2d/assets/') ? { 'Cache-Control': 'private, max-age=3600' } : {});
+    send(res, 200, buf, MIME[path.extname(f)] || 'application/octet-stream', f.startsWith('office2d/art/') && !f.endsWith('.json') ? { 'Cache-Control': 'private, max-age=3600' } : {});
   });
 }
 function readBody(req, cb) {
@@ -195,7 +195,7 @@ const server = http.createServer((req, res) => {
 
   if (p === '/' || p === '/index.html' || p === '/city') return serveFile(res, 'office2d/index.html');
   if (p === '/embed') { res.writeHead(302, { Location: '/?embed=1' }); return res.end(); }
-  if (p === '/audio.js' || /^\/office2d\/[a-z0-9_.-]+\.js$/.test(p) || /^\/office2d\/assets\/[a-z0-9_-]+\.(webp|png|json)$/.test(p)) return serveFile(res, p.slice(1));
+  if (p === '/audio.js' || /^\/office2d\/[a-z0-9_.-]+\.js$/.test(p) || /^\/office2d\/art\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(webp|png|json|mp3)$/.test(p)) return serveFile(res, p.slice(1)); // the art pack (office2d/art/README.md)
   if (p === '/api/state') { state.bots = lib.statusAll(); return send(res, 200, JSON.stringify(fullState()), 'application/json'); }
   if (p === '/api/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
@@ -278,7 +278,7 @@ function publicHandler(req, res) {
   if (p === '/robots.txt') return send(res, 200, 'User-agent: *\nDisallow: /\n');
   if (p === '/' || p === '/index.html' || p === '/city') return servePublicPage(res, 'office2d/index.html');
   if (p === '/style.css' || p === '/favicon.svg') return serveFile(res, p.slice(1));
-  if (p === '/audio.js' || /^\/office2d\/[a-z0-9_.-]+\.js$/.test(p) || /^\/office2d\/assets\/[a-z0-9_-]+\.(webp|png|json)$/.test(p)) return serveFile(res, p.slice(1));
+  if (p === '/audio.js' || /^\/office2d\/[a-z0-9_.-]+\.js$/.test(p) || /^\/office2d\/art\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(webp|png|json|mp3)$/.test(p)) return serveFile(res, p.slice(1)); // the art pack (office2d/art/README.md)
   if (p === '/api/state') { state.bots = lib.statusAll(); return send(res, 200, JSON.stringify(fullState()), 'application/json'); }
   if (p === '/api/stream') {
     if (publicSse >= PUBLIC_MAX_SSE) return send(res, 503, 'busy');

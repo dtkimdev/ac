@@ -1,4 +1,4 @@
-// Painted 2.5D office. Canvas 2D over pre-rendered plates (assets/plate-*.webp; v8 art via bin/preprocess_v8.py):
+// Painted 2.5D office. Canvas 2D over pre-rendered plates (art/room/plate-*.webp). Every picture lives in the art pack, art/README.md:
 // cached plate+grade, city FX behind the glass, themed monitor screens, seated chibi workers (one per live bot) who
 // turn in their chairs through painted in-between poses and walk over to another desk when the interactions feed says so,
 // cosmetic idle life (lounge visits, neighbour chats, fidgets, a moody corgi), harbour boats, lamps, dust.
@@ -7,10 +7,20 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { VIEW, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
+import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=29'; // V: busts the 1 h asset cache when the art set changes
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=30'; // V: cache version for local servers; the published site stamps each file itself
+// the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
+// carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
+const BID = new URL(import.meta.url).searchParams.get('b');
+let PACK = null; const artWhere = {};
+const artUrl = name => { const p = artWhere[name]; if (!p) throw new Error('not in art/pack.json: ' + name); return A + p + (PACK.stamp && PACK.stamp[p] ? '?h=' + PACK.stamp[p] : V); };
+async function loadPack() {
+  PACK = await fetch(A + 'pack.json' + (BID ? '?b=' + BID : V), { credentials: 'same-origin' }).then(r => r.json());
+  for (const f of PACK.folders) for (const [n, it] of Object.entries(f.files)) { artWhere[n] = f.path ? f.path + '/' + n : n; if (it.title) artWhere[n + '#title'] = it.title; }
+  window.AC = window.AC || {}; window.AC.art = { url: artUrl, title: n => artWhere[n + '#title'] || null }; // audio.js finds the music here
+}
 const q = new URLSearchParams(location.search);
 const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
 if (EMBED) document.body.classList.add('embed');
@@ -22,7 +32,7 @@ const tagsEl = document.getElementById('tags'), fpsEl = document.getElementById(
 const D = window.__office2d = { workers: [], ready: false, frames: 0, fps: 0, loaded: false, walking: 0, interactions: 0, quality: QUALITY[0], turned: 0, corgi: null, corgi2: null, wall: {}, labels: [], plates: 'lo', glassClip: null, ambient: { away: [], lounge: [] }, assets: {} };
 
 const LIVE = [], IMGS = []; // for __office2d.memory(): every canvas made here (weakly held) and every picture loaded
-const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => { IMGS.push(i); ok(i); }; i.onerror = () => no(new Error('asset ' + src)); i.src = A + src + V; });
+const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => { IMGS.push(i); ok(i); }; i.onerror = () => no(new Error('asset ' + src)); i.src = artUrl(src); });
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); if (typeof WeakRef === 'function') LIVE.push(new WeakRef(c)); return c; };
 const free = c => { if (c) { c.width = 0; c.height = 0; } }; // hand a canvas's pixels back now: weak TVs collect garbage late, so replaced canvases piled up
 D.memory = () => { // rough estimate of picture memory, in MB: canvases still alive plus decoded pictures
@@ -38,7 +48,8 @@ const SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans
 let L, plates, sprites, fronts, sideImg = null, dogImg, dogImg2, legImg, fx, bossMon, bossClip, nav, turnB, turnH, ATL = 1, nochair, dashImg = {}, masks = {}, seats = [], monitors = [], occluders = [], zones = [], standing = [], walkH = [], lng;
 const redGlow = glowSprite('255,70,50'), screenGlow = glowSprite('150,190,255');
 async function load() {
-  L = await fetch(A + 'layout.json' + V, { credentials: 'same-origin' }).then(r => r.json());
+  await loadPack();
+  L = await fetch(artUrl('layout.json'), { credentials: 'same-origin' }).then(r => r.json());
   const ships = L.airships.map(a => a.file), occ = L.occluders.map(o => o.mask);
   const [dusk, night, fgM, skyM, waterM, dogI, dog2I, legsI, tbI, thI, ncD, ncN, lapI, mugI, boatI, boatL, ...rest] = await Promise.all([img('plate-dusk.webp'), img('plate-night.webp'), img('fg-mask.png'), img('sky-mask.png'),
     img('water-mask.png'), img(L.corgi.file), img(L.corgi2), img(L.legs.file), img(L.turn.bodies), img(L.turn.heads), img('nochair-dusk.webp'), img('nochair-night.webp'), img(L.dash.laptop), img(L.dash.mug), img(L.boats.file), img(L.boats.lit),
@@ -898,19 +909,6 @@ function dogMood(m, w) {
       const [node] = nearestNode(...at());
       return dogGo(node, span(1, 1.3), seq);
     }
-    case 'feed': { // ask a bot for food: sit, beg (dreaming of a biscuit), then the bot feeds it (stepFeeds / drawFeeds drive the rest)
-      w = w || pickFriend();
-      if (!w) return dogMood('rest');
-      d.by = w;
-      const at = () => w.walk ? [w.walk.x, w.walk.y] : w.seat.feet, face = () => { d.face = at()[0] > d.x ? 1 : -1; };
-      const serve = () => { face(); const side = d.x < at()[0] ? -1 : 1; let ok = true;
-        if (w.walk) w.walk.face = side; else if (w.seat.roam) w.dogLook = side;
-        else { const P = w.pose; if (P.b > 1.5 && P.dur === 0 && !w.chatting) { P.hold = Math.max(P.hold, 6.5); if (!P.after) P.after = () => turnTo(w, 0, TURN_T); } else ok = startTurn(w, 7.5, side, true); } // already turned round: it just stays a while
-        if (!ok) { d.seq = [['beg', span(1.2, 2)], ['sit', 1]]; return; } // busy right now: no snack this time
-        feeds.push({ w, d, side, t: w.walk || w.seat.roam ? -0.3 : -1.1, crumbs: [] }); }; // a seated bot swivels round first
-      const [node] = nearestNode(...at());
-      return dogGo(node, span(1, 1.3), [['sit', span(0.6, 1.1), face], ['beg', span(2.2, 3), () => { face(); d.think = 2.8; }], ['beg', 6, serve], ['sit', span(1, 2)]]);
-    }
     case 'nap': { const c = L.dog.rest.filter(r => r[1] === 'sleep'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.9), [['sleep', span(30, 95)]]); }
     case 'rest': { const c = L.dog.rest.filter(r => r[1] === 'lie'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.95), [['lie', span(14, 42)]]); }
     case 'beg': {
@@ -924,7 +922,7 @@ function dogMood(m, w) {
   }
 }
 function dogNext() {
-  const kb = loungeBots().length, M = DOG_MOODS, W = [['wander', M.wander], ['affection', DEMO ? 34 : M.affection], ['ask', M.ask], ['belly', M.belly], ['nap', M.nap], ['rest', M.rest], ['beg', kb ? M.begWithVisitors : M.beg], ['zoomies', M.zoomies], ['feed', M.feed || 0]];
+  const kb = loungeBots().length, M = DOG_MOODS, W = [['wander', M.wander], ['affection', DEMO ? 34 : M.affection], ['ask', M.ask], ['belly', M.belly], ['nap', M.nap], ['rest', M.rest], ['beg', kb ? M.begWithVisitors : M.beg], ['zoomies', M.zoomies]];
   let r = rnd() * W.reduce((a, b) => a + b[1], 0);
   for (const [m, wt] of W) if ((r -= wt) <= 0) return dogMood(m);
   dogMood('wander');
@@ -932,12 +930,9 @@ function dogNext() {
 function dogPetted(w) { const d = dog = w.walk.petDog; d.mood = 'happy'; d.by = w; d.path = []; d.v = 0; d.zoom = 0; d.face = w.walk.x > d.x ? 1 : -1; d.seq = [['happy', 3.6], ['sit', span(2, 4)]]; dogSeq(); dog = dogs[0]; }
 D.dogPut = (i, node) => { const d = dogs[i]; d.path = []; d.seq = []; d.v = 0; d.node = node; [d.x, d.y] = d.N[node]; d.pose = 'sit'; d.t = 600; return [d.x, d.y]; };
 D.dogAt = (i, x, y, pose = 'walk') => { const d = dogs[i]; d.path = []; d.seq = []; d.v = 0; d.x = x; d.y = y; d.pose = pose === 'walk' ? 'sniff' : pose; d.t = 600; return [d.x, d.y]; };
-D.dogFeed = (name, i = 0) => { const w = findWorker(name); if (!w || !dogs[i]) return false; dog = dogs[i]; dog.path = []; dog.seq = []; dog.v = 0; dogMood('feed', w); dog = dogs[0]; return true; }; // check aid
-D.feeds = () => feeds.map(f => ({ bot: f.w.bot.name, t: +f.t.toFixed(2), abort: !!f.abort }));
 D.dogMood = m => { if (!dog) return false; dog.path = []; dog.seq = []; dog.v = 0; dogMood(m); return true; };
 function stepDog(dt) {
   const d = dog;
-  if (d.think > 0) d.think -= dt;
   d.fs += (d.face - d.fs) * Math.min(1, dt * 9);
   if (d.pose !== 'walk') { if ((d.t -= dt) <= 0) dogSeq(); }
   else {
@@ -968,7 +963,6 @@ function drawDog(d, t) {
   else if (pose === 'beg') { sy = 1 + Math.sin(t * 3.4) * 0.022; rot = Math.sin(t * 5.5) * 0.02; }
   else if (pose === 'happy') { hop = Math.abs(Math.sin(t * 6.2)) * H * 0.075; rot = Math.sin(t * 12.4) * 0.03; }
   else if (pose === 'belly') { rot = Math.sin(t * 4.6) * 0.035; sy = 1 + Math.sin(t * 9) * 0.012; }
-  else if (pose === 'eat') { const c = Math.sin(t * 17); sy = 1 + c * 0.02; rot = 0.02 + Math.sin(t * 8.5) * 0.035; hop = Math.max(0, c) * H * 0.012; } // munching
   else if (pose === 'walk') hop = Math.abs(Math.sin(d.ph * Math.PI / 3)) * H * 0.012 * Math.min(2, d.pace);
   const dir = (d.fs < 0 ? -1 : 1) * Math.max(0.22, Math.abs(d.fs));
   P();
@@ -981,83 +975,9 @@ function drawDog(d, t) {
     ctx.globalAlpha = Math.sin(p * Math.PI) * 0.75;
     ctx.drawImage(zSpr, d.x + d.face * W * 0.3 + p * H * 0.28 - s / 2, d.y - H * 0.52 - p * H * 0.7 - s / 2, s, s);
   }
-  if (pose === 'eat') for (let i = 0; i < 3; i++) { // yum: little hearts rise while it munches
-    const p = (t * 0.55 + i / 3) % 1, s = H * (0.12 + 0.1 * p);
-    ctx.globalAlpha = Math.sin(p * Math.PI) * 0.85;
-    ctx.drawImage(heartSpr, d.x + d.face * W * 0.15 + Math.sin(p * 6 + i) * H * 0.12 - s / 2, d.y - H * 0.85 - p * H * 0.6 - s / 2, s, s);
-  }
-  if (d.think > 0) { const a = Math.min(1, d.think / 0.3, (3.1 - d.think) / 0.3), bw = H * 0.62, bh = bw * 0.75, bob = Math.sin(t * 2.4) * H * 0.02; // dreaming of a biscuit
-    ctx.globalAlpha = Math.max(0, a); ctx.drawImage(boneBubble, d.x + d.face * W * 0.18 - bw * 0.25, d.y - H * 1.05 - bh + bob, bw, bh); }
   ctx.globalAlpha = 1;
 }
 
-// ---------- snack time (David, 2026-11-10): now and then a dog asks a bot for food. It sits, begs and dreams of a biscuit; the bot turns
-// to it, reaches into its hoodie pocket, rummages, brings out a bone biscuit and holds it down to the dog's mouth; the dog eats it in three
-// bites (crumbs, little hearts), then hops about happily. Everything eases; the arm is drawn over the bot (sleeve in the bot's own hoodie
-// colour, then the hand). Full picture only: the lite (TV) picture keeps the begging and the turning, without the arm. ----------
-const feeds = [], FEED = { pocket: 0.45, out: 1.2, mouth: 2.25, bites: 3, eat: 3.1, done: 3.85 };
-const sleeveOf = (() => { const memo = {}; return w => { const k = w.sprite; if (memo[k]) return memo[k]; let c = '#7a6a8a'; try { const im = fronts[k], t = mk(1, 1), g = t.getContext('2d', { willReadFrequently: true }); g.drawImage(im, im.width * 0.3, im.height * 0.8, 6, 6, 0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data; c = `rgb(${d[0]},${d[1]},${d[2]})`; } catch (e) {} return (memo[k] = c); }; })();
-const dogDims = d => { const C = L.corgi, hu = hAt(d.y), [cw, ch] = C.cell, W = 0.507 * DOG.size * hu / C.bodyW; return [W, W * ch / cw]; };
-const mouthOf = d => { const [W, H] = dogDims(d), f = d.face < 0 ? -1 : 1; return [d.x + f * W * 0.3, d.y - H * (d.pose === 'beg' ? 0.74 : 0.62)]; };
-function stepFeeds(dt) {
-  for (let i = feeds.length - 1; i >= 0; i--) {
-    const f = feeds[i], w = f.w, d = f.d, prev = f.t; f.t += dt;
-    const gone = w.walk ? w.walk.phase !== 'hang' && w.walk.phase !== 'talk' : w.seat.roam ? false : w.pose.b < 2 && f.t > 0.2 && f.t < FEED.eat; // the bot walked off or turned back
-    if (gone && !f.abort) { f.abort = true; f.t = Math.max(f.t, FEED.eat); }
-    if (!f.abort && prev < FEED.out && f.t >= FEED.out && w.walk) say(w.walk, ['here you go!', 'good pup 🍪', 'snack time!'][(rnd() * 3) | 0], 2.2);
-    if (!f.abort && prev < FEED.mouth && f.t >= FEED.mouth && d.by === w && d.mood === 'feed') { d.pose = 'eat'; d.t = 2.6; d.seq = [['happy', span(1.8, 2.6), () => { d.face = (w.walk ? w.walk.x : w.seat.feet[0]) > d.x ? 1 : -1; }], ['sit', span(1, 2)]]; }
-    if (!f.abort) for (let b = 0; b < FEED.bites; b++) { const tb = FEED.mouth + 0.12 + b * 0.27; if (prev < tb && f.t >= tb) { const [mx, my] = mouthOf(d), s = dogDims(d)[1] * 0.05; for (let j = 0; j < 4; j++) f.crumbs.push({ x: mx, y: my, vx: (rnd() - 0.5) * s * 9, vy: -rnd() * s * 6, life: 0.7 + rnd() * 0.4, s: s * (0.25 + rnd() * 0.3) }); } }
-    for (const c of f.crumbs) { c.life -= dt; c.vy += 140 * dt * (c.s > 0 ? 1 : 0); c.x += c.vx * dt; c.y += c.vy * dt; }
-    f.crumbs = f.crumbs.filter(c => c.life > 0);
-    if (f.t > FEED.done + 0.8) feeds.splice(i, 1);
-  }
-}
-function drawBiscuit(x, y, s, rot) { // a little bone biscuit
-  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-  ctx.fillStyle = '#9a6a3c'; for (const [a, b] of [[-1, -0.55], [-1, 0.55], [1, -0.55], [1, 0.55]]) { ctx.beginPath(); ctx.arc(a * s * 0.95, b * s * 0.62, s * 0.52, 0, 7); ctx.fill(); }
-  ctx.fillRect(-s, -s * 0.42, s * 2, s * 0.84);
-  ctx.fillStyle = '#e9c48c'; for (const [a, b] of [[-1, -0.55], [-1, 0.55], [1, -0.55], [1, 0.55]]) { ctx.beginPath(); ctx.arc(a * s * 0.95, b * s * 0.62, s * 0.4, 0, 7); ctx.fill(); }
-  ctx.fillRect(-s, -s * 0.3, s * 2, s * 0.6); ctx.fillStyle = 'rgba(255,245,225,.6)'; ctx.fillRect(-s * 0.8, -s * 0.24, s * 1.4, s * 0.14);
-  ctx.restore();
-}
-function drawFeeds(t) {
-  if (!feeds.length) return;
-  P();
-  for (const f of feeds) {
-    const w = f.w, d = f.d, b = w.box, bw = b[2] - b[0], bh = b[3] - b[1], cx = (b[0] + b[2]) / 2, seated = !w.walk && !w.seat.roam, side = f.side;
-    for (const c of f.crumbs) { ctx.globalAlpha = Math.min(1, c.life * 2); ctx.fillStyle = '#d7aa6a'; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(0.6, c.s), 0, 7); ctx.fill(); }
-    ctx.globalAlpha = 1;
-    if (f.t < 0 || f.t > FEED.done) continue;
-    const sh = [cx + side * bw * (seated ? 0.17 : 0.27), b[1] + bh * (seated ? 0.46 : 0.47)], pk = [cx + side * bw * (seated ? 0.07 : 0.11), b[1] + bh * (seated ? 0.57 : 0.62)];
-    const [mx, my] = mouthOf(d), s = Math.max(2.2, dogDims(d)[1] * 0.075), hand = [mx - (d.face < 0 ? -1 : 1) * s * 1.5, my + s * 0.2];
-    const T = f.t, E = q => q * q * (3 - 2 * q), lerp2 = (a, c, q) => [a[0] + (c[0] - a[0]) * q, a[1] + (c[1] - a[1]) * q];
-    let p, alpha = 1, snack = 0;
-    if (T < FEED.pocket) { p = lerp2(sh, pk, E(T / FEED.pocket)); alpha = Math.min(1, T / 0.15); }
-    else if (T < FEED.out) p = [pk[0] + Math.sin(T * 28) * s * 0.3, pk[1] + Math.sin(T * 21) * s * 0.2]; // rummaging in the pocket
-    else if (T < FEED.mouth) { const q = E((T - FEED.out) / (FEED.mouth - FEED.out)), ctl = [(pk[0] + hand[0]) / 2, Math.min(pk[1], hand[1]) - bh * 0.1];
-      p = [(1 - q) * (1 - q) * pk[0] + 2 * (1 - q) * q * ctl[0] + q * q * hand[0], (1 - q) * (1 - q) * pk[1] + 2 * (1 - q) * q * ctl[1] + q * q * hand[1]]; snack = 1; }
-    else if (T < FEED.eat) { const bi = Math.min(FEED.bites, Math.floor((T - FEED.mouth - 0.12) / 0.27) + 1); p = [hand[0] + Math.sin((T - FEED.mouth) * 23) * s * 0.12, hand[1]]; snack = [1, 0.68, 0.38, 0][Math.max(0, bi)]; }
-    else { const q = E(Math.min(1, (T - FEED.eat) / (FEED.done - FEED.eat))); p = lerp2(hand, sh, q); alpha = 1 - Math.max(0, (q - 0.6) / 0.4); }
-    if (f.abort) snack = 0;
-    // the arm: shoulder -> elbow (bent out and down a little) -> wrist, a soft dark edge under the sleeve
-    const dx = p[0] - sh[0], dy = p[1] - sh[1], len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, bend = Math.min(bh * 0.07, len * 0.22) * (ny > 0 ? 1 : -1) * side;
-    const el = [(sh[0] + p[0]) / 2 + nx * bend, (sh[1] + p[1]) / 2 + ny * bend], th = bh * (seated ? 0.05 : 0.055);
-    ctx.globalAlpha = alpha; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(20,14,24,.55)'; ctx.lineWidth = th + 1.6; ctx.beginPath(); ctx.moveTo(...sh); ctx.quadraticCurveTo(...el, ...p); ctx.stroke();
-    ctx.strokeStyle = sleeveOf(w); ctx.lineWidth = th; ctx.beginPath(); ctx.moveTo(...sh); ctx.quadraticCurveTo(...el, ...p); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = th * 0.35; ctx.beginPath(); ctx.moveTo(sh[0] - nx * th * 0.2, sh[1] - ny * th * 0.2); ctx.quadraticCurveTo(el[0] - nx * th * 0.2, el[1] - ny * th * 0.2, p[0], p[1]); ctx.stroke();
-    if (snack > 0) drawBiscuit(p[0] + (d.face < 0 ? 1 : -1) * -s * 0.9, p[1] - s * 0.15, s * 0.62 * snack, -0.35 * (d.face < 0 ? -1 : 1));
-    ctx.fillStyle = '#5a3a2c'; ctx.beginPath(); ctx.ellipse(p[0], p[1], th * 0.62, th * 0.55, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#f3c6a2'; ctx.beginPath(); ctx.ellipse(p[0], p[1], th * 0.5, th * 0.45, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = 'rgba(255,240,228,.5)'; ctx.beginPath(); ctx.ellipse(p[0] - th * 0.12, p[1] - th * 0.14, th * 0.2, th * 0.13, 0, 0, 7); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-}
-const heartSpr = (() => { const c = mk(48, 48), g = c.getContext('2d'); g.font = '700 34px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(255,170,190,.9)'; g.shadowBlur = 6; g.fillStyle = '#ff7aa2'; g.fillText('♥', 24, 26); return c; })();
-const boneBubble = (() => { const c = mk(96, 72), g = c.getContext('2d'); g.fillStyle = 'rgba(255,255,255,.94)'; g.strokeStyle = 'rgba(60,40,50,.35)'; g.lineWidth = 2;
-  g.beginPath(); g.roundRect(8, 4, 80, 46, 22); g.fill(); g.stroke(); for (const [x, y, r] of [[30, 56, 6], [20, 66, 4]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.stroke(); }
-  g.save(); g.translate(48, 27); g.rotate(-0.25); g.fillStyle = '#c99858'; for (const [a, b] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) { g.beginPath(); g.arc(a * 17, b * 6, 7, 0, 7); g.fill(); } g.fillRect(-17, -5, 34, 10);
-  g.fillStyle = '#efd09c'; for (const [a, b] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) { g.beginPath(); g.arc(a * 17, b * 6, 5.4, 0, 7); g.fill(); } g.fillRect(-17, -3.6, 34, 7.2); g.restore(); return c; })();
 
 // ---------- boss desk FX: screen glow, scanline shimmer on the 2 curved monitors ----------
 const scanSpr = (() => { const c = mk(64, 128), g = c.getContext('2d');
@@ -1175,7 +1095,7 @@ function drawDash(w, t) { // full-body art on her bean bag: laptop while working
   else curl(x - Wd / 2 + Wd * L.dash.mugAt[0], y - Hd + Hd * L.dash.mugAt[1], 0.75, w.ph, t); // her mug, while it's idle time
   w.box[0] = x - Wd / 2; w.box[1] = y - Hd; w.box[2] = x + Wd / 2; w.box[3] = y; w.hx = x; w.hy = y - Hd;
 }
-// painted legs (assets/legs.png): cell scaled from the body height, hip line at `hip`, sole on `floor`; waist fits the hoodie hem
+// painted legs (art/bots/walking/legs.png): cell scaled from the body height, hip line at `hip`, sole on `floor`; waist fits the hoodie hem
 function drawLegSet(set, i, x, hip, floor, hu, ww, face) {
   const G = L.legs, [cw, ch] = G.cell, c = G[set][i], foot = G[set + 'Foot'][i], H = (floor - hip) / (foot - G.hip), W = 0.6 * ww / G.waist * Math.min(1, 1.1 * H / (hu * 0.6)), top = hip - G.hip * H;
   if (face > 0) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(legImg, c[0], c[1], cw, ch, -W / 2, top, W, H); ctx.restore(); } // the sheet faces left
@@ -1347,7 +1267,7 @@ function labelBitmap(w) {
 function bubbleBitmap(text, talk) {
   const key = (talk ? 'T|' : 'W|') + text;
   let c = bubbleCache.get(key); if (c) return c;
-  const S2 = dpr * qual.scale, fp = labelFont * 0.92 * S2, pad = fp * 0.7, hgt = Math.round(fp * 1.85), tail = fp * 0.55, sh = Math.ceil(fp * 0.6);
+  const S2 = dpr * qual.scale, fp = labelFont * 0.92 * BUBBLE.size * S2, pad = fp * 0.7, hgt = Math.round(fp * 1.85), tail = fp * 0.55, sh = Math.ceil(fp * 0.6);
   const m = mk(1, 1).getContext('2d'); m.font = `600 ${fp}px ${SANS}`;
   let s = text; while (m.measureText(s).width > fp * 15 && s.length > 4) s = s.slice(0, -2);
   if (s !== text) s = s.trimEnd() + '…';
@@ -1477,7 +1397,6 @@ function render(t, dt) {
   const redraw = (screenT -= dt) <= 0; if (redraw) screenT = 0.12;
   const walking = sortItems();
   for (let i = 0; i < items.length; i++) drawItem(items[i], t, redraw);
-  drawFeeds(t);
   drawErrorGlows(t);
   fx.lamps(ctx, t, env, lampTint);
   fx.motes(ctx, t, dt, env);
@@ -1660,7 +1579,7 @@ function frame(now) {
   }
   maybeDemo(t); if (pending.length) pump(now);
   stepChat(dt); stepAmbient(dt);
-  if (dogs.length) { for (const d of dogs) { dog = d; stepDog(dt); } dog = dogs[0]; stepFeeds(dt); }
+  if (dogs.length) { for (const d of dogs) { dog = d; stepDog(dt); } dog = dogs[0]; }
   if ((labelT -= dt) <= 0) { labelT = LABEL_EVERY; refreshLabels(); }
   const r0 = performance.now();
   if (qual.lite) renderLite(t, dt); else render(t, dt);

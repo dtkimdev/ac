@@ -2,7 +2,7 @@
 // (David's Toshiba TV) can be diagnosed from a photo of the screen. Draws nothing of the office and sends nothing anywhere.
 import { LITE } from './config.js';
 
-const A = (window.AC_STATIC ? '' : '/') + 'office2d/assets/', V = '?v=20';
+const A = (window.AC_STATIC ? '' : '/') + 'office2d/art/', V = '?v=30'; // the art pack: art/README.md
 const cv = document.getElementById('office'), g = cv.getContext('2d', { alpha: false });
 document.getElementById('loading')?.remove();
 const box = document.createElement('pre');
@@ -27,7 +27,7 @@ async function run() {
   out(`browser: ${navigator.userAgent}`);
   out(`screen ${screen.width}x${screen.height}, window ${innerWidth}x${innerHeight}, pixel ratio ${devicePixelRatio}, cores ${navigator.hardwareConcurrency || '?'}, memory ${navigator.deviceMemory || '?'} GB`);
   out(`detected as a TV: ${LITE.tvBrowsers.test(navigator.userAgent) ? 'yes' : 'no'}`);
-  const t0 = performance.now(), plate = await load('plate-dusk.webp'), sprite = await load('w00.png');
+  const t0 = performance.now(), plate = await load('room/plate-dusk.webp'), sprite = await load('bots/back/w00.png');
   out(`loading 2 pictures took ${r1((performance.now() - t0) / 1000)} s`);
   const T = 4000;
 

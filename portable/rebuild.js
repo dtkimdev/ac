@@ -37,7 +37,7 @@ if (!fs.existsSync(SNAP)) {
 }
 
 rmrf(OUT);
-mkdirp(path.join(OUT, 'office2d', 'assets'));
+mkdirp(path.join(OUT, 'office2d'));
 cpFile(path.join(SRC, 'style.css'), path.join(OUT, 'style.css'));
 cpFile(path.join(SRC, 'favicon.svg'), path.join(OUT, 'favicon.svg'));
 cpFile(path.join(SRC, 'audio.js'), path.join(OUT, 'audio.js'));
@@ -45,7 +45,12 @@ for (const f of fs.readdirSync(path.join(SRC, 'office2d'))) {
   const from = path.join(SRC, 'office2d', f);
   if (fs.statSync(from).isFile() && f.endsWith('.js')) cpFile(from, path.join(OUT, 'office2d', f));
 }
-cpDir(path.join(SRC, 'office2d', 'assets'), path.join(OUT, 'office2d', 'assets'));
+// the art pack, as published (with content stamps), plus a flat copy of it in office2d/assets/ for the art tools in portable/art,
+// which ask for pictures by bare name (they write their results to both: see pack.previewPut)
+const pack = require(path.join(ROOT, 'bin', 'art-pack.js')), ART_OUT = path.join(OUT, 'office2d', 'art');
+cpDir(path.join(SRC, 'office2d', 'art'), ART_OUT);
+pack.stamp(ART_OUT);
+for (const p of Object.keys(pack.files(pack.load()))) cpFile(path.join(ART_OUT, p), path.join(OUT, 'office2d', 'assets', path.basename(p)));
 cpFile(SNAP, path.join(OUT, 'state.json'));
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
@@ -97,4 +102,4 @@ const st = JSON.parse(fs.readFileSync(path.join(OUT, 'state.json'), 'utf8'));
 console.log('PORTABLE_REBUILD_OK');
 console.log('out=' + OUT);
 console.log('bots=' + (st.bots || []).length);
-console.log('assets=' + fs.readdirSync(path.join(OUT, 'office2d', 'assets')).length);
+console.log('art_files=' + Object.keys(pack.files(pack.load())).length);

@@ -9,6 +9,7 @@ on:
     paths:
       - 'public/**'
       - 'bin/pages-build.sh'
+      - 'bin/art-pack.js'
       - '.github/workflows/publish.yml'
   workflow_dispatch:
 permissions:

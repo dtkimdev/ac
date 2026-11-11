@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // node portable/art/run-heads-trim.js <out.webp> : runs heads-trim.js on the preview's turn-heads.webp (see that file). Run once, on the
-// pictures before this repair (commit 74a4042 or older); copy the result to public/office2d/assets/turn-heads.webp after checking it.
+// pictures before this repair (commit 74a4042 or older); copy the result to public/office2d/art/bots/turning/turn-heads.webp after checking it.
 const { execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path');
 const out = path.resolve(process.argv[2] || 'turn-heads.webp'), root = path.resolve(__dirname, '..', '..');
