@@ -143,7 +143,6 @@ export function makeFx(L, rnd, img) {
   // frame / vines / interior are redrawn from the plate on top (fg mask) -> nothing city-related over a mullion
   const glass = new Path2D(), TR0 = (L.transom || [0.34, 0.354])[0] * PH, TR1 = (L.transom || [0.34, 0.354])[1] * PH;
   for (const [a, b] of (L.panes || [[WX0 / PW, WX1 / PW]])) { glass.rect(a * PW, WY0, (b - a) * PW, TR0 - WY0); glass.rect(a * PW, TR1, (b - a) * PW, WY1 - TR1); }
-  if (L.nearGlass) { const [a, b, y1] = L.nearGlass; glass.rect(a * PW, WY1, (b - a) * PW, y1 * PH - WY1); } // the window band behind the back-right desk: only the water draws there (water-mask.png)
   const paneCount = (L.panes || [0]).length * 2;
   const wbox = L.masks.water ? [L.masks.water[0] * PW, L.masks.water[1] * PH, L.masks.water[2] * PW, L.masks.water[3] * PH] : null;
   let waterC = null, waterG = null, waterAge = 1;
@@ -439,19 +438,7 @@ export function makeFx(L, rnd, img) {
         for (let k = 0; k < 6; k++) { const yy = y + k * 5; if (yy > r.y1) break; ctx.globalAlpha = la * (1 - k / 6) * (k ? 0.45 : 0.95); const s = k ? 5 : 7; ctx.drawImage(r.glow, r.x - s / 2, yy - s / 2, s, s); }
       }
       ctx.globalCompositeOperation = 'source-over';
-      this.water(ctx, t, dt, env);
-      // sea glints (sun / city light on the swell)
-      const [a0, b0, b1, a1] = sea;
-      ctx.globalCompositeOperation = 'lighter';
-      const ng = Math.round(glints.length * (0.4 + 0.6 * fxq) * share);
-      for (let i = 0; i < ng; i++) {
-        const g = glints[i], y = a0[1] + (a1[1] - a0[1]) * g.v, xl = a0[0] + (a1[0] - a0[0]) * g.v, xr = b0[0] + (b1[0] - b0[0]) * g.v;
-        const x = xl + (xr - xl) * ((g.u + t * 0.006) % 1), w = g.w * (0.6 + g.v), s = Math.sin(t * 1.8 + g.ph);
-        if (s <= 0) continue;
-        ctx.globalAlpha = (0.12 + 0.22 * env.dark + 0.12 * env.golden) * s;
-        ctx.drawImage(T.glint, x - w, y - 1.2, w * 2, 2.4);
-      }
-      ctx.globalCompositeOperation = 'source-over';
+      // (the animated water layer and the sea glints were taken out: David, 2026-11-11, they slowed the whole view; the river is the painting)
       // boats: slow, with reflection, wake and (at dusk/night) cabin lights
       const nb = Math.max(2, Math.round(boats.length * env.boats * (0.5 + 0.5 * fxq)));
       let live = 0; for (let i = 0; i < boats.length; i++) if (boats[i].on) live++;

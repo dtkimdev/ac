@@ -57,15 +57,20 @@ export const PROPS = [];
 
 // ---------- speed ----------
 // Levels 0-3 are the full picture, for PCs and phones. Level 4 is lite: same scene, far fewer drawing operations. Force one with ?q=0 .. ?q=4
+// The full picture is drawn at most this many pixels wide, and the browser scales it up to the screen (David, 2026-11-11: on large
+// high-resolution screens the city stuttered; 2560 keeps it smooth and still sharp).
+export const VIEW = { maxWidth: 2560 };
 export const QUALITY = [
   { level: 0, scale: 1, fx: 1 }, { level: 1, scale: 1, fx: 0.6 }, { level: 2, scale: 0.8, fx: 0.5 }, { level: 3, scale: 0.66, fx: 0.35 },
   { level: 4, scale: 1, fx: 0, lite: true },
 ];
 export const LITE = {
   tvBrowsers: /smart-?tv|smarttv|hbbtv|netcast|tizen|web0s|webos|vidaa|viera|bravia|philipstv|roku|crkey|android ?tv|\bAFT[A-Z0-9]|\bTV\b/i, // these start in lite straight away
-  enterFps: 25,       // below this for enterSeconds, switch to lite
-  enterSeconds: 3,
-  rememberFps: 12,    // below this the device is remembered, so it starts in lite next time (?q=0 clears that)
+  enterFps: 18,       // below this for enterSeconds (page on screen, after warmup seconds), switch to lite
+  enterSeconds: 8,
+  warmup: 10,
+  throttledFps: 6,    // a sample below this is a covered or background window being paused by the browser: ignored
+  leaveFps: 50, leaveSeconds: 10, // a computer that fell into lite by itself returns to the full picture when lite runs this fast
   maxWidth: 1280,     // internal drawing width; the browser scales it up to the screen
   sliceEvery: 0.12,   // seconds between room patch refreshes; seated bots and monitors update through these
   sliceCols: 6, sliceRows: 3,

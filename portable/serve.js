@@ -25,6 +25,7 @@ const TYPES = {
   '.webp': 'image/webp',
   '.gif': 'image/gif',
   '.wasm': 'application/wasm',
+  '.mp3': 'audio/mpeg',
 };
 
 if (!fs.existsSync(path.join(ROOT, 'index.html'))) {
@@ -43,9 +44,18 @@ const server = http.createServer((req, res) => {
   if (!file.startsWith(ROOT)) { res.writeHead(403); res.end('forbidden'); return; }
   fs.readFile(file, (err, buf) => {
     if (err) { res.writeHead(404); res.end('not found'); return; }
-    const ext = path.extname(file).toLowerCase();
+    const ext = path.extname(file).toLowerCase(), type = TYPES[ext] || 'application/octet-stream';
+    // byte ranges, as GitHub Pages serves them: audio needs them to seek and to loop
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (m && (m[1] || m[2])) {
+      let a = m[1] ? +m[1] : buf.length - +m[2], b = m[1] && m[2] ? Math.min(+m[2], buf.length - 1) : buf.length - 1;
+      if (a < 0) a = 0; if (a > b) { res.writeHead(416, { 'Content-Range': 'bytes */' + buf.length }); res.end(); return; }
+      res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${a}-${b}/${buf.length}`, 'Content-Length': b - a + 1, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store', 'X-Agent-City-Portable': '1' });
+      if (req.method === 'HEAD') res.end(); else res.end(buf.subarray(a, b + 1)); return;
+    }
     res.writeHead(200, {
-      'Content-Type': TYPES[ext] || 'application/octet-stream',
+      'Content-Type': type,
+      'Accept-Ranges': 'bytes',
       'Cache-Control': 'no-store',
       'X-Agent-City-Portable': '1',
     });

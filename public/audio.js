@@ -105,20 +105,46 @@ const synth = {
     const buf = await c.startRendering(); ctx = keep[0]; nextT = keep[1]; bar = keep[2]; return buf;
   },
 };
-// The button (David, 2026-11-11): the generated lofi above, no video and no pop-up; while it plays a small line of text above the
-// button names the track. (The YouTube mix was dropped: YouTube's terms need its player visible, and David wanted no video.)
-const TRACK = 'Agent City Lofi · generated live';
-let label = null;
-function showLabel(on) {
-  if (!label) { label = document.createElement('div'); label.id = 'track'; label.textContent = '♪ ' + TRACK; label.setAttribute('aria-live', 'polite');
-    label.style.cssText = 'position:fixed;right:16px;bottom:40px;z-index:2;font:500 10px var(--sans,system-ui);color:var(--dim,#bbb);opacity:.85;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.6);transition:opacity .4s';
+// The button (David, 2026-11-11): plays David's track (assets/ac-music.mp3, used with the creator's permission, credited in the label)
+// on an endless loop with no gap: two players take turns, the next one fading in from the start while the current one fades out over
+// its last seconds. No video and no pop-up; a small line of text above the button names the track while it plays. If the file cannot
+// play, the generated lofi above plays instead.
+const TRACK = { src: (window.AC_STATIC ? '' : '/') + 'office2d/assets/ac-music.mp3?v=1', name: 'Lofi Trance Mix · Velvet Vinyl', vol: 0.6, fade: 7 };
+let label = null, players = null, cur = 0, ticker = null, failed = false, failWhy = "";
+function showLabel(on, text) {
+  if (!label) { label = document.createElement('div'); label.id = 'track'; label.setAttribute('aria-live', 'polite');
+    label.style.cssText = 'position:fixed;right:16px;bottom:40px;z-index:2;font:500 10px var(--sans,system-ui);color:var(--dim,#bbb);opacity:0;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.6);transition:opacity .4s';
     document.body.appendChild(label); }
-  label.style.opacity = on ? '.85' : '0';
+  label.textContent = '♪ ' + text; label.style.opacity = on ? '.85' : '0';
 }
+function player() { const a = new Audio(); a.preload = 'auto'; a.src = TRACK.src; a.volume = 0; a.target = 0; a.rate = 1; a.addEventListener('error', fail); a.addEventListener('ended', () => { if (a === players[cur] && AC.music.on) swap(); }); return a; }
+function fade(a, to, sec) { a.target = to; a.rate = Math.abs(to - a.volume) / Math.max(0.05, sec); }
+function swap() { // the next player starts from the top and fades in while this one fades out
+  const a = players[cur], b = players[cur ^ 1]; cur ^= 1;
+  b.currentTime = 0; b.volume = 0; b.play().catch(fail); fade(b, TRACK.vol, TRACK.fade); fade(a, 0, TRACK.fade);
+}
+function musicTick() { // 20 times a second: volume ramps, and the hand-over near the end of the track
+  if (!players) return;
+  for (const a of players) { if (a.volume !== a.target) { const d = a.target - a.volume, st = a.rate * 0.05; a.volume = Math.abs(d) <= st ? a.target : Math.max(0, Math.min(1, a.volume + Math.sign(d) * st)); }
+    if (a.volume === 0 && a.target === 0 && !a.paused) a.pause(); }
+  const a = players[cur]; if (AC.music.on && a.duration && !a.paused && a.currentTime >= a.duration - TRACK.fade - 0.3) swap();
+}
+function fail(e) { if (failed) return; failed = true; failWhy = String(e && (e.message || e.type) || e); if (players) for (const a of players) a.pause(); if (AC.music.on) { if (!synth.on) synth.toggle(); showLabel(true, SYNTH_NAME); } }
+const SYNTH_NAME = 'Agent City Lofi · generated live';
 AC.music = {
   on: false,
-  toggle() { this.on = synth.toggle(); showLabel(this.on); return this.on; },
+  toggle() {
+    this.on = !this.on;
+    if (failed) { if (synth.on !== this.on) synth.toggle(); showLabel(this.on, SYNTH_NAME); return this.on; }
+    if (!players) { players = [player(), player()]; ticker = setInterval(musicTick, 50); }
+    const a = players[cur];
+    if (this.on) { a.play().then(() => fade(a, TRACK.vol, 1.5), fail); showLabel(true, TRACK.name); }
+    else { for (const p of players) fade(p, 0, 0.8); showLabel(false, TRACK.name); }
+    return this.on;
+  },
   _render: synth._render,
-  track: TRACK,
+  _state: () => players ? { cur, t: players.map(a => +a.currentTime.toFixed(1)), vol: players.map(a => +a.volume.toFixed(2)), paused: players.map(a => a.paused), failed, failWhy } : { failed, failWhy }, // check aid
+  _seek: s => { if (players) players[cur].currentTime = s; }, // check aid: jump near the end to hear the hand-over
+  track: TRACK.name,
 };
 })();

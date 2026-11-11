@@ -7,10 +7,10 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
+import { VIEW, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=27'; // V: busts the 1 h asset cache when the art set changes
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/assets/', V = '?v=29'; // V: busts the 1 h asset cache when the art set changes
 const q = new URLSearchParams(location.search);
 const DEMO = q.get('demo') === '1', EMBED = q.get('embed') === '1', NOTAGS = q.get('notags') === '1'; // notags: screenshot aid only
 if (EMBED) document.body.classList.add('embed');
@@ -98,9 +98,11 @@ function buildStatic() {
 
 // ---------- viewport + cached plate (re-composited only when the time-of-day bucket, size or quality changes) ----------
 for (const kv of (q.get('lite') || '').split(',')) { const [a, b] = kv.split(':'); if (a in LITE && b !== undefined && !isNaN(+b)) LITE[a] = +b; } // tuning aid, e.g. ?q=4&lite=cityEvery:2,maxWidth:960
-const LITE_KEY = 'ac_lite', remembered = () => { try { return localStorage.getItem(LITE_KEY) === '1'; } catch { return false; } }, remember = on => { try { if (on) localStorage.setItem(LITE_KEY, '1'); else localStorage.removeItem(LITE_KEY); } catch {} };
+try { localStorage.removeItem('ac_lite'); localStorage.removeItem('ac_lite2'); } catch {} // old flags: fast PCs had been stuck in lite by them (David, 2026-11-11)
+const LITE_KEY = 'ac_lite3', remembered = () => { try { return localStorage.getItem(LITE_KEY) === '1'; } catch { return false; } }, remember = on => { try { if (on) localStorage.setItem(LITE_KEY, '1'); else localStorage.removeItem(LITE_KEY); } catch {} };
 if (q.has('q') && +q.get('q') !== 4) remember(false);
-const startLevel = q.has('q') ? +q.get('q') || 0 : LITE.tvBrowsers.test(navigator.userAgent) || remembered() ? 4 : 0;
+const TV = LITE.tvBrowsers.test(navigator.userAgent);
+const startLevel = q.has('q') ? +q.get('q') || 0 : TV || remembered() ? 4 : 0;
 let dpr = 1, k = 1, offX = 0, offY = 0, base = mk(1, 1), baseKey = '', qual = QUALITY[startLevel] || QUALITY[0], fullPaint = true, propImgs = [];
 // plate sets: 2560x1440 for normal canvases, 3840x2160 (loaded lazily) once the canvas itself is bigger than that
 let hiLoading = false;
@@ -114,7 +116,7 @@ function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   if (qual.lite) qual.scale = Math.min(1, LITE.maxWidth / (innerWidth * dpr));
   document.body.classList.toggle('lite', !!qual.lite);
-  const s = dpr * qual.scale;
+  const s = qual.lite ? dpr * qual.scale : Math.min(dpr * qual.scale, VIEW.maxWidth / innerWidth);
   cv.width = Math.round(innerWidth * s); cv.height = Math.round(innerHeight * s);
   k = Math.max(cv.width / PW, cv.height / PH); offX = (cv.width - PW * k) / 2; offY = (cv.height - PH * k) / 2;
   baseKey = ''; layoutDirty = true; labelFont = 0; maybeHi();
@@ -1621,15 +1623,22 @@ const mb = document.getElementById('music');
 mb.onclick = () => { const on = window.AC.music.toggle(); mb.setAttribute('aria-pressed', on); mb.textContent = on ? '♪ lofi on' : '♪ lofi off'; };
 
 // ---------- loop: one rAF, delta time, display rate, adaptive quality, paused while hidden ----------
+let warmT = performance.now(), autoLite = 0, backFor = 0; document.addEventListener('visibilitychange', () => { warmT = performance.now(); });
 let booted = false, rescued = false, labelT = LABEL_EVERY, raf = 0, last = 0, fpsN = 0, fpsT = 0, t = 0, lowFor = 0, highFor = 0, slowFor = 0, lastQChange = 0;
 const PROF = q.has('prof'); // ?prof=1: time the city layers (check aid)
 const STATS = q.has('stats'); fpsEl.hidden = !STATS; // ?stats=1 shows the speed on screen, for checking a real TV
 const applyFx = () => fx.setQuality(qual.fx, qual.lite ? LITE.cityShare : 1);
 function setQuality(lv, now) {
-  qual = QUALITY[lv]; D.quality = qual; applyFx(); lastQChange = now; if (qual.lite) shrinkForLite(); resize();
+  qual = QUALITY[lv]; D.quality = qual; applyFx(); lastQChange = now; if (qual.lite) shrinkForLite(); else if (plates && plates.small) unshrink(); resize();
+}
+// back from lite to the full picture (a computer that had only been paused): the full-size room pictures and pose sheets come back
+function unshrink() {
+  Promise.all([img('plate-dusk.webp'), img('plate-night.webp'), img(L.turn.bodies), img(L.turn.heads)])
+    .then(([d, n, b, h]) => { if (qual.lite) return; plates = { dusk: d, night: n }; turnB = b; turnH = h; ATL = 1; baseKey = ''; hiLoading = false; maybeHi(); }).catch(() => {});
 }
 // lite draws at most 1280 wide, so the 2560-wide room pictures and the pose sheets only cost memory at full size there.
-// Shrinks them once (about 42 MB less on a TV); the originals are released. Lite never goes back to the full picture.
+// Shrinks them once (about 42 MB less on a TV); the originals are released. A TV stays in lite; a computer that only fell into lite
+// while its window was paused goes back to the full picture (unshrink).
 function shrinkForLite() {
   if (!plates || plates.small) return;
   const shrink = (im, w, h) => { const c = mk(w, h), g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, w, h); return c; };
@@ -1661,19 +1670,26 @@ function frame(now) {
     const fps = fpsN * 1000 / (now - fpsT);
     D.turned = wl.filter(w => w.pose.b > 1).length;
     D.fps = window.__fps = Math.round(fps); fpsEl.textContent = STATS ? `${D.fps} fps · ${qual.lite ? 'lite' : 'full ' + qual.level} · ${cv.width}x${cv.height}` : D.fps + ' fps'; fpsN = 0; fpsT = now;
-    // a clearly weak device goes straight to lite, with no long wait; very slow ones are remembered so the next visit starts there
+    // only a truly weak device goes to lite (its city moves in steps): a steady low rate while the page is on screen and warmed up
+    // (David, 2026-11-11: a fast PC had fallen into lite and the cars, boats and planes jumped). A rate under LITE.throttledFps is the browser pausing a covered or background window, not a slow computer: it never counts.
+    // Lite is never remembered for the next visit (only TV browsers start in it), and a computer that recovers goes back to full.
+    const throttled = fps < LITE.throttledFps || document.hidden || now - warmT < LITE.warmup * 1000;
     if (!q.has('q') && !qual.lite) {
-      slowFor = fps < LITE.enterFps || (qual.level === 3 && fps < 50) ? slowFor + 1 : 0; // also leave the lowest full level if it is not smooth
-      if (slowFor >= LITE.enterSeconds) { if (fps < LITE.rememberFps) remember(true); slowFor = 0; setQuality(QUALITY.findIndex(l => l.lite), now); }
+      slowFor = !throttled && fps < LITE.enterFps ? slowFor + 1 : 0;
+      if (slowFor >= LITE.enterSeconds) { slowFor = 0; autoLite++; setQuality(QUALITY.findIndex(l => l.lite), now); }
+    }
+    if (!q.has('q') && qual.lite && autoLite && autoLite < 3 && !TV) { // fell into lite on its own: try full again once it runs fast
+      backFor = !throttled && fps >= LITE.leaveFps ? backFor + 1 : 0;
+      if (backFor >= LITE.leaveSeconds) { backFor = 0; rescued = false; setQuality(0, now); }
     }
     // lite still too slow on this device: one last step down
     if (!q.has('q') && qual.lite && !rescued) {
-      lowFor = fps < LITE.rescueFps ? lowFor + 1 : 0;
+      lowFor = !throttled && fps < LITE.rescueFps ? lowFor + 1 : 0;
       if (lowFor >= LITE.rescueSeconds) { rescued = true; lowFor = 0; LITE.sliceEvery *= 2; LITE.cityEvery *= 2; LITE.maxWidth = LITE.rescueWidth; resize(); }
     }
     // adaptive quality: < 50 fps for 2 s steps down (fewer FX, then lower internal resolution); recovers slowly
     if (D.frames > 90 && !q.get('q') && !qual.lite) {
-      lowFor = fps < 50 ? lowFor + 1 : 0; highFor = fps >= 58 ? highFor + 1 : 0;
+      lowFor = !throttled && fps < 50 ? lowFor + 1 : 0; highFor = fps >= 58 ? highFor + 1 : 0;
       if (lowFor >= 2 && qual.level < 3 && now - lastQChange > 2500) { setQuality(qual.level + 1, now); lowFor = 0; }
       else if (highFor >= 20 && qual.level > 0 && now - lastQChange > 30000) { setQuality(qual.level - 1, now); highFor = 0; }
     }
