@@ -1780,35 +1780,36 @@
   {
    "linked": [
     "K02 (stands beside it)",
+    "K12 (bookcase on its left)",
     "dusk and night plates"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Moved right of the new bookcase; drawn at a person's height.",
    "id": "K01",
    "section": "K",
    "name": "Fridge",
    "kind": "baked",
-   "where": "portable/art/scene.js step 1b, FR",
-   "what": "Retro two-door fridge with chrome bar handles, in the kitchen corner on the left.",
-   "easy": "Easy: colour, handles (scene.js, then rebuild the plates). Size or place: scene.js FR and the floor shadow.",
+   "where": "portable/art/scene.js step 1b (src/kitchen2-*.png, from src/gen/kitchen-iso.jpg)",
+   "what": "Retro two-door mini fridge in cream taupe with chrome bar handles, right of the bookcase.",
+   "easy": "Medium: a new source picture (props_prep2.py), then rebuild the plates.",
    "pics": [
     {
      "label": "fridge",
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 0,
-       "y": 856,
-       "w": 168,
-       "h": 284
+       "x": 188,
+       "y": 932,
+       "w": 100,
+       "h": 206
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 0,
-       "y": 856,
-       "w": 168,
-       "h": 284
+       "x": 188,
+       "y": 932,
+       "w": 100,
+       "h": 206
       }
      }
     }
@@ -1820,33 +1821,33 @@
     "K08 (lamp pole beside it)",
     "L01–L03 (bean bags in front)"
    ],
-   "notes": "The coffee machine’s and the jug’s cut-outs reach over the stand’s front lip, so the lip looks notched under them.",
+   "notes": "Redrawn 2026-11-12 (round 2). One clean picture with everything on it, no notches.",
    "id": "K02",
    "section": "K",
    "name": "Kitchen stand and its drawers",
    "kind": "baked",
-   "where": "portable/art/scene.js step 1b, CT",
-   "what": "The wooden stand beside the fridge with nine drawers and brass pulls.",
-   "easy": "Easy: wood colour, pulls. Size: scene.js CT.",
+   "where": "portable/art/scene.js step 1b (src/kitchen2-*.png)",
+   "what": "Low walnut stand with nine drawers and brass pulls; the coffee machine, kettle and canisters stand on it.",
+   "easy": "Medium: part of the kitchen picture (props_prep2.py).",
    "pics": [
     {
      "label": "stand",
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 156,
-       "y": 964,
-       "w": 284,
-       "h": 168
+       "x": 276,
+       "y": 1024,
+       "w": 200,
+       "h": 116
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 156,
-       "y": 964,
-       "w": 284,
-       "h": 168
+       "x": 276,
+       "y": 1024,
+       "w": 200,
+       "h": 116
       }
      }
     }
@@ -1857,13 +1858,13 @@
     "K10 (steam)",
     "K11 (coffee pour, main.js KIT)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). KIT in main.js matched to its spout, drip tray and display.",
    "id": "K03",
    "section": "K",
    "name": "Coffee machine",
    "kind": "baked",
-   "where": "portable/art/scene.js step 1b, ITEMS[0] (kept from the seed painting)",
-   "what": "The espresso machine on the stand, with its small blue display.",
+   "where": "portable/art/scene.js step 1b (src/kitchen2-*.png); main.js KIT spout/tray/screen",
+   "what": "Espresso machine with a small blue display and a bowl on top; bots pull coffee here.",
    "easy": "Colour: medium (it is cut from the painting). Moving it: KIT positions in main.js move too.",
    "pics": [
     {
@@ -1871,19 +1872,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 176,
-       "y": 810,
-       "w": 164,
-       "h": 190
+       "x": 310,
+       "y": 936,
+       "w": 96,
+       "h": 116
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 176,
-       "y": 810,
-       "w": 164,
-       "h": 190
+       "x": 310,
+       "y": 936,
+       "w": 96,
+       "h": 116
       }
      }
     }
@@ -1893,33 +1894,33 @@
    "linked": [
     "K10 (steam above it)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). ",
    "id": "K04",
    "section": "K",
-   "name": "Milk jug and coffee canister",
+   "name": "Kettle and small jar",
    "kind": "baked",
-   "where": "portable/art/scene.js step 1b, ITEMS[1] (kept from the seed painting)",
-   "what": "A steel jug with a handle and a small canister in front of it, right of the coffee machine.",
+   "where": "portable/art/scene.js step 1b (src/kitchen2-*.png)",
+   "what": "Copper pour-over kettle and a small copper jar right of the machine.",
    "easy": "Colour: medium (cut from the painting).",
    "pics": [
     {
-     "label": "jug and canister",
+     "label": "kettle and jar",
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 330,
-       "y": 880,
-       "w": 82,
-       "h": 112
+       "x": 396,
+       "y": 980,
+       "w": 80,
+       "h": 68
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 330,
-       "y": 880,
-       "w": 82,
-       "h": 112
+       "x": 396,
+       "y": 980,
+       "w": 80,
+       "h": 68
       }
      }
     }
@@ -1929,13 +1930,13 @@
    "linked": [
     "K02"
    ],
-   "notes": "Not in the pack and not in ITEMS: it survived the kitchen rebuild from the old painting.",
+   "notes": "Redrawn 2026-11-12 (round 2). Now part of the kitchen picture.",
    "id": "K05",
    "section": "K",
    "name": "Small canister left of the machine",
    "kind": "baked",
-   "where": "seed painting (not in scene.js ITEMS)",
-   "what": "A small dark lidded canister on the stand, left of the coffee machine.",
+   "where": "portable/art/scene.js step 1b (src/kitchen2-*.png)",
+   "what": "Copper canister left of the coffee machine.",
    "easy": "Medium: it is part of the painting; to change it, add it to scene.js.",
    "pics": [
     {
@@ -1943,19 +1944,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 160,
-       "y": 916,
+       "x": 280,
+       "y": 992,
        "w": 60,
-       "h": 64
+       "h": 56
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 160,
-       "y": 916,
+       "x": 280,
+       "y": 992,
        "w": 60,
-       "h": 64
+       "h": 56
       }
      }
     }
@@ -1963,35 +1964,35 @@
   },
   {
    "linked": [
-    "K07 (string lights)"
+    "K12 (the bookcase)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Moved from the wall into the bookcase, which took the wall under the clock.",
    "id": "K06",
    "section": "K",
-   "name": "Snack shelves",
+   "name": "Snack shelf (in the bookcase)",
    "kind": "baked",
-   "where": "seed painting (commit 83b9edb)",
-   "what": "Walnut shelves on the back wall with jars, coffee bags and mugs.",
-   "easy": "Medium: part of the painting; needs a scene.js step.",
+   "where": "portable/art/scene.js step 1b (src/bookcase-*.png)",
+   "what": "Coffee bags and mugs on the bookcase's lowest open shelves, above its cabinet.",
+   "easy": "Medium: part of the bookcase picture (props_prep2.py).",
    "pics": [
     {
-     "label": "shelves",
+     "label": "snack shelf",
      "dusk": {
       "crop": {
        "plate": "dusk",
        "x": 0,
-       "y": 480,
+       "y": 860,
        "w": 192,
-       "h": 360
+       "h": 280
       }
      },
      "night": {
       "crop": {
        "plate": "night",
        "x": 0,
-       "y": 480,
+       "y": 860,
        "w": 192,
-       "h": 360
+       "h": 280
       }
      }
     }
@@ -2001,33 +2002,33 @@
    "linked": [
     "K06"
    ],
-   "notes": "Not in the pack.",
+   "notes": "Redrawn 2026-11-12 (round 2). Drawn new on the nook wall.",
    "id": "K07",
    "section": "K",
-   "name": "String lights over the shelves",
+   "name": "String lights on the nook wall",
    "kind": "baked",
-   "where": "seed painting",
-   "what": "A string of warm bulbs hanging across the shelves.",
-   "easy": "Medium: painted in; making them twinkle needs code (ask David).",
+   "where": "portable/art/scene.js step 1b, WS",
+   "what": "Warm bulbs on a wire along the top of the kitchen's back wall.",
+   "easy": "Easy: bulb colour, spacing (scene.js WS).",
    "pics": [
     {
      "label": "string lights",
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 0,
-       "y": 560,
-       "w": 200,
-       "h": 110
+       "x": 180,
+       "y": 784,
+       "w": 348,
+       "h": 52
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 0,
-       "y": 560,
-       "w": 200,
-       "h": 110
+       "x": 180,
+       "y": 784,
+       "w": 348,
+       "h": 52
       }
      }
     }
@@ -2038,13 +2039,13 @@
     "O13 (its glow)",
     "layout.json lamps[0]"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Its glow moved with it (layout.json lamps[0]).",
    "id": "K08",
    "section": "K",
    "name": "Floor lamp",
    "kind": "baked",
-   "where": "seed painting (shade) + portable/art/scene.js step 1b, POLE",
-   "what": "The warm floor lamp between the stand and the bean bags.",
+   "where": "portable/art/scene.js step 1b (src/kitchen2-*.png); glow: layout.json lamps[0]",
+   "what": "Slim brass floor lamp with a glowing drum shade, right of the stand.",
    "easy": "Easy: pole colour (scene.js). Shade: part of the painting.",
    "pics": [
     {
@@ -2052,19 +2053,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 396,
-       "y": 796,
-       "w": 124,
-       "h": 308
+       "x": 452,
+       "y": 920,
+       "w": 92,
+       "h": 220
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 396,
-       "y": 796,
-       "w": 124,
-       "h": 308
+       "x": 452,
+       "y": 920,
+       "w": 92,
+       "h": 220
       }
      }
     }
@@ -2074,33 +2075,33 @@
    "linked": [
     "K03"
    ],
-   "notes": "Not in the pack.",
+   "notes": "Round 2: only the tops show now, through the window above the nook wall.",
    "id": "K09",
    "section": "K",
-   "name": "Potted plant behind the coffee machine",
+   "name": "Plants behind the kitchen",
    "kind": "baked",
    "where": "seed painting",
    "what": "A big leafy plant in the kitchen corner, behind the machine.",
    "easy": "Medium: part of the painting.",
    "pics": [
     {
-     "label": "plant",
+     "label": "plants",
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 150,
-       "y": 470,
-       "w": 200,
-       "h": 380
+       "x": 180,
+       "y": 600,
+       "w": 360,
+       "h": 200
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 150,
-       "y": 470,
-       "w": 200,
-       "h": 380
+       "x": 180,
+       "y": 600,
+       "w": 360,
+       "h": 200
       }
      }
     }
@@ -2112,17 +2113,17 @@
     "K04",
     "L04"
    ],
-   "notes": "",
+   "notes": "Round 2: the kitchen curl rises from the new machine (layout.json lounge.steam).",
    "id": "K10",
    "section": "K",
    "name": "Coffee steam",
    "kind": "code",
    "where": "main.js#drawSteam, main.js#curl",
-   "what": "Thin curls of steam over the jug on the stand and the mug on the coffee table.",
+   "what": "Thin curls of steam over the coffee machine's bowl and the mug on the coffee table.",
    "easy": "Easy: colour, how thick, how high.",
    "pics": [
     {
-     "label": "over the jug",
+     "label": "over the machine",
      "dusk": {
       "shot": "shots/K10-kettle-dusk.png"
      },
@@ -2146,7 +2147,7 @@
     "K03",
     "config.js LOITER"
    ],
-   "notes": "Shown: Shopper idling, and Studio sent to the coffee machine.",
+   "notes": "Shown: Shopper idling, and Studio sent to the coffee machine. Round 2: the mug is smaller to fit the new machine (KIT.mug).",
    "id": "K11",
    "section": "K",
    "name": "Kitchen bots with mugs",
@@ -2171,6 +2172,82 @@
      },
      "night": {
       "shot": "shots/K11-coffee-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": "K12",
+   "section": "K",
+   "name": "Skill bookcase",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1b (src/bookcase-*.png, from src/gen/bookcase.jpg); layout.json bookcase",
+   "what": "Tall walnut bookcase under the wall clock: five shelves for the twenty skill books, the snack shelf, a cabinet.",
+   "linked": [
+    "B01 (the books)",
+    "B02 (Grok's book run)",
+    "K06 (snack shelf)",
+    "O12 (clock above it)"
+   ],
+   "easy": "Medium: a new source picture (props_prep2.py), then rebuild; the books are code (B01).",
+   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock.",
+   "pics": [
+    {
+     "label": "bookcase",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 232,
+       "w": 192,
+       "h": 908
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 232,
+       "w": 192,
+       "h": 908
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "K13",
+   "section": "K",
+   "name": "Kitchen nook wall",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1b, WS",
+   "what": "Walnut back wall of the kitchen nook: upper boards with string lights and a COFFEE board, wainscot below.",
+   "linked": [
+    "K07",
+    "K02"
+   ],
+   "easy": "Easy: colours, the board's words (scene.js WS).",
+   "notes": "Added 2026-11-12 (round 2) where the old kitchen's leftovers were.",
+   "pics": [
+    {
+     "label": "nook wall",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 176,
+       "y": 784,
+       "w": 352,
+       "h": 356
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 176,
+       "y": 784,
+       "w": 352,
+       "h": 356
+      }
      }
     }
    ]
@@ -2205,7 +2282,7 @@
    "linked": [
     "all desks and chairs stand on it"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). One floor everywhere now, also under the rug, bean bags and table.",
    "id": "O02",
    "section": "O",
    "name": "Floor",
@@ -2241,7 +2318,7 @@
    "linked": [
     "O17 (corner repairs)"
    ],
-   "notes": "",
+   "notes": "Round 2: the left wall under the clock is the bookcase now (K12); the kitchen nook has its own back wall (K07, K13).",
    "id": "O03",
    "section": "O",
    "name": "Walls and ceiling",
@@ -2322,7 +2399,7 @@
     "O11 (empty-seat patches)",
     "layout.json desks"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.",
    "id": "O04",
    "section": "O",
    "name": "Back-left desk",
@@ -2361,7 +2438,7 @@
     "O11 (empty-seat patches)",
     "layout.json desks"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.",
    "id": "O05",
    "section": "O",
    "name": "Back-right desk",
@@ -2400,7 +2477,7 @@
     "O11 (empty-seat patches)",
     "layout.json desks"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.",
    "id": "O06",
    "section": "O",
    "name": "Right desk (SB Pallet)",
@@ -2440,7 +2517,7 @@
     "layout.json desks",
     "X05 (desk-fr mask)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.",
    "id": "O07",
    "section": "O",
    "name": "Front-right desk (Numbers)",
@@ -2477,7 +2554,7 @@
     "M16 (screen glow)",
     "X04 (boss mask)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.",
    "id": "O08",
    "section": "O",
    "name": "Boss desk",
@@ -2514,14 +2591,14 @@
     "M01–M14 (screens inside)",
     "layout.json desks[].monitors"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Drawn to fit the exact screen the viewer animates; no copied painted bezels.",
    "id": "O09",
    "section": "O",
    "name": "Monitor frames",
    "kind": "baked",
-   "where": "portable/art/scene.js step 4 (copied from the painted monitors)",
-   "what": "The monitor bezels, necks and feet on every desk; the pictures inside are drawn in code (M).",
-   "easy": "Medium: they are copies of the painted monitor.",
+   "where": "portable/art/scene.js step 4 (pasteMon: drawn round each screen quad)",
+   "what": "A slim charcoal bezel, dark glass, neck and foot drawn round every screen; the pictures inside are drawn in code (M).",
+   "easy": "Easy: bezel colour and width, neck, foot (scene.js step 4).",
    "pics": [
     {
      "label": "back-right desk monitors",
@@ -2587,7 +2664,7 @@
     "O04–O08 (chairs)",
     "layout.json nochair"
    ],
-   "notes": "Both files are completely transparent (2 KB each, the same file) since commit 379e1f5, so these patches draw nothing.",
+   "notes": "Round 2: the patches hold real floor and desk again (they had been empty since 379e1f5), so a turning bot no longer shows the plate chair behind its own chair.",
    "id": "O11",
    "section": "O",
    "name": "Empty-seat patches",
@@ -2871,18 +2948,77 @@
    "pics": []
   },
   {
+   "id": "O21",
+   "section": "O",
+   "name": "Office chair (from behind)",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 5 (src/chair.png from bots/turning/turn-bodies.webp); layout.json seats[].chair",
+   "what": "The mesh office chair at every seat, as the turning sheet draws it from behind; its backrest covers the seated bot.",
+   "linked": [
+    "O04–O08",
+    "O11",
+    "C rows of turn-bodies"
+   ],
+   "easy": "Medium: comes from the turning sheet; change both together.",
+   "notes": "Added 2026-11-12 (round 2; David: the backs looked like black blobs).",
+   "pics": [
+    {
+     "label": "chair, back-right desk",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1540,
+       "y": 910,
+       "w": 152,
+       "h": 220
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1540,
+       "y": 910,
+       "w": 152,
+       "h": 220
+      }
+     }
+    },
+    {
+     "label": "chair, right desk",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 2100,
+       "y": 1000,
+       "w": 180,
+       "h": 270
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 2100,
+       "y": 1000,
+       "w": 180,
+       "h": 270
+      }
+     }
+    }
+   ]
+  },
+  {
    "linked": [
     "X07 (bag-r mask)",
     "layout.json lounge.bags"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Its cut-out is made from the same picture.",
    "id": "L01",
    "section": "L",
    "name": "Red bean bag",
    "kind": "baked",
-   "where": "seed painting (commit 83b9edb)",
+   "where": "portable/art/scene.js step 5b (src/bag-r-*.png); mask room/masks/bag-r-mask.png",
    "what": "The red bean bag on the left of the rug.",
-   "easy": "Medium: painted in; recolour in scene.js and keep the mask.",
+   "easy": "Medium: a source picture in src/, then rebuild (the mask follows).",
    "pics": [
     {
      "label": "red bag",
@@ -2912,14 +3048,14 @@
     "X08 (bag-b mask)",
     "D05"
    ],
-   "notes": "Reads grey-blue at dusk, almost grey.",
+   "notes": "Redrawn 2026-11-12 (round 2). A true blue now.",
    "id": "L02",
    "section": "L",
    "name": "Blue bean bag",
    "kind": "baked",
-   "where": "seed painting",
+   "where": "portable/art/scene.js step 5b (src/bag-b-*.png); mask room/masks/bag-b-mask.png",
    "what": "The blue bean bag in the middle (Dash’s seat in the code).",
-   "easy": "Medium: painted in.",
+   "easy": "Medium: a source picture in src/, then rebuild (the mask follows).",
    "pics": [
     {
      "label": "blue bag",
@@ -2948,14 +3084,14 @@
    "linked": [
     "X09 (bag-m mask)"
    ],
-   "notes": "Looks orange rather than mustard.",
+   "notes": "Redrawn 2026-11-12 (round 2). Mustard orange.",
    "id": "L03",
    "section": "L",
    "name": "Mustard bean bag",
    "kind": "baked",
-   "where": "seed painting",
+   "where": "portable/art/scene.js step 5b (src/bag-m-*.png, colour in props_prep2.py); mask room/masks/bag-m-mask.png",
    "what": "The mustard bean bag on the right of the rug.",
-   "easy": "Medium: painted in.",
+   "easy": "Easy: hue in props_prep2.py, then rebuild.",
    "pics": [
     {
      "label": "mustard bag",
@@ -2985,12 +3121,12 @@
     "X06 (table mask)",
     "K10 (steam over the mug)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). A cleaner round table with a mug and a bowl of snacks.",
    "id": "L04",
    "section": "L",
    "name": "Coffee table",
    "kind": "baked",
-   "where": "seed painting",
+   "where": "portable/art/scene.js step 5b (src/table-*.png); mask room/masks/table-mask.png",
    "what": "Small round table with a mug and a bowl of snacks.",
    "easy": "Medium: painted in.",
    "pics": [
@@ -3021,14 +3157,14 @@
    "linked": [
     "L01–L04"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 (round 2). Drawn new: a terracotta oval with a border band and a ring of dots.",
    "id": "L05",
    "section": "L",
    "name": "Rug",
    "kind": "baked",
-   "where": "seed painting (kept by scene.js RUG)",
+   "where": "portable/art/scene.js step 5b (drawn: RUG)",
    "what": "The round patterned rug under the lounge.",
-   "easy": "Medium: painted in.",
+   "easy": "Easy: colours and pattern (scene.js 5b).",
    "pics": [
     {
      "label": "rug",

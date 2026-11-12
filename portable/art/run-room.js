@@ -17,7 +17,7 @@ for (const f of ['plate-dusk.webp', 'plate-night.webp', 'plate-dusk-hi.webp', 'p
 fs.mkdirSync(path.join(prev, 'scene-src'), { recursive: true }); // the layout from before the scene build (74a4042): the room tool reads the seed desks and masks
 for (const f of ['layout.json', 'water-mask.png']) fs.writeFileSync(path.join(prev, 'scene-src', f), execFileSync('git', ['show', '74a4042:public/office2d/assets/' + f], { cwd: root, maxBuffer: 1 << 28 }));
 const arg = only ? JSON.stringify(only.split(',')) : 'null';
-const res = execFileSync(process.execPath, [path.join(root, 'portable', 'shot.js'), '--url', 'http://127.0.0.1:8791/?q=0&notags=1', '--size', '400x300', '--wait', '1',
+const res = execFileSync(process.execPath, [path.join(root, 'portable', 'shot.js'), '--url', `http://127.0.0.1:${process.env.PORTABLE_PORT || 8791}/?q=0&notags=1`, '--size', '400x300', '--wait', '1',
   '--js', `import('/room.js').then(m => m.run('/orig/', '/office2d/assets/', ${arg}, '/scene-src/')).then(r => { window.__roomDone = r; }, e => { window.__roomDone = { error: String(e && e.stack || e) }; })`,
   '--print', 'JSON.stringify({ done: window.__roomDone, out: window.__roomOut })', '--out', path.join(out, 'page.png')], { maxBuffer: 1 << 30 }).toString();
 const line = res.split('\n').find(l => l.startsWith('"{'));

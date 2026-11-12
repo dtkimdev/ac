@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=31'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=32'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -720,8 +720,9 @@ function say(g, text, dur) { g.say = text; g.sayOff = dur; layoutDirty = true; }
 // ---------- kitchen task (David, 2026-11-10): at the coffee machine a bot pulls a coffee into a mug, drawn over the painted machine, behind
 // the bots; afterwards the bot carries the mug. The fridge animation was removed (David, 2026-11-10). Plate px, from the 3x plate. ----------
 const KIT = {
-  spout: [137, 472], tray: 482,   // espresso group head and drip tray top
-  screen: [110, 442, 124, 455],   // the machine's little display
+  spout: [182.7, 508.3], tray: 516.2, // espresso group head and drip tray top (round 2 kitchen: portable/art/src/props2.json kitchenSpots)
+  screen: [177.1, 486.7, 186.9, 492.7], // the machine's little display
+  mug: 0.62,                      // the mug's size (the round 2 machine is smaller than the painted one)
   coffeeT: [0.8, 3.2, 0.7],       // warm up, pour, hand-off (s)
   live: 0,                        // >0 while anything here moves (lite repaints the corner)
 };
@@ -745,11 +746,11 @@ function drawKitchen(t) {
     const [qx0, qy0, qx1, qy1] = KIT.screen; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 9);
     ctx.drawImage(screenGlow, qx0 - 8, qy0 - 8, qx1 - qx0 + 16, qy1 - qy0 + 16); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     if (on) { // the mug under the spout, filling
-      const mw = 11, mh = 10, mx = sx - mw / 2, my = tray - mh, fill = Math.max(0, Math.min(1, (k.t - a) / b));
+      const mw = 11 * KIT.mug, mh = 10 * KIT.mug, mx = sx - mw / 2, my = tray - mh, fill = Math.max(0, Math.min(1, (k.t - a) / b));
       ctx.fillStyle = '#f4efe6'; ctx.beginPath(); ctx.roundRect(mx, my, mw, mh, 2); ctx.fill();
-      ctx.strokeStyle = '#f4efe6'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(mx + mw + 1, my + mh * 0.45, 2.4, -1.3, 1.3); ctx.stroke();
+      ctx.strokeStyle = '#f4efe6'; ctx.lineWidth = 1.6 * KIT.mug; ctx.beginPath(); ctx.arc(mx + mw + KIT.mug, my + mh * 0.45, 2.4 * KIT.mug, -1.3, 1.3); ctx.stroke();
       ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(mx + mw * 0.65, my + 1, mw * 0.35 - 1, mh - 2); // shade
-      if (fill > 0) { ctx.fillStyle = '#5a3418'; ctx.fillRect(mx + 1.2, my + 1.5, mw - 2.4, 1.6); }
+      if (fill > 0) { ctx.fillStyle = '#5a3418'; ctx.fillRect(mx + 1.2 * KIT.mug, my + 1.5 * KIT.mug, mw - 2.4 * KIT.mug, 1.6 * KIT.mug); }
       if (k.t > a && k.t < a + b) { // the stream
         ctx.strokeStyle = 'rgba(92,52,22,.95)'; ctx.lineWidth = 1.3 + 0.3 * Math.sin(t * 30); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.sin(t * 13) * 0.3, my + 1); ctx.stroke();
       }
@@ -1423,7 +1424,7 @@ function staticBox(it) {
     case 4: return patchBox(over[r]);
     case 7: return dev(CK.x - 30, CK.y - 30, CK.x + CK.w + 30, CK.y + CK.h + 30);
     case 9: return dev(r.x, r.y, r.x + r.w, r.y + r.h);
-    case 10: return dev(0, 425, 180, 520);
+    case 10: return dev(150, 462, 215, 525);
     default: return null; // steam and monitor shimmer are left out of lite
   }
 }
@@ -1507,7 +1508,7 @@ function renderLite(t, dt) {
   }
   if (KIT.live > 0) { // the coffee task: only the mug changes; the whole corner (with the bot turning) at the start and the end
     KIT.live -= dt; const k = kitTask();
-    if (!k || k.t < 0.3) dirty.push(dev(0, 420, 185, 640)); else dirty.push(dev(100, 432, 156, 498));
+    if (!k || k.t < 0.3) dirty.push(dev(90, 440, 275, 640)); else dirty.push(dev(160, 468, 206, 522)); // round 2: the machine moved right
   }
   cityDt += dt;
   if ((cityT -= dt) <= 0) { cityT = LITE.cityEvery; renderCity(t, cityDt); cityDt = 0; dirty.push(cityBox); }

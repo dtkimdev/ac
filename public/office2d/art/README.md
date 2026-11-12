@@ -117,8 +117,8 @@ The whole office as one painting, at dusk and at night, in two sizes (-hi for sc
 | `plate-night.webp` | The office at night (normal screens) | 2560×1440 |
 | `plate-dusk-hi.webp` | The office at dusk, high resolution (big screens) | 3840×2160 |
 | `plate-night-hi.webp` | The office at night, high resolution (big screens) | 3840×2160 |
-| `nochair-dusk.webp` | Empty-seat patches without chairs, dusk (cells: layout.json nochair) | 2968×286 |
-| `nochair-night.webp` | Empty-seat patches without chairs, night | 2968×286 |
+| `nochair-dusk.webp` | Empty-seat patches without chairs, dusk (cells: layout.json nochair) | 2996×288 |
+| `nochair-night.webp` | Empty-seat patches without chairs, night | 2996×288 |
 
 ### room/masks/ — Cut-outs (masks)
 
@@ -340,12 +340,12 @@ These are part of `room/plate-*.webp`. They are drawn by the scene builder, then
 | item | made by | notes |
 |---|---|---|
 | Floor (wood boards), walls, ceiling | `portable/art/scene.js` | step 1: one clean floor |
-| Desks (black, four legs) and chairs | `portable/art/scene.js` | DESKS and PLAN: who sits where, desk sizes |
-| Monitor frames on the desks | `portable/art/scene.js` | the screens inside them are drawn in code (screens.js) |
-| Kitchen fridge (retro, two doors) | `portable/art/scene.js` | step 1b, FR |
-| Kitchen stand, coffee machine, canisters | `portable/art/scene.js` | step 1b, CT |
-| Snack shelves (walnut, on the back wall) | `seed painting (commit 83b9edb)` | kept from the original painting |
-| Bean bags (red, blue, mustard), coffee table, rug, floor lamp | `seed painting (commit 83b9edb)` | kept; their masks are in room/masks |
+| Desks (black, four legs) and office chairs | `portable/art/scene.js` | DESKS and PLAN: who sits where, desk sizes; step 5: each chair is the turning sheet's office chair from behind (src/chair.png) |
+| Monitor frames on the desks | `portable/art/scene.js` | step 4: drawn round each screen quad (bezel, glass, neck, foot); the screens inside are drawn in code (screens.js) |
+| Kitchen: fridge, stand, coffee machine, kettle, canisters, floor lamp | `portable/art/scene.js` | step 1b: src/gen/kitchen-iso.jpg keyed by props_prep2.py (src/kitchen2-*.png) |
+| Kitchen nook wall (string lights, COFFEE board, wainscot) | `portable/art/scene.js` | step 1b, WS |
+| Skill bookcase (tall, under the clock) with the snack shelf and cabinet | `portable/art/scene.js` | step 1b: src/gen/bookcase.jpg keyed and stretched by props_prep2.py (src/bookcase-*.png); the books on it are drawn in code (main.js drawBooks) |
+| Bean bags (red, blue, mustard), coffee table, rug, floor lamp | `portable/art/scene.js` | step 5b: rug drawn; bags and table from src/bag-*.png, src/table-*.png; their masks (room/masks) are written by the same step |
 | Boss desk | `portable/art/scene.js` | DESKS boss |
 | Window, city skyline, bridges, river (the still view) | `seed painting + portable/art/scene.js` | step 2b redraws the lower window band |
 | Corner repairs (bamboo removed, gaps filled) | `portable/art/room.js` | run with run-room.js |

@@ -35,13 +35,14 @@ const RUG = [305, 640, 170, 72]; // the lounge rug (kept)
 const LAMP_POLE = [225, 430, 237, 548];
 const LIGHTS = [[232, 560, 150], [690, 610, 170], [1150, 560, 200]]; // warm pools on the floor (lounge lamp, boss lamp, window light on the right)
 
+const krgb = (c, m = 1) => `rgb(${c.map(v => Math.max(0, Math.min(255, v * m)) | 0).join(",")})`;
 const lum = (r, g, b) => 0.3 * r + 0.59 * g + 0.11 * b;
 function hash(a, b) { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; }
 function solve(A, b) { const n = b.length, M = A.map((r, i) => [...r, b[i]]); for (let c = 0; c < n; c++) { let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r; [M[c], M[p]] = [M[p], M[c]]; const d = M[c][c] || 1e-9; for (let k = c; k <= n; k++) M[c][k] /= d; for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; } } return M.map(r => r[n]); }
 // a gentle fit (quadratic plus the light pools), evaluated only inside the area the painted floor was sampled from, so it cannot run off at the edges
 const basis = (x0, y0) => { const x = Math.max(120, Math.min(1010, x0)), y = Math.max(472, Math.min(714, y0)), u = x / PW, v = (y - 460) / 260; return [1, u, v, u * u, u * v, v * v, ...LIGHTS.map(([cx, cy, r]) => Math.exp(-((x - cx) ** 2 + ((y - cy) * 1.8) ** 2) / (r * r)))]; };
 
-export async function run(base, orig, assets, src = assets) { // src: the layout from before this tool (run-scene.js takes it from git), so it can run again
+export async function run(base, orig, assets, src = assets, art = '/scene-art/') { // src: the layout from before this tool (run-scene.js takes it from git), so it can run again
   const L = await fetch(src + 'layout.json').then(r => r.json()), waterOld = await img(src + 'water-mask.png');
   const P = { dusk: await img(base + 'plate-dusk-hi.webp'), night: await img(base + 'plate-night-hi.webp') };
   const O = { dusk: await img(orig + 'plate-dusk-hi.webp'), night: await img(orig + 'plate-night-hi.webp') };
@@ -54,7 +55,7 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
   for (const k of ['dusk', 'night']) od[k] = ctx(full(k, O)).getImageData(0, 0, W3, H3).data;
   const layer = paint => { const c = canvas(W3, H3), g = ctx(c); g.setTransform(S, 0, 0, S, 0, 0); g.fillStyle = '#fff'; g.strokeStyle = '#fff'; paint(g); return g.getImageData(0, 0, W3, H3).data; };
   const keepPaint = g => { g.beginPath(); g.ellipse(RUG[0], RUG[1], RUG[2], RUG[3], 0, 0, 7); g.fill(); for (const m of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(g, m); g.fillRect(LAMP_POLE[0], LAMP_POLE[1], LAMP_POLE[2] - LAMP_POLE[0], LAMP_POLE[3] - LAMP_POLE[1]); };
-  const floorM = layer(g => { poly(g, FLOOR); g.fill(); g.globalCompositeOperation = 'destination-out'; keepPaint(g); });
+  const floorM = layer(g => { poly(g, FLOOR); g.fill(); }); // one floor everywhere: the rug, bean bags, table and floor lamp are drawn new on top (round 2)
   const log = [];
 
   // ---- 1. the floor: the room's light fitted to the painted floor (planks only), boards and grain on top ----
@@ -87,87 +88,61 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
     g.putImageData(id, 0, 0);
   }
   log.push('floor');
-  // ---- 1b. the kitchen corner drawn new (David, 2026-11-10): a retro two-door fridge and the wooden stand beside it in one consistent
-  // front-on view, flat against the back wall and parallel to the snack shelves (David, 2026-11-11): every receding edge runs straight
-  // up along DV, so the fridge and the stand show their fronts and a strip of their tops, no sides. The fridge is a little deeper than the stand and
-  // both stand against the back wall. The coffee machine and the canisters are kept and stand on the new top; the floor lamp's pole is redrawn.
-  const krgb = (c, m = 1) => `rgb(${c.map(v => Math.max(0, Math.min(255, v * m)) | 0).join(",")})`, DV = [0, -16], FR = { x0: 3, x1: 79, top: 449, base: 565, d: 1.12 }, CT = { x0: 79, x1: 216, top: 500, lip: 505, kick: 556, base: 562 };
-  const fd = [DV[0] * FR.d, DV[1] * FR.d], mv = (p, v, f = 1) => [p[0] + v[0] * f, p[1] + v[1] * f];
-  const frFront = [[FR.x0, FR.top], [FR.x1, FR.top], [FR.x1, FR.base], [FR.x0, FR.base]];
-  const frSide = [[FR.x1, FR.top], mv([FR.x1, FR.top], fd), mv([FR.x1, FR.base], fd), [FR.x1, FR.base]];
-  const frTop = [[FR.x0, FR.top], [FR.x1, FR.top], mv([FR.x1, FR.top], fd), mv([FR.x0, FR.top], fd)];
-  const ctTop = [[CT.x0, CT.top], [CT.x1, CT.top], mv([CT.x1, CT.top], DV), mv([CT.x0, CT.top], DV)];
-  const ctSide = [[CT.x1, CT.top], mv([CT.x1, CT.top], DV), mv([CT.x1, CT.base], DV), [CT.x1, CT.base]];
-  const ctFront = [[CT.x0, CT.top], [CT.x1, CT.top], [CT.x1, CT.base], [CT.x0, CT.base]];
-  const ITEMS = [ // what stands on the stand, traced on the painting (plate px)
-    [[107, 428], [111, 421], [119, 420], [121, 409], [141, 409], [143, 420], [163, 420], [167, 426], [167, 447], [163, 452], [163, 480], [166, 482], [166, 492], [112, 492], [112, 482], [115, 480], [115, 452], [108, 449]],
-    [[168, 452], [176, 446], [190, 446], [199, 451], [203, 458], [203, 491], [168, 491]],
-  ];
-  const POLE = { x: 229.3, y0: 457, y1: 547 };
-  const kitWin = [0, 404, 246, 572], newKit = g => { for (const p of [frFront, frSide, frTop, ctTop, ctSide, ctFront, ...ITEMS]) { poly(g, p); g.fill(); } g.fillRect(203, 404, 50, 54); }; // + the lamp shade
-  const itemsCut = {};
-  for (const k of ['dusk', 'night']) { const m = canvas(W3, H3), mg = ctx(m); mg.setTransform(S, 0, 0, S, 0, 0); mg.fillStyle = '#fff'; for (const p of ITEMS) { poly(mg, p); mg.fill(); }
-    mg.globalCompositeOperation = 'source-in'; mg.setTransform(1, 0, 0, 1, 0, 0); mg.drawImage(hi[k], 0, 0); itemsCut[k] = m; }
-  const kpal = {}; // the painting's own fridge and wood colours
-  for (const k of ['dusk', 'night']) { const g = ctx(hi[k]), avg = (x0, y0, x1, y1) => { const d = g.getImageData(x0 * S, y0 * S, (x1 - x0) * S, (y1 - y0) * S).data; let r = 0, gg = 0, b = 0, n = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; } return [r / n, gg / n, b / n]; };
-    kpal[k] = { fr: avg(48, 458, 72, 486), wood: avg(150, 512, 206, 534), top: avg(176, 486, 212, 496) }; }
-  { // whatever of the old fridge, stand, jar and pole the new ones do not cover: filled from the wall and floor round them
+  // ---- 1b. the kitchen corner, round 2 (David, 2026-11-12): a tall walnut bookcase under the wall clock (its twenty skill books are drawn
+  // by the viewer, so a book can leave its slot), then the fridge, the stand with the coffee machine and the floor lamp: one generated
+  // picture (src/gen/kitchen-iso.jpg, keyed by props_prep2.py), front-on, feet on the nook's floor line, against a walnut wainscot under
+  // the window. The snack shelf (coffee bags, mugs) is now the bookcase's lowest open shelf. ----
+  const KP = await fetch(art + 'props2.json').then(r => r.json()), KS = KP.kitchenSpots, BC = KP.bookcase;
+  const KL = { dusk: await img(art + 'kitchen2-dusk.png'), night: await img(art + 'kitchen2-night.png') }, BK = { dusk: await img(art + 'bookcase-dusk.png'), night: await img(art + 'bookcase-night.png') };
+  const WS = { x0: 90, x1: 224, x2: 262, wall: 398, top: 464, sill: 469, base: 567 }; // the nook's back wall behind the kitchen: an upper panel with string lights and a menu board, then a wainscot
+  const kitWin = [0, 380, 272, 572];
+  { // the old fridge, stand, machine, jar and lamp: whatever the new ones do not cover is filled from the window, wall and floor round them
     const W = (kitWin[2] - kitWin[0]) * S, H = (kitWin[3] - kitWin[1]) * S;
-    const hole = bitmap(kitWin, g => { g.fillStyle = '#fff'; g.fillRect(0, 426, 86, 141); poly(g, [[82, 474], [236, 474], [236, 567], [82, 567]]); g.fill(); g.fillRect(222, 455, 16, 96); g.globalCompositeOperation = 'destination-out'; newKit(g); });
+    const OLD = [[[107, 428], [111, 421], [119, 420], [121, 409], [141, 409], [143, 420], [163, 420], [167, 426], [167, 447], [163, 452], [163, 480], [166, 482], [166, 492], [112, 492], [112, 482], [115, 480], [115, 452], [108, 449]],
+      [[168, 452], [176, 446], [190, 446], [199, 451], [203, 458], [203, 491], [168, 491]]];
+    const kc = canvas(W, H), kg = ctx(kc); kg.drawImage(KL.dusk, KP.kitchen.at[0] * S - kitWin[0] * S, KP.kitchen.at[1] * S - kitWin[1] * S); const ka = kg.getImageData(0, 0, W, H).data;
+    let hole = bitmap(kitWin, g => { g.fillStyle = '#fff'; for (const q of OLD) { poly(g, q); g.fill(); } g.fillRect(200, 400, 58, 62); g.fillRect(216, 452, 24, 18); g.fillRect(0, 420, 92, 150); });
+    hole = dilate(hole, W, H, 4);
+    const cover = bitmap(kitWin, g => { g.fillStyle = '#fff'; g.fillRect(BC.rect[0], BC.rect[1], BC.rect[2] - BC.rect[0], BC.rect[3] - BC.rect[1]); g.fillRect(WS.x0, WS.wall, WS.x1 - WS.x0, WS.base - WS.wall); g.fillRect(WS.x1, WS.wall - 3, WS.x2 - WS.x1, 470 - WS.wall + 3); });
+    for (let i = 0; i < hole.length; i++) if (cover[i] || ka[i * 4 + 3] > 200) hole[i] = 0;
     fill([hi.dusk, hi.night], kitWin, hole, hole.map(v => v ? 0 : 1)); }
+  const kpal = {}; // the painting's own wood colours (the old stand's front)
+  for (const k of ['dusk', 'night']) { const D0 = od[k], avg = (x0, y0, x1, y1) => { let r = 0, g = 0, b = 0, n = 0; for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const o = ((y * S) * W3 + x * S) * 4; r += D0[o]; g += D0[o + 1]; b += D0[o + 2]; n++; } return [r / n, g / n, b / n]; };
+    kpal[k] = { wood: avg(150, 512, 206, 534), top: avg(176, 486, 212, 496) }; }
   for (const k of ['dusk', 'night']) {
-    const g = ctx(hi[k]), p = kpal[k], nt = k === 'night', F = p.fr, Wd = p.wood, warm = nt ? 0.75 : 1;
+    const g = ctx(hi[k]), p = kpal[k], Wd = p.wood, nt = k === 'night';
     g.save(); g.setTransform(S, 0, 0, S, 0, 0);
     const lin = (x0, y0, x1, y1, stops) => { const gr = g.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
-    // floor shadows: the fridge and the stand sit on the boards
-    g.fillStyle = lin(0, FR.base - 3, 0, FR.base + 12, [[0, 'rgba(6,3,2,.6)'], [1, 'rgba(6,3,2,0)']]); poly(g, [[FR.x0 - 3, FR.base - 2], [FR.x1 + fd[0], FR.base - 2], [FR.x1 + fd[0] + 10, FR.base + 12], [FR.x0, FR.base + 12]]); g.fill();
-    g.fillStyle = lin(0, CT.base - 3, 0, CT.base + 10, [[0, 'rgba(6,3,2,.5)'], [1, 'rgba(6,3,2,0)']]); poly(g, [[CT.x0, CT.base - 2], [CT.x1 + DV[0], CT.base - 2 + DV[1] * 0.2], [CT.x1 + DV[0] + 8, CT.base + 10], [CT.x0, CT.base + 10]]); g.fill();
-    // fridge: side (warmed by the floor lamp beside the stand), top, then the front with its two doors, chrome handles and kick plate
-    g.fillStyle = lin(FR.x1, 0, FR.x1 + fd[0], 0, [[0, krgb(F, 0.86)], [1, krgb(F, 0.62)]]); poly(g, frSide); g.fill();
-    g.fillStyle = `rgba(255,178,110,${0.16 * warm})`; poly(g, frSide); g.fill();
-    g.fillStyle = 'rgba(0,0,0,.35)'; poly(g, [mv([FR.x1, FR.base - 7], fd, 0), mv([FR.x1, FR.base - 7], fd), mv([FR.x1, FR.base], fd), [FR.x1, FR.base]]); g.fill(); // its kick plate runs round the side
-    g.fillStyle = lin(0, FR.top + fd[1], 0, FR.top, [[0, krgb(F, 0.98)], [1, krgb(F, 1.18)]]); poly(g, frTop); g.fill();
-    const fh = FR.base - FR.top, split = FR.top + Math.round(fh * 0.36), kick = FR.base - 7;
-    g.fillStyle = lin(FR.x0, 0, FR.x1, 0, [[0, krgb(F, 0.84)], [0.55, krgb(F, 1)], [1, krgb(F, 1.1)]]); g.beginPath(); g.roundRect(FR.x0, FR.top, FR.x1 - FR.x0, kick - FR.top, [5, 5, 1, 1]); g.fill();
-    g.fillStyle = lin(0, FR.top, 0, kick, [[0, 'rgba(255,240,228,.14)'], [0.3, 'rgba(255,240,228,0)'], [0.7, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.18)']]); g.beginPath(); g.roundRect(FR.x0, FR.top, FR.x1 - FR.x0, kick - FR.top, [5, 5, 1, 1]); g.fill();
-    g.fillStyle = 'rgba(255,236,220,.22)'; g.beginPath(); g.roundRect(FR.x0 + 3, FR.top + 0.6, FR.x1 - FR.x0 - 6, 1.2, 0.6); g.fill(); // light along the rounded top edge
-    g.fillStyle = `rgba(255,196,140,${0.3 * warm})`; g.fillRect(FR.x1 - 1.6, FR.top + 4, 1.6, kick - FR.top - 5); // rim light on the right edge
-    g.fillStyle = krgb(F, 0.32); g.fillRect(FR.x0 + 1, split - 0.8, FR.x1 - FR.x0 - 2, 1.6); g.fillStyle = 'rgba(255,240,228,.16)'; g.fillRect(FR.x0 + 1, split + 0.9, FR.x1 - FR.x0 - 2, 0.7); // the door gap
-    g.fillStyle = krgb(F, 0.3); g.fillRect(FR.x0, kick, FR.x1 - FR.x0, FR.base - kick); g.fillStyle = krgb(F, 0.22); g.fillRect(FR.x0 + 2, kick + 1.5, FR.x1 - FR.x0 - 4, FR.base - kick - 1.5);
-    for (const [x, y] of [[6, FR.base - 1.5], [FR.x1 - 6, FR.base - 1.5]]) { g.fillStyle = '#17120f'; g.beginPath(); g.roundRect(x - 3, y - 1, 6, 3, 1); g.fill(); }
-    for (const hy of [split - 8, split + 9]) { // chrome bar handles on the left of each door
-      g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.roundRect(11, hy + 1.4, 22, 3, 1.5); g.fill();
-      g.fillStyle = lin(0, hy - 1.5, 0, hy + 1.5, [[0, nt ? '#b9b6c4' : '#efe2d6'], [0.5, nt ? '#7c7886' : '#a8978c'], [1, nt ? '#4c4854' : '#6e5f58']]); g.beginPath(); g.roundRect(11, hy - 1.5, 22, 3, 1.5); g.fill();
-      g.fillStyle = nt ? '#5c5864' : '#7d6c62'; g.fillRect(12.5, hy - 1, 2, 3.4); g.fillRect(29.5, hy - 1, 2, 3.4); }
-    // the stand: right end, top, front with nine drawers, kick
-    g.fillStyle = lin(CT.x1, 0, CT.x1 + DV[0], 0, [[0, krgb(Wd, 0.72)], [1, krgb(Wd, 0.52)]]); poly(g, ctSide); g.fill();
-    g.fillStyle = 'rgba(0,0,0,.3)'; poly(g, [[CT.x1, CT.kick], mv([CT.x1, CT.kick], DV), mv([CT.x1, CT.base], DV), [CT.x1, CT.base]]); g.fill();
-    g.fillStyle = lin(0, CT.top + DV[1], 0, CT.top, [[0, krgb(p.top, 0.8)], [1, krgb(p.top, 1.06)]]); poly(g, ctTop); g.fill();
-    for (let i = 1; i < 6; i++) { g.strokeStyle = `rgba(40,18,8,${0.06 + 0.03 * (i % 2)})`; g.lineWidth = 0.5; const f = i / 6; g.beginPath(); g.moveTo(CT.x0 + DV[0] * f, CT.top + DV[1] * f); g.lineTo(CT.x1 + DV[0] * f, CT.top + DV[1] * f); g.stroke(); } // grain along the top
-    g.fillStyle = lin(0, CT.top, 0, CT.lip, [[0, krgb(p.top, 1.3)], [0.35, krgb(p.top, 1.08)], [1, krgb(Wd, 0.7)]]); g.fillRect(CT.x0, CT.top, CT.x1 - CT.x0, CT.lip - CT.top);
-    g.fillStyle = krgb(Wd, 0.9); g.fillRect(CT.x0, CT.lip, CT.x1 - CT.x0, CT.kick - CT.lip);
-    g.fillStyle = lin(0, CT.lip, 0, CT.lip + 3, [[0, 'rgba(0,0,0,.35)'], [1, 'rgba(0,0,0,0)']]); g.fillRect(CT.x0, CT.lip, CT.x1 - CT.x0, 3);
-    const cols = 3, rows = 3, cw = (CT.x1 - CT.x0 - 4) / cols, rh = (CT.kick - CT.lip - 3) / rows;
-    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) {
-      const x = CT.x0 + 2 + c * cw + 1, y = CT.lip + 2 + r * rh + 0.8, w = cw - 2, h = rh - 1.6, lit = 0.94 + 0.08 * c / (cols - 1);
-      g.fillStyle = krgb(Wd, 0.55); g.fillRect(x - 0.7, y - 0.7, w + 1.4, h + 1.4);
-      g.fillStyle = lin(0, y, 0, y + h, [[0, krgb(Wd, 1.08 * lit)], [1, krgb(Wd, 0.9 * lit)]]); g.fillRect(x, y, w, h);
-      g.fillStyle = 'rgba(255,226,190,.12)'; g.fillRect(x, y, w, 0.8);
-      for (let j = 0; j < 3; j++) { g.fillStyle = 'rgba(50,22,8,.08)'; g.fillRect(x + 1, y + 2 + j * h / 3.2 + ((c * 7 + r * 3 + j) % 3) * 0.6, w - 2, 0.5); }
-      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.roundRect(x + w / 2 - 4.5, y + h * 0.42 + 0.6, 9, 2.2, 1); g.fill();
-      g.fillStyle = nt ? '#9a8a6a' : '#d9b77a'; g.beginPath(); g.roundRect(x + w / 2 - 4.5, y + h * 0.42 - 0.4, 9, 2, 1); g.fill(); }
-    g.fillStyle = krgb(Wd, 0.32); g.fillRect(CT.x0, CT.kick, CT.x1 - CT.x0, CT.base - CT.kick);
-    g.fillStyle = `rgba(255,178,110,${0.1 * warm})`; poly(g, ctSide); g.fill();
-    // what stands on top, with a soft contact shadow
-    g.fillStyle = 'rgba(20,8,2,.35)'; for (const [cx, cy, rx] of [[139, 492, 30], [186, 491, 19]]) { g.beginPath(); g.ellipse(cx, cy, rx, 3, 0, 0, 7); g.fill(); }
-    g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(itemsCut[k], 0, 0); g.setTransform(S, 0, 0, S, 0, 0);
-    // the floor lamp's brass pole and foot, beside the stand's right end
-    g.fillStyle = 'rgba(6,3,2,.4)'; g.beginPath(); g.ellipse(POLE.x + 3, POLE.y1 + 1, 12, 3, 0, 0, 7); g.fill();
-    g.fillStyle = lin(POLE.x - 1.6, 0, POLE.x + 1.6, 0, [[0, nt ? '#4a3a26' : '#6b4d2a'], [0.6, nt ? '#a8865a' : '#e2b678'], [1, nt ? '#6a5236' : '#9b7244']]); g.fillRect(POLE.x - 1.6, POLE.y0, 3.2, POLE.y1 - POLE.y0);
-    g.fillStyle = nt ? '#3c2f20' : '#5a4024'; g.beginPath(); g.ellipse(POLE.x, POLE.y1, 8, 2.4, 0, 0, 7); g.fill(); g.fillStyle = nt ? '#8a6e4a' : '#c89c62'; g.beginPath(); g.ellipse(POLE.x, POLE.y1 - 0.8, 7, 1.6, 0, 0, 7); g.fill();
+    // the wainscot: vertical walnut boards, a sill along the top that catches the window light, a dark skirting
+    g.fillStyle = lin(0, WS.sill, 0, WS.base, [[0, krgb(Wd, 0.62)], [1, krgb(Wd, 0.42)]]); g.fillRect(WS.x0, WS.sill, WS.x1 - WS.x0, WS.base - WS.sill);
+    for (let x = WS.x0 + 9; x < WS.x1 - 2; x += 11) { g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, WS.sill + 1, 0.8, WS.base - WS.sill - 6); g.fillStyle = 'rgba(255,220,180,.05)'; g.fillRect(x + 0.8, WS.sill + 1, 0.6, WS.base - WS.sill - 6); }
+    g.fillStyle = lin(0, WS.top, 0, WS.sill, [[0, krgb(p.top, 1.15)], [1, krgb(Wd, 0.7)]]); g.fillRect(WS.x0, WS.top, WS.x1 - WS.x0, WS.sill - WS.top);
+    g.fillStyle = nt ? 'rgba(170,180,230,.18)' : 'rgba(255,200,150,.3)'; g.fillRect(WS.x0, WS.top, WS.x1 - WS.x0, 0.8);
+    g.fillStyle = krgb(Wd, 0.28); g.fillRect(WS.x0, WS.base - 5, WS.x1 - WS.x0, 5);
+    // the upper panel: horizontal walnut boards, a top rail, warm string lights, a small chalk menu board
+    g.fillStyle = lin(0, WS.wall, 0, WS.top, [[0, krgb(Wd, 0.5)], [1, krgb(Wd, 0.66)]]); g.fillRect(WS.x0, WS.wall, WS.x1 - WS.x0, WS.top - WS.wall);
+    g.fillStyle = lin(0, WS.wall, 0, 470, [[0, krgb(Wd, 0.42)], [1, krgb(Wd, 0.5)]]); g.fillRect(WS.x1, WS.wall, WS.x2 - WS.x1, 470 - WS.wall); // where the panel runs back to the window wall
+    g.fillStyle = krgb(Wd, 0.26); g.fillRect(WS.x1, 466, WS.x2 - WS.x1, 4);
+    for (let y = WS.wall + 8; y < WS.top - 2; y += 8.5) { g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(WS.x0, y, WS.x2 - WS.x0, 0.7); g.fillStyle = 'rgba(255,220,180,.04)'; g.fillRect(WS.x0, y + 0.7, WS.x2 - WS.x0, 0.6); }
+    g.fillStyle = krgb(p.top, 0.85); g.fillRect(WS.x0, WS.wall - 3, WS.x2 - WS.x0, 4); g.fillStyle = nt ? 'rgba(170,180,230,.2)' : 'rgba(255,200,150,.32)'; g.fillRect(WS.x0, WS.wall - 3, WS.x2 - WS.x0, 0.8);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(WS.x0, WS.wall + 1, WS.x2 - WS.x0, 2.5);
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(WS.x2 - 1, WS.wall - 3, 1, 470 - WS.wall + 3);
+    const mb = [104, 412, 40, 30]; g.fillStyle = krgb(Wd, 0.35); g.fillRect(mb[0] - 2, mb[1] - 2, mb[2] + 4, mb[3] + 4); g.fillStyle = '#1d211f'; g.fillRect(mb[0], mb[1], mb[2], mb[3]);
+    g.fillStyle = nt ? 'rgba(220,220,210,.55)' : 'rgba(240,236,224,.8)'; g.font = '600 6px sans-serif'; g.textAlign = 'center'; g.fillText('COFFEE', mb[0] + mb[2] / 2, mb[1] + 9);
+    g.fillStyle = nt ? 'rgba(220,220,210,.35)' : 'rgba(240,236,224,.5)'; for (let i = 0; i < 3; i++) { g.fillRect(mb[0] + 6, mb[1] + 14 + i * 5, 18 - i * 3, 0.8); g.fillRect(mb[0] + 29, mb[1] + 14 + i * 5, 5, 0.8); }
+    g.strokeStyle = 'rgba(30,20,12,.8)'; g.lineWidth = 0.5; g.beginPath(); for (let x = WS.x0; x <= WS.x2; x += 1) { const y = WS.wall + 5 + 3.2 * Math.abs(Math.sin((x - WS.x0) / 26 * Math.PI)); x === WS.x0 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
+    for (let x = WS.x0 + 13; x < WS.x2; x += 26) { const y = WS.wall + 8.2; const gl = g.createRadialGradient(x, y + 1, 0, x, y + 1, 9); gl.addColorStop(0, `rgba(255,190,110,${nt ? 0.5 : 0.35})`); gl.addColorStop(1, 'rgba(255,190,110,0)'); g.fillStyle = gl; g.fillRect(x - 9, y - 8, 18, 18); g.fillStyle = '#ffe2a8'; g.beginPath(); g.ellipse(x, y + 1.2, 1.3, 1.8, 0, 0, 7); g.fill(); g.fillStyle = '#3a2a1a'; g.fillRect(x - 0.8, y - 1.2, 1.6, 1.2); }
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(WS.x1 - 1.2, WS.top, 1.2, WS.base - WS.top); // the corner where the nook ends
+    // contact shadows: the bookcase, the fridge, the stand and the lamp stand on the boards
+    const sh = (x0, x1, y, d, a) => { g.fillStyle = lin(0, y - 2, 0, y + d, [[0, `rgba(6,3,2,${a})`], [1, 'rgba(6,3,2,0)']]); g.fillRect(x0, y - 2, x1 - x0, d + 2); };
+    sh(BC.rect[0], BC.rect[2] + 4, BC.rect[3], 12, 0.6); sh(96, 236, 567, 10, 0.5);
+    g.fillStyle = 'rgba(6,3,2,.4)'; g.beginPath(); g.ellipse(KS.pole[0] + 2, KS.pole[1] + 1, 11, 2.6, 0, 0, 7); g.fill();
+    // a shadow the bookcase casts on the wall beside it
+    g.fillStyle = lin(BC.rect[2], 0, BC.rect[2] + 10, 0, [[0, 'rgba(6,3,2,.45)'], [1, 'rgba(6,3,2,0)']]); g.fillRect(BC.rect[2], BC.rect[1] + 6, 10, BC.rect[3] - BC.rect[1] - 6);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(BK[k], BC.rect[0] * S, BC.rect[1] * S);
+    g.drawImage(KL[k], Math.round(KP.kitchen.at[0] * S), Math.round(KP.kitchen.at[1] * S));
     g.restore();
-    // the bean bags stand in front of the stand: put them back over it
-    const bb = canvas(W3, H3), bg = ctx(bb); bg.setTransform(S, 0, 0, S, 0, 0); for (const n of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(bg, n); bg.globalCompositeOperation = 'source-in'; bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(P[k], 0, 0, W3, H3); g.drawImage(bb, 0, 0);
   }
   log.push('kitchen');
 
@@ -259,20 +234,40 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
 
   // ---- 4. monitors: the screens' bezels copied from the painted ones; neck and foot drawn on the new tops ----
   const quadsOut = {}; // desk id -> monitor quads (plate px)
-  const pasteMon = (k, q, dx, D) => { // copy one painted monitor (bezel and screen area) dx px along, then its stand
-    const xs = q.map(p => p[0]), ys = q.map(p => p[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2 + dx, qb = Math.max(...ys), foot = D.yb + (D.yf - D.yb) * 0.35;
-    const m = canvas(W3, H3), mg = ctx(m); mg.setTransform(S, 0, 0, S, 0, 0); mg.fillStyle = '#fff'; mg.strokeStyle = '#fff'; mg.lineWidth = 6; mg.lineJoin = 'round'; poly(mg, q); mg.fill(); mg.stroke();
-    mg.globalCompositeOperation = 'source-in'; mg.setTransform(1, 0, 0, 1, 0, 0); mg.drawImage(O[k], 0, 0, W3, H3);
-    const g = ctx(hi[k]); g.save(); g.setTransform(S, 0, 0, S, 0, 0);
-    const w = Math.max(6, (Math.max(...xs) - Math.min(...xs)) * 0.1), p = pal[k];
-    if (foot > qb) { g.fillStyle = rgb(p.leg, 0.75); g.fillRect(cx - w / 2, qb - 2, w, foot - qb + 2); g.fillStyle = rgb(p.leg, 0.9); g.beginPath(); g.ellipse(cx, foot, w * 2.2, Math.max(1.5, (D.yf - D.yb) * 0.1), 0, 0, 7); g.fill(); }
-    g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(m, dx * S, 0); g.restore();
+  // round 2 (David, 2026-11-12): every monitor frame drawn new around the exact screen the viewer animates (no painted bezels copied any more):
+  // a slim charcoal bezel with rounded corners, dark glass, a lit top edge, a neck and a foot on the desk top
+  const pasteMon = (k, q, dx, D) => {
+    q = q.map(([x, y]) => [x + dx, y]);
+    const xs = q.map(p => p[0]), ys = q.map(p => p[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2, qb = Math.max(q[2][1], q[3][1]), wq = Math.max(...xs) - Math.min(...xs), p = pal[k], nt = k === 'night';
+    const c0 = [xs.reduce((s, v) => s + v, 0) / 4, ys.reduce((s, v) => s + v, 0) / 4], e = 1.6 + wq * 0.022;
+    const grow = (d) => q.map(([x, y]) => { const vx = x - c0[0], vy = y - c0[1], l = Math.hypot(vx, vy) || 1, sx = Math.sign(vx), sy = Math.sign(vy); return [x + sx * d, y + sy * d * 1.15]; });
+    const outer = grow(e), back = grow(e + 0.6).map(([x, y]) => [x + (cx < VP[0] ? -0.9 : 0.9), y + 0.6]);
+    const g = ctx(hi[k]); g.save(); g.setTransform(S, 0, 0, S, 0, 0); g.lineJoin = 'round';
+    let foot = D.yb + (D.yf - D.yb) * 0.4; if (foot < qb + 2) foot = qb + 2;
+    const nw = Math.max(3, wq * 0.07);
+    // neck and foot
+    const ng = g.createLinearGradient(cx - nw / 2, 0, cx + nw / 2, 0); ng.addColorStop(0, rgb(p.leg, 1.25)); ng.addColorStop(1, rgb(p.leg, 0.75));
+    g.fillStyle = ng; g.fillRect(cx - nw / 2, qb - 2, nw, foot - qb + 1.5);
+    g.fillStyle = 'rgba(6,3,2,.45)'; g.beginPath(); g.ellipse(cx, foot + 0.8, nw * 2.6, Math.max(1.4, (D.yf - D.yb) * 0.1), 0, 0, 7); g.fill();
+    g.fillStyle = rgb(p.leg, 1.05); g.beginPath(); g.ellipse(cx, foot, nw * 2.2, Math.max(1.2, (D.yf - D.yb) * 0.08), 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,240,225,.08)'; g.fillRect(cx - nw * 2, foot - 0.6, nw * 4, 0.5);
+    // the shell behind, then the bezel
+    g.fillStyle = 'rgba(4,4,6,.55)'; g.strokeStyle = 'rgba(4,4,6,.55)'; g.lineWidth = 1.4; poly(g, back); g.fill(); g.stroke();
+    const bz = g.createLinearGradient(0, Math.min(...ys) - e, 0, qb + e); bz.addColorStop(0, nt ? '#1d1e25' : '#2a2a30'); bz.addColorStop(1, nt ? '#0d0e12' : '#151518');
+    g.fillStyle = bz; g.strokeStyle = bz; g.lineWidth = 1.2; poly(g, outer); g.fill(); g.stroke();
+    // a lit top edge and a faint inner lip
+    g.strokeStyle = nt ? 'rgba(170,180,230,.16)' : 'rgba(255,214,180,.22)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(outer[0][0] + 1, outer[0][1] + 0.3); g.lineTo(outer[1][0] - 1, outer[1][1] + 0.3); g.stroke();
+    g.fillStyle = '#06070a'; poly(g, q); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 0.5; poly(g, q); g.stroke();
+    // a small power light on the bottom bezel
+    g.fillStyle = nt ? 'rgba(120,200,255,.7)' : 'rgba(120,200,255,.5)'; g.beginPath(); g.arc((q[2][0] + q[3][0]) / 2 + wq * 0.38, (q[2][1] + q[3][1]) / 2 + e * 0.55, 0.45, 0, 7); g.fill();
+    g.restore();
   };
   for (const d of PLAN) {
     const D = DESKS[d.id];
     if (d.mon === 'keep:sbp+add') { const keep = deskById.sbp.monitors.map(q => q.map(([x, y]) => [x * PW, y * PH])), src = keep[d.add.from[1]], scx = (Math.min(...src.map(p => p[0])) + Math.max(...src.map(p => p[0]))) / 2;
       quadsOut[d.id] = [...keep, ...d.add.at.map(cx => src.map(([x, y]) => [x + cx - scx, y]))]; for (const k of ['dusk', 'night']) for (const cx of d.add.at) pasteMon(k, src, cx - scx, D); }
-    else if (d.mon === 'keep:housekeeping') quadsOut[d.id] = deskById.housekeeping.monitors.map(q => q.map(([x, y]) => [x * PW, y * PH]));
+    else if (d.mon === 'keep:housekeeping') { quadsOut[d.id] = deskById.housekeeping.monitors.map(q => q.map(([x, y]) => [x * PW, y * PH])); for (const k of ['dusk', 'night']) for (const q of quadsOut[d.id]) pasteMon(k, q, 0, D); }
     else if (typeof d.mon === 'string' && d.mon.startsWith('paste:')) { const qs = (d.id === 'boss' ? L.boss.monitors : deskById[d.id].monitors).map(q => q.map(([x, y]) => [x * PW, y * PH])); for (const k of ['dusk', 'night']) for (const q of qs) pasteMon(k, q, 0, D); quadsOut[d.id] = qs; }
     else { const src = deskById[d.mon.from[0]].monitors[d.mon.from[1]].map(([x, y]) => [x * PW, y * PH]), scx = (Math.min(...src.map(p => p[0])) + Math.max(...src.map(p => p[0]))) / 2;
       quadsOut[d.id] = d.mon.at.map(cx => src.map(([x, y]) => [x + cx - scx, y])); for (const k of ['dusk', 'night']) for (const cx of d.mon.at) pasteMon(k, src, cx - scx, D); }
@@ -284,48 +279,70 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
     g.restore(); }
   log.push('monitors');
 
-  // ---- 5. chairs: the painted backrest (exactly its traced outline) and a drawn post, five-star base, wheels and armrests ----
+  // ---- 5. chairs, round 2 (David, 2026-11-12: a chair seen from behind looked like a black blob): the office chair exactly as the turning
+  // sheet draws it from behind (src/chair.png, props_prep2.py), at the scale the viewer draws that seat's turn frames, so the plate chair
+  // and the turning chair are the same chair. Its backrest outline is the seat's `chair` polygon: the viewer lays it over the sitting bot. ----
   const seatsOut = [], before = { dusk: ctx(hi.dusk).getImageData(0, 0, W3, H3), night: ctx(hi.night).getImageData(0, 0, W3, H3) };
-  const bagsM = layer(g => { for (const m of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(g, m); });
+  const CH = KP.chair, chairImg = await img(art + CH.file);
+  const tint = {}; // the room's dusk->night light at each seat (night picture over dusk picture, wide average)
+  for (const d of PLAN) d.seats.forEach(([x, tid]) => { const t = seatById[tid], y0 = Math.round(t.ctop * PH), y1 = Math.round(t.base * PH), c = [0, 0], r = [[0, 0, 0], [0, 0, 0]];
+    for (let y = y0; y < y1; y += 2) for (let xx = Math.round(x - 40); xx < x + 40; xx += 2) { const o = ((y * S) * W3 + Math.max(0, Math.min(PW - 1, xx)) * S) * 4; ['dusk', 'night'].forEach((k, j) => { for (let ch = 0; ch < 3; ch++) r[j][ch] += od[k][o + ch]; }); }
+    tint[`${d.id}${x}`] = [0, 1, 2].map(ch => Math.max(0.3, Math.min(1.1, (r[1][ch] + 1) / (r[0][ch] + 1)))); });
   for (const d of PLAN) d.seats.forEach(([x, tid], i) => {
-    const t = seatById[tid], dx = x - t.x * PW, back = t.chair.map(([cx, cy]) => [cx * PW + dx, cy * PH]), H = (t.base - t.ctop) * PH, ys = back.map(p => p[1]), yb = Math.max(...ys), xs = back.map(p => p[0]), cw = Math.max(...xs) - Math.min(...xs);
-    const parts = g => { // seen from behind: the seat under the backrest, armrests either side, the gas column, the five-star base on casters
-      const base = t.base * PH, seatY = yb + H * 0.015, colTop = seatY + H * 0.05, starY = base - H * 0.085, R = cw * 0.82, col = Math.max(3, cw * 0.13);
-      g.beginPath(); g.ellipse(x, seatY, cw * 0.62, H * 0.055, 0, 0, 7); g.fill();
-      for (const sd of [-1, 1]) { g.beginPath(); g.roundRect(x + sd * cw * 0.56 - cw * 0.11, yb - H * 0.14, cw * 0.22, H * 0.045, 2); g.fill(); g.fillRect(x + sd * cw * 0.56 - 1.2, yb - H * 0.12, 2.4, H * 0.14); }
-      g.fillRect(x - col / 2, colTop, col, starY - colTop);
-      for (let i = 0; i < 5; i++) { const an = -Math.PI / 2 + i * 2 * Math.PI / 5 + 0.3, ex = x + Math.cos(an) * R, ey = starY + Math.sin(an) * R * 0.3, th = Math.max(1.6, H * 0.03);
-        g.beginPath(); g.moveTo(x - th, starY - th * 0.4); g.lineTo(x + th, starY - th * 0.4); g.lineTo(ex + th * 0.4, ey); g.lineTo(ex - th * 0.4, ey + th * 0.6); g.closePath(); g.fill();
-        g.beginPath(); g.ellipse(ex, ey + H * 0.03, H * 0.032, H * 0.026, 0, 0, 7); g.fill(); }
-      g.beginPath(); g.ellipse(x, starY, col * 1.3, col * 0.55, 0, 0, 7); g.fill(); };
+    const t = seatById[tid], base = t.base * PH, H = (t.base - t.ctop) * PH, ts = H / CH.chairH, dx = x - t.x * PW;
+    const back = CH.back.map(([u, v]) => [x + (u - CH.cx) * ts, base + (v - CH.floor) * ts]);
+    const at = [x - CH.cx * ts, base - CH.floor * ts, CH.cell[0] * ts, CH.cell[1] * ts];
+    const parts = g => { g.drawImage(chairImg, at[0], at[1], at[2], at[3]); g.beginPath(); g.ellipse(x - 4 * ts, base - 3 * ts, 52 * ts, 9 * ts, 0, 0, 7); g.fill(); };
     for (const k of ['dusk', 'night']) {
-      const g = ctx(hi[k]), shade = k === 'night' ? 0.55 : 1;
-      g.save(); g.setTransform(S, 0, 0, S, 0, 0);
-      g.fillStyle = 'rgba(6,3,2,.4)'; g.beginPath(); g.ellipse(x, t.base * PH, cw * 0.8, H * 0.05, 0, 0, 7); g.fill(); // its shadow
-      const cg2 = g.createLinearGradient(x - cw, 0, x + cw, 0); cg2.addColorStop(0, `rgb(${40 * shade + 6},${41 * shade + 6},${47 * shade + 7})`); cg2.addColorStop(0.5, `rgb(${26 * shade + 5},${27 * shade + 5},${32 * shade + 6})`); cg2.addColorStop(1, `rgb(${18 * shade + 4},${19 * shade + 4},${23 * shade + 5})`); g.fillStyle = cg2; parts(g);
-      g.restore();
-      // the backrest itself, copied from the painted chair inside its traced outline
-      const m = canvas(W3, H3), mg = ctx(m); mg.setTransform(S, 0, 0, S, 0, 0); mg.fillStyle = '#fff'; poly(mg, t.chair.map(([cx, cy]) => [cx * PW, cy * PH])); mg.fill();
-      mg.globalCompositeOperation = 'source-in'; mg.setTransform(1, 0, 0, 1, 0, 0); mg.drawImage(O[k], 0, 0, W3, H3);
-      const keepBags = canvas(W3, H3); { const kg = ctx(keepBags); kg.drawImage(m, dx * S, 0); kg.globalCompositeOperation = 'destination-out'; kg.setTransform(S, 0, 0, S, 0, 0); for (const n of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(kg, n); }
-      g.drawImage(keepBags, 0, 0);
-      // bean bags and the table stand in front of the back-left chairs: put them back over the chair
-      const bb = canvas(W3, H3), bg = ctx(bb); bg.setTransform(S, 0, 0, S, 0, 0); for (const n of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(bg, n); bg.globalCompositeOperation = 'source-in'; bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(P[k], 0, 0, W3, H3); g.drawImage(bb, 0, 0);
+      const g = ctx(hi[k]); g.save(); g.setTransform(S, 0, 0, S, 0, 0);
+      g.fillStyle = 'rgba(6,3,2,.42)'; g.beginPath(); g.ellipse(x - 4 * ts, base - 3 * ts, 50 * ts, 8 * ts, 0, 0, 7); g.fill(); // its shadow
+      const c = canvas(Math.ceil(at[2] * S), Math.ceil(at[3] * S)), cg = ctx(c); cg.drawImage(chairImg, 0, 0, c.width, c.height);
+      { const tn = k === 'night' ? tint[`${d.id}${x}`] : [0.8, 0.8, 0.82]; cg.globalCompositeOperation = 'multiply'; cg.fillStyle = `rgb(${tn.map(v => Math.round(v * 255)).join(',')})`; cg.fillRect(0, 0, c.width, c.height); cg.globalCompositeOperation = 'destination-in'; cg.drawImage(chairImg, 0, 0, c.width, c.height); }
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(c, Math.round(at[0] * S), Math.round(at[1] * S)); g.restore();
     }
-    seatsOut.push({ desk: d.id, i, x, t, dx, back, parts });
+    seatsOut.push({ desk: d.id, i, x, t, dx, back, parts, at });
   });
   log.push('chairs');
+  // ---- 5b. the lounge, round 2: a woven rug drawn new, then the coffee table and the three bean bags (red, blue, mustard: src/, props_prep.py
+  // and props_prep2.py) standing on it, back to front. Their cut-outs (the viewer hides bots behind them) are made from the same pictures. ----
+  const LG = {}; for (const n of ['bag-b', 'bag-m', 'bag-r', 'table']) LG[n] = { dusk: await img(art + n + '-dusk.png'), night: await img(art + n + '-night.png'), rect: KP[n].rect };
+  const drawLounge = (g, k) => {
+    const nt = k === 'night', D0 = od[k];
+    let fr = [0, 0, 0], n = 0; for (let y = 600; y < 700; y += 3) for (let x = 140; x < 470; x += 3) { const o = ((y * S) * W3 + x * S) * 4; fr[0] += D0[o]; fr[1] += D0[o + 1]; fr[2] += D0[o + 2]; n++; } fr = fr.map(v => v / n);
+    const L0 = lum(...fr) / 90, base = [128 * L0, 52 * L0, 40 * L0], c = (m, a = 1) => `rgba(${base.map(v => Math.max(0, Math.min(255, v * m)) | 0).join(',')},${a})`;
+    g.save(); g.setTransform(S, 0, 0, S, 0, 0);
+    const [rx, ry, ra, rb] = RUG;
+    g.fillStyle = 'rgba(6,3,2,.25)'; g.beginPath(); g.ellipse(rx, ry + 1.5, ra + 2, rb + 1.5, 0, 0, 7); g.fill();
+    const rg = g.createRadialGradient(rx, ry, 0, rx, ry, ra); rg.addColorStop(0, c(1.05)); rg.addColorStop(0.75, c(0.95)); rg.addColorStop(1, c(0.8));
+    g.save(); g.translate(rx, ry); g.scale(1, rb / ra); g.fillStyle = rg; g.beginPath(); g.arc(0, 0, ra, 0, 7); g.fill();
+    const ring = (r, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); };
+    ring(ra - 5, 6, c(0.62)); ring(ra - 9.5, 1.2, nt ? 'rgba(170,140,100,.35)' : 'rgba(232,180,110,.45)'); ring(ra - 2, 1, c(1.25, 0.6));
+    ring(ra * 0.55, 1, nt ? 'rgba(170,140,100,.25)' : 'rgba(232,180,110,.32)'); ring(ra * 0.5, 4, c(0.85, 0.7));
+    for (let i = 0; i < 24; i++) { const an = i / 24 * Math.PI * 2; g.fillStyle = nt ? 'rgba(170,140,100,.3)' : 'rgba(232,180,110,.38)'; g.beginPath(); g.arc(Math.cos(an) * (ra - 15), Math.sin(an) * (ra - 15), 1.6, 0, 7); g.fill(); }
+    g.restore();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    for (const nm of ['bag-b', 'bag-m', 'bag-r', 'table']) { const q = LG[nm], [x0, y0] = q.rect;
+      g.save(); g.setTransform(S, 0, 0, S, 0, 0); g.fillStyle = 'rgba(6,3,2,.38)'; const [a0, b0, a1, b1] = q.rect; g.beginPath(); g.ellipse((a0 + a1) / 2, b1 - (b1 - b0) * 0.06, (a1 - a0) * 0.46, (b1 - b0) * 0.08, 0, 0, 7); g.fill(); g.restore();
+      if (nt) { const c2 = canvas(q.night.width, q.night.height), cg = ctx(c2); cg.drawImage(q.night, 0, 0); cg.globalCompositeOperation = 'multiply'; cg.fillStyle = 'rgb(200,198,215)'; cg.fillRect(0, 0, c2.width, c2.height); cg.globalCompositeOperation = 'destination-in'; cg.drawImage(q.night, 0, 0); g.drawImage(c2, Math.round(x0 * S), Math.round(y0 * S)); }
+      else g.drawImage(q[k], Math.round(x0 * S), Math.round(y0 * S)); }
+    g.restore();
+  };
+  for (const k of ['dusk', 'night']) drawLounge(ctx(hi[k]), k);
+  const bagMasks = {}; for (const nm of ['bag-r', 'bag-b', 'bag-m', 'table']) { const r = L.masks[nm], w = Math.round((r[2] - r[0]) * PW * 2), h = Math.round((r[3] - r[1]) * PH * 2), m = canvas(w, h), mg = ctx(m), q = LG[nm];
+    mg.setTransform(2, 0, 0, 2, -r[0] * PW * 2, -r[1] * PH * 2); mg.drawImage(q.dusk, q.rect[0], q.rect[1], q.dusk.width / S, q.dusk.height / S); bagMasks[nm + '-mask.png'] = m.toDataURL('image/png'); }
+  log.push('lounge');
 
   // ---- 6. chair-less patches (floor and desk behind each chair, shown while a bot turns) and the front desks' cut-outs ----
   let ax = 0; const atlasParts = [];
   for (const s of seatsOut) {
-    const xs = s.back.map(p => p[0]), x0 = Math.floor(Math.min(...xs) - (Math.max(...xs) - Math.min(...xs)) * 0.75), x1 = Math.ceil(Math.max(...xs) + (Math.max(...xs) - Math.min(...xs)) * 0.75), y0 = Math.floor(s.t.ctop * PH - 2), y1 = Math.ceil(s.t.base * PH + 6);
+    const x0 = Math.floor(s.at[0] - 2), x1 = Math.ceil(s.at[0] + s.at[2] + 2), y0 = Math.floor(Math.min(s.t.ctop * PH, Math.min(...s.back.map(p => p[1]))) - 2), y1 = Math.ceil(s.t.base * PH + 6);
     atlasParts.push({ s, x0, y0, w: x1 - x0, h: y1 - y0, ax }); ax += (x1 - x0) * 2 + 4;
   }
   const atlas = { dusk: canvas(ax, Math.max(...atlasParts.map(p => p.h * 2))), night: null }; atlas.night = canvas(atlas.dusk.width, atlas.dusk.height);
-  for (const k of ['dusk', 'night']) { const src = canvas(W3, H3); ctx(src).putImageData(before[k], 0, 0); const ag = ctx(atlas[k]);
+  for (const k of ['dusk', 'night']) { const src = canvas(W3, H3); ctx(src).putImageData(before[k], 0, 0); drawLounge(ctx(src), k); const ag = ctx(atlas[k]);
     for (const p of atlasParts) { const m = canvas(p.w * 2, p.h * 2), mg = ctx(m); mg.drawImage(src, p.x0 * S, p.y0 * S, p.w * S, p.h * S, 0, 0, p.w * 2, p.h * 2);
-      mg.globalCompositeOperation = 'destination-in'; mg.setTransform(2, 0, 0, 2, -p.x0 * 2, -p.y0 * 2); mg.filter = 'blur(1px)'; mg.fillStyle = '#fff'; mg.lineWidth = 3; poly(mg, p.s.back); mg.fill(); mg.strokeStyle = '#fff'; mg.stroke(); p.s.parts(mg);
+      const mm = canvas(p.w * 2, p.h * 2), m2 = ctx(mm); m2.setTransform(2, 0, 0, 2, -p.x0 * 2, -p.y0 * 2); m2.filter = 'blur(1px)'; m2.fillStyle = '#fff'; m2.strokeStyle = '#fff'; m2.lineWidth = 3; poly(m2, p.s.back); m2.fill(); m2.stroke(); p.s.parts(m2); p.s.parts(m2);
+      mg.globalCompositeOperation = 'destination-in'; mg.drawImage(mm, 0, 0);
       ag.drawImage(m, p.ax, 0); } }
   const frontMask = id => { const D = DESKS[id], qs = quadsOut[id], top = Math.min(...qs.flatMap(q => q.map(p => p[1]))) - 4, r = [D.x0 - 6, top, D.x1 + 6, D.yfl + 6], m = canvas((r[2] - r[0]) * 2, (r[3] - r[1]) * 2), g = ctx(m);
     g.setTransform(2, 0, 0, 2, -r[0] * 2, -r[1] * 2); g.fillStyle = '#fff'; g.strokeStyle = '#fff';
@@ -349,7 +366,7 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
 
   // ---- 8. the viewer's layout ----
   const lay = JSON.parse(JSON.stringify(L)), nav = L.nav.nodes.map(([x, y]) => [x * PW, y * PH]);
-  { const cur = await fetch(assets + 'layout.json').then(r => r.json()).catch(() => null); if (cur && cur.sprites) { lay.sprites = cur.sprites; lay.walkSide = cur.walkSide; } } // the character art's measurements (run-chars.js) stay as installed
+  { const cur = await fetch(assets + 'layout.json').then(r => r.json()).catch(() => null); if (cur && cur.sprites) { for (const key of ['sprites', 'walkSide', 'baseSprites', 'dash', 'turn']) if (cur[key] !== undefined) lay[key] = cur[key]; } } // the character art's measurements (run-chars.js, the redrawn characters) stay as installed
   // a back-row seat joins the walkway behind the desks at the walkway point nearest to it (the seats moved since the template's own)
   const AISLE = L.nav.nodes.map((p, i) => [i, p]).filter(([, p]) => Math.abs(p[1] - 0.7861) < 0.004);
   const seatNode = (t, x) => t.feet[1] > 0.78 && t.feet[1] < 0.8 ? AISLE.reduce((b, a) => Math.abs(a[1][0] * PW - x) < Math.abs(b[1][0] * PW - x) ? a : b)[0] : t.node;
@@ -359,15 +376,25 @@ export async function run(base, orig, assets, src = assets) { // src: the layout
   lay.desks.push({ ...JSON.parse(JSON.stringify(deskById.lounge)), bots: [] });
   lay.nochair = Object.fromEntries(atlasParts.map(p => [`${p.s.desk[0]}${p.s.i}`, [p.ax, 0, p.w * 2, p.h * 2, p.x0, p.y0]]));
   lay.boss.monitors = L.boss.monitors;
-  lay.steam = L.steam.filter(c => c.x < 0.4); // the mugs on the boss and front-right desks are gone with the old desks
+  lay.steam = L.steam.filter(c => c.x > 0.2 && c.x < 0.4); // only the mug on the lounge table: the boss and front-right desks' mugs went with the old desks, the old kitchen jar with the old kitchen
   lay.lamps = L.lamps.filter(l => l.desk !== 'boss'); // and so is the boss desk lamp
+  // round 2: the kitchen moved right of the new bookcase. The floor lamp's glow, the machine's steam, the coffee and fridge spots follow it;
+  // a new walking point in front of the bookcase (joined to the fridge spot) for Grok's book runs
+  { const ls = KS.lampShade; lay.lamps[0] = { ...lay.lamps[0], x: +(((ls[0] + ls[2]) / 2) / PW).toFixed(4), y: +(((ls[1] + ls[3]) / 2) / PH).toFixed(4) }; }
+  lay.lounge.steam = [+(KS.steam[0] / PW).toFixed(4), +(KS.steam[1] / PH).toFixed(4)]; lay.lounge.espresso = [+(KS.spout[0] / PW).toFixed(4), +(KS.tray / PH).toFixed(4)];
+  lay.lounge.lamp = [lay.lamps[0].x, lay.lamps[0].y];
+  const spot = id => lay.lounge.spots.find(q => q.id === id), nodes = lay.nav.nodes;
+  { const c = spot('coffee'), f = spot('fridge'); c.p = [+(KS.spout[0] / PW).toFixed(4), c.p[1]]; nodes[c.node] = c.p.slice(); f.p = [+(KS.fridge[0] / PW).toFixed(4), f.p[1]]; nodes[f.node] = f.p.slice(); }
+  const bookNode = nodes.length; nodes.push([+(48 / PW).toFixed(4), +(612 / PH).toFixed(4)]); lay.nav.edges.push([spot('fridge').node, bookNode]);
+  lay.bookcase = { rect: BC.rect.map((v, i) => +(v / (i % 2 ? PH : PW)).toFixed(4)), inner: BC.inner.map(v => +(v / PW).toFixed(4)), shelves: BC.shelves.map(([a, b]) => [+(a / PH).toFixed(4), +(b / PH).toFixed(4)]), node: bookNode, spot: nodes[bookNode].slice(), slots: 4,
+    note: 'portable/art/scene.js 1b: the case is in the room picture; the viewer draws the books (BOOKS in config.js), 4 to a shelf, top shelf first' };
   lay.masks.boss = masksOut.boss.rect; lay.masks['desk-fr'] = masksOut['desk-fr'].rect; delete lay.masks['plant-l'];
   delete lay.masks['room-l']; delete lay.masks['room-r'];
   lay.masks.water = waterOut.rect; lay.nearGlass = [VB.x0 / PW, VB.x1 / PW, VB.sill / PH]; // the animated water reaches down into the window band
   lay.sun = [771 / PW, 304 / PH]; lay.moon = [634 / PW, 128 / PH]; // where the painted sun and moon are: their light paths on the water
-  lay.note = (L.note || '') + '; v11: office rebuilt by portable/art/scene.js (clean floor, black four-leg desks, one monitor per bot, team desks)';
+  lay.note = (L.note || '') + '; v11: office rebuilt by portable/art/scene.js (clean floor, black four-leg desks, one monitor per bot, team desks); v12 (round 2): skill bookcase, kitchen redrawn, drawn monitor frames, turn-sheet chairs, lounge redrawn';
   const lo = {}; for (const k of ['dusk', 'night']) { lo[k] = canvas(2560, 1440); const g = ctx(lo[k]); g.imageSmoothingQuality = 'high'; g.drawImage(hi[k], 0, 0, 2560, 1440); }
   window.__sceneOut = { 'layout.json': JSON.stringify(lay), 'plate-dusk-hi.webp': hi.dusk.toDataURL('image/webp', 0.9), 'plate-night-hi.webp': hi.night.toDataURL('image/webp', 0.9), 'plate-dusk.webp': lo.dusk.toDataURL('image/webp', 0.9), 'plate-night.webp': lo.night.toDataURL('image/webp', 0.9),
-    'nochair-dusk.webp': atlas.dusk.toDataURL('image/webp', 0.92), 'nochair-night.webp': atlas.night.toDataURL('image/webp', 0.92), 'boss-mask.png': masksOut.boss.png, 'desk-fr-mask.png': masksOut['desk-fr'].png, 'water-mask.png': waterOut.png };
+    'nochair-dusk.webp': atlas.dusk.toDataURL('image/webp', 0.92), 'nochair-night.webp': atlas.night.toDataURL('image/webp', 0.92), 'boss-mask.png': masksOut.boss.png, 'desk-fr-mask.png': masksOut['desk-fr'].png, 'water-mask.png': waterOut.png, ...bagMasks };
   return log;
 }

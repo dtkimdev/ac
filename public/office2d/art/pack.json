@@ -49,15 +49,15 @@
     "nochair-dusk.webp": {
      "label": "Empty-seat patches without chairs, dusk (cells: layout.json nochair)",
      "size": [
-      2968,
-      286
+      2996,
+      288
      ]
     },
     "nochair-night.webp": {
      "label": "Empty-seat patches without chairs, night",
      "size": [
-      2968,
-      286
+      2996,
+      288
      ]
     }
    }
@@ -774,34 +774,34 @@
    "notes": "step 1: one clean floor"
   },
   {
-   "label": "Desks (black, four legs) and chairs",
+   "label": "Desks (black, four legs) and office chairs",
    "made": "portable/art/scene.js",
-   "notes": "DESKS and PLAN: who sits where, desk sizes"
+   "notes": "DESKS and PLAN: who sits where, desk sizes; step 5: each chair is the turning sheet's office chair from behind (src/chair.png)"
   },
   {
    "label": "Monitor frames on the desks",
    "made": "portable/art/scene.js",
-   "notes": "the screens inside them are drawn in code (screens.js)"
+   "notes": "step 4: drawn round each screen quad (bezel, glass, neck, foot); the screens inside are drawn in code (screens.js)"
   },
   {
-   "label": "Kitchen fridge (retro, two doors)",
+   "label": "Kitchen: fridge, stand, coffee machine, kettle, canisters, floor lamp",
    "made": "portable/art/scene.js",
-   "notes": "step 1b, FR"
+   "notes": "step 1b: src/gen/kitchen-iso.jpg keyed by props_prep2.py (src/kitchen2-*.png)"
   },
   {
-   "label": "Kitchen stand, coffee machine, canisters",
+   "label": "Kitchen nook wall (string lights, COFFEE board, wainscot)",
    "made": "portable/art/scene.js",
-   "notes": "step 1b, CT"
+   "notes": "step 1b, WS"
   },
   {
-   "label": "Snack shelves (walnut, on the back wall)",
-   "made": "seed painting (commit 83b9edb)",
-   "notes": "kept from the original painting"
+   "label": "Skill bookcase (tall, under the clock) with the snack shelf and cabinet",
+   "made": "portable/art/scene.js",
+   "notes": "step 1b: src/gen/bookcase.jpg keyed and stretched by props_prep2.py (src/bookcase-*.png); the books on it are drawn in code (main.js drawBooks)"
   },
   {
    "label": "Bean bags (red, blue, mustard), coffee table, rug, floor lamp",
-   "made": "seed painting (commit 83b9edb)",
-   "notes": "kept; their masks are in room/masks"
+   "made": "portable/art/scene.js",
+   "notes": "step 5b: rug drawn; bags and table from src/bag-*.png, src/table-*.png; their masks (room/masks) are written by the same step"
   },
   {
    "label": "Boss desk",
