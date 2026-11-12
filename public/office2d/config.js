@@ -6,9 +6,12 @@ export const REFRESH = { repo: 'dtkimdev/ac', workflow: 'refresh.yml', ref: 'mai
 
 // ---------- bots ----------
 export const BOTS = {
-  hiddenIds: ['a80017dc-128b-4534-8cde-674d5b094b4f'], // never shown in the office; the bot itself is untouched (bot11 Notes)
-  loungeBotIdPrefix: 'fa5eb849-',                      // this bot (bot14 Dashboards) lives on the blue bean bag instead of a desk
-  spriteByNum: { 1: 1, 2: 7, 5: 8, 7: 3, 8: 4 },       // bot number -> fixed row in the sprite set; everyone else draws from the rest
+  // never shown in the office; the bots themselves are untouched (bot11 Notes; old 14, replaced by the new Dashboards, David 2026-11-12)
+  hiddenIds: ['a80017dc-128b-4534-8cde-674d5b094b4f', 'fa5eb849-f363-4153-8c97-77a89556137f'],
+  loungeBotIdPrefix: 'e0bf5277-',                      // this bot (bot14 Dashboards) wears the Dashboards art (bots/dash) and visits the blue bean bag
+  // bot number -> fixed row in the sprite set (every current bot pinned, David 2026-11-12). A new bot draws a free row by its seed:
+  // rows 12-15 are four different designs made for new bots (layout.json baseSprites = 16).
+  spriteByNum: { 0: 0, 1: 1, 2: 7, 3: 6, 4: 2, 5: 8, 6: 10, 7: 3, 8: 4, 9: 5, 10: 9, 11: 11 },
 };
 
 // Behaviour. `default` applies to every bot; `byBot` overrides it per bot number. Times are [shortest, longest] seconds.
