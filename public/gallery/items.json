@@ -1,0 +1,4584 @@
+{
+ "about": "Agent City art gallery: every art item with an ID. Built from the art pack (public/office2d/art/pack.json), portable/art/scene.js and the running site. Crop boxes are plate pixels (2560×1440). Shots are screenshots of drawn items (portable/shot.js --clip --dpr 2).",
+ "start": "e11c5dd",
+ "sections": [
+  [
+   "C",
+   "Characters"
+  ],
+  [
+   "D",
+   "Dash"
+  ],
+  [
+   "P",
+   "Corgis"
+  ],
+  [
+   "K",
+   "Kitchen"
+  ],
+  [
+   "O",
+   "Office"
+  ],
+  [
+   "L",
+   "Lounge"
+  ],
+  [
+   "M",
+   "Monitors"
+  ],
+  [
+   "W",
+   "Window and city"
+  ],
+  [
+   "H",
+   "Harbour"
+  ],
+  [
+   "S",
+   "Sound"
+  ],
+  [
+   "X",
+   "Cut-outs"
+  ]
+ ],
+ "items": [
+  {
+   "linked": [
+    "f00 and w00 (front and back)",
+    "turn-bodies and turn-heads row 0",
+    "walk-side cell 0",
+    "layout.json sprites[0] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C00",
+   "section": "C",
+   "name": "Usage",
+   "kind": "cell",
+   "where": "bots/front/f00.png, bots/back/w00.png, bots/turning/turn-bodies.webp + turn-heads.webp row 0, bots/walking/walk-side.webp cell 0",
+   "what": "Usage as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: back-right desk, 2nd seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f00.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w00.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 0,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 0,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 0,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f01 and w01 (front and back)",
+    "turn-bodies and turn-heads row 1",
+    "walk-side cell 1",
+    "layout.json sprites[1] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C01",
+   "section": "C",
+   "name": "Grok",
+   "kind": "cell",
+   "where": "bots/front/f01.png, bots/back/w01.png, bots/turning/turn-bodies.webp + turn-heads.webp row 1, bots/walking/walk-side.webp cell 1",
+   "what": "Grok as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: the boss desk (front centre).",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f01.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w01.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 266,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 232,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 198,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f02 and w02 (front and back)",
+    "turn-bodies and turn-heads row 2",
+    "walk-side cell 2",
+    "layout.json sprites[2] (size and hem)"
+   ],
+   "notes": "Repainted without the cap, yellow hoodie, dark hair (run-chars.js).",
+   "id": "C02",
+   "section": "C",
+   "name": "Studio",
+   "kind": "cell",
+   "where": "bots/front/f02.png, bots/back/w02.png, bots/turning/turn-bodies.webp + turn-heads.webp row 2, bots/walking/walk-side.webp cell 2",
+   "what": "Studio as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: back-left desk, left seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f02.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w02.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 532,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 464,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 396,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f03 and w03 (front and back)",
+    "turn-bodies and turn-heads row 3",
+    "walk-side cell 3",
+    "layout.json sprites[3] (size and hem)"
+   ],
+   "notes": "Dark blue hoodie (run-chars.js).",
+   "id": "C03",
+   "section": "C",
+   "name": "LF",
+   "kind": "cell",
+   "where": "bots/front/f03.png, bots/back/w03.png, bots/turning/turn-bodies.webp + turn-heads.webp row 3, bots/walking/walk-side.webp cell 3",
+   "what": "LF as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: back-left desk, right seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f03.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w03.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 798,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 696,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 594,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f04 and w04 (front and back)",
+    "turn-bodies and turn-heads row 4",
+    "walk-side cell 4",
+    "layout.json sprites[4] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C04",
+   "section": "C",
+   "name": "Archives",
+   "kind": "cell",
+   "where": "bots/front/f04.png, bots/back/w04.png, bots/turning/turn-bodies.webp + turn-heads.webp row 4, bots/walking/walk-side.webp cell 4",
+   "what": "Archives as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: back-right desk, 3rd seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f04.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w04.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 1064,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 928,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 792,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f05 and w05 (front and back)",
+    "turn-bodies and turn-heads row 5",
+    "walk-side cell 5",
+    "layout.json sprites[5] (size and hem)"
+   ],
+   "notes": "Repainted without the hair bun (portable/art/run-chars.js).",
+   "id": "C05",
+   "section": "C",
+   "name": "Cyber",
+   "kind": "cell",
+   "where": "bots/front/f05.png, bots/back/w05.png, bots/turning/turn-bodies.webp + turn-heads.webp row 5, bots/walking/walk-side.webp cell 5",
+   "what": "Cyber as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: SB Pallet desk (right), right seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f05.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w05.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 1330,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 1160,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 990,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f06 and w06 (front and back)",
+    "turn-bodies and turn-heads row 6",
+    "walk-side cell 6",
+    "layout.json sprites[6] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C06",
+   "section": "C",
+   "name": "Ops",
+   "kind": "cell",
+   "where": "bots/front/f06.png, bots/back/w06.png, bots/turning/turn-bodies.webp + turn-heads.webp row 6, bots/walking/walk-side.webp cell 6",
+   "what": "Ops as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: back-right desk, 1st seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f06.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w06.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 1596,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 1392,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 1188,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f07 and w07 (front and back)",
+    "turn-bodies and turn-heads row 7",
+    "walk-side cell 7",
+    "layout.json sprites[7] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C07",
+   "section": "C",
+   "name": "$tonks",
+   "kind": "cell",
+   "where": "bots/front/f07.png, bots/back/w07.png, bots/turning/turn-bodies.webp + turn-heads.webp row 7, bots/walking/walk-side.webp cell 7",
+   "what": "$tonks as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: Numbers desk (front right), left seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f07.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w07.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 1862,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 1624,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 1386,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f08 and w08 (front and back)",
+    "turn-bodies and turn-heads row 8",
+    "walk-side cell 8",
+    "layout.json sprites[8] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C08",
+   "section": "C",
+   "name": "Media",
+   "kind": "cell",
+   "where": "bots/front/f08.png, bots/back/w08.png, bots/turning/turn-bodies.webp + turn-heads.webp row 8, bots/walking/walk-side.webp cell 8",
+   "what": "Media as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: back-left desk, middle seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f08.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w08.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 2128,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 1856,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 1584,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f09 and w09 (front and back)",
+    "turn-bodies and turn-heads row 9",
+    "walk-side cell 9",
+    "layout.json sprites[9] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C09",
+   "section": "C",
+   "name": "Sports",
+   "kind": "cell",
+   "where": "bots/front/f09.png, bots/back/w09.png, bots/turning/turn-bodies.webp + turn-heads.webp row 9, bots/walking/walk-side.webp cell 9",
+   "what": "Sports as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: Numbers desk (front right), right seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f09.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w09.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 2394,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 2088,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 1782,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f10 and w10 (front and back)",
+    "turn-bodies and turn-heads row 10",
+    "walk-side cell 10",
+    "layout.json sprites[10] (size and hem)"
+   ],
+   "notes": "",
+   "id": "C10",
+   "section": "C",
+   "name": "SBP",
+   "kind": "cell",
+   "where": "bots/front/f10.png, bots/back/w10.png, bots/turning/turn-bodies.webp + turn-heads.webp row 10, bots/walking/walk-side.webp cell 10",
+   "what": "SBP as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: SB Pallet desk (right), left seat.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f10.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w10.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 2660,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 2320,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 1980,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f11 and w11 (front and back)",
+    "turn-bodies and turn-heads row 11",
+    "walk-side cell 11",
+    "layout.json sprites[11] (size and hem)"
+   ],
+   "notes": "Has no desk; idles in the kitchen beside the floor lamp.",
+   "id": "C11",
+   "section": "C",
+   "name": "Shopper",
+   "kind": "cell",
+   "where": "bots/front/f11.png, bots/back/w11.png, bots/turning/turn-bodies.webp + turn-heads.webp row 11, bots/walking/walk-side.webp cell 11",
+   "what": "Shopper as drawn in the office: front, back, the turning rows (back to front) and the side view for walking. Sits at: no desk: stands in the kitchen.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f11.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w11.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 2926,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 2552,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 2178,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "layout.json legs (cells, foot heights, hip and waist)",
+    "all walking bots"
+   ],
+   "notes": "Shared by all twelve bots, so a change shows on everyone.",
+   "id": "C12",
+   "section": "C",
+   "name": "Walking legs (shared)",
+   "kind": "cell",
+   "where": "bots/walking/legs.png (cells: layout.json legs)",
+   "what": "The painted legs every walking bot wears: eight side steps, four front steps, two back steps and one sitting pose.",
+   "easy": "Easy: colour of trousers and shoes. Hard: step shapes (feet must stay at the same height per cell). New step: ask David.",
+   "pics": [
+    {
+     "label": "side steps 1–8",
+     "dusk": {
+      "cell": {
+       "file": "legs.png",
+       "x": 0,
+       "y": 0,
+       "w": 1600,
+       "h": 150
+      }
+     }
+    },
+    {
+     "label": "front steps 1–4",
+     "dusk": {
+      "cell": {
+       "file": "legs.png",
+       "x": 0,
+       "y": 150,
+       "w": 800,
+       "h": 150
+      }
+     }
+    },
+    {
+     "label": "back steps 1–2",
+     "dusk": {
+      "cell": {
+       "file": "legs.png",
+       "x": 800,
+       "y": 150,
+       "w": 400,
+       "h": 150
+      }
+     }
+    },
+    {
+     "label": "sitting",
+     "dusk": {
+      "cell": {
+       "file": "legs.png",
+       "x": 1200,
+       "y": 150,
+       "w": 200,
+       "h": 150
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "C00–C11 (the pictures it uses)",
+    "config.js BEHAVIOR turnEvery, fidgetEvery"
+   ],
+   "notes": "",
+   "id": "C13",
+   "section": "C",
+   "name": "Seated bot, turning and fidgets",
+   "kind": "code",
+   "where": "main.js#drawSeated, main.js#drawBust, main.js#stepPose, main.js#stepFidget",
+   "what": "How a seated bot is put together from the body, head and turning cells, turns round in the chair, leans and stretches. Shown: Grok turned to face the room.",
+   "easy": "Timing is a setting (not art). Changing the drawing itself: ask David.",
+   "pics": [
+    {
+     "label": "Grok turned round",
+     "dusk": {
+      "shot": "shots/C13-dusk.png"
+     },
+     "night": {
+      "shot": "shots/C13-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "C12 (legs)",
+    "walk-side cells in C00–C11",
+    "config.js WALK"
+   ],
+   "notes": "",
+   "id": "C14",
+   "section": "C",
+   "name": "Walking bot",
+   "kind": "code",
+   "where": "main.js#drawWalker, main.js#drawLegSet",
+   "what": "A bot walking: its walk-side upper body on the shared legs, with a soft shadow. Shown: Studio walking to the rug.",
+   "easy": "Easy: nothing to paint here; change C12 or the walk-side cells. Gait changes: ask David.",
+   "pics": [
+    {
+     "label": "Studio walking",
+     "dusk": {
+      "shot": "shots/C14-dusk.png"
+     },
+     "night": {
+      "shot": "shots/C14-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "every bot"
+   ],
+   "notes": "",
+   "id": "C15",
+   "section": "C",
+   "name": "Name tags",
+   "kind": "code",
+   "where": "main.js#labelBitmap",
+   "what": "The small dark tag above each bot: status dot, name, age and usage.",
+   "easy": "Easy: colours, font size, corner radius.",
+   "pics": [
+    {
+     "label": "Grok, Ops and Usage tags",
+     "dusk": {
+      "shot": "shots/C15-dusk.png"
+     },
+     "night": {
+      "shot": "shots/C15-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "config.js BUBBLE.size (0.8, must not grow)",
+    "config.js BEHAVIOR deskChat, loungeChat"
+   ],
+   "notes": "The bubbles are small and short-lived; in this shot only the two bots turned towards each other show clearly.",
+   "id": "C16",
+   "section": "C",
+   "name": "Speech bubbles and desk chats",
+   "kind": "code",
+   "where": "main.js#bubbleBitmap, main.js#startChat, main.js#stepChat",
+   "what": "Neighbours turn to each other and chat; short words or emoji appear in small bubbles. Shown: Sports and $tonks chatting.",
+   "easy": "Easy: bubble colour and shape. Size may not go above 0.8 (David).",
+   "pics": [
+    {
+     "label": "Sports and $tonks chatting",
+     "dusk": {
+      "shot": "shots/C16-dusk.png"
+     },
+     "night": {
+      "shot": "shots/C16-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "bot status from the data (not art)"
+   ],
+   "notes": "Faint at this size: hard to see on Cyber in the shot.",
+   "id": "C17",
+   "section": "C",
+   "name": "Red error glow",
+   "kind": "code",
+   "where": "main.js#drawErrorGlows",
+   "what": "A soft pulsing red glow over a bot whose status is error. Shown in demo mode (?demo=1), where Cyber is failing.",
+   "easy": "Easy: colour, strength and size of the glow.",
+   "pics": [
+    {
+     "label": "Cyber (demo error)",
+     "dusk": {
+      "shot": "shots/C17-dusk.png"
+     },
+     "night": {
+      "shot": "shots/C17-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "D02 (front view)"
+   ],
+   "notes": "",
+   "id": "D01",
+   "section": "D",
+   "name": "Dash, back view",
+   "kind": "file",
+   "where": "bots/dash/dash-back.png",
+   "what": "Dash (Dashboards) seen from behind, at her seat.",
+   "easy": "Easy: colours and clothes, keep 138×243 and the placement. Change D02 with it.",
+   "pics": [
+    {
+     "label": "back",
+     "dusk": {
+      "file": "dash-back.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "D01 (back view)"
+   ],
+   "notes": "",
+   "id": "D02",
+   "section": "D",
+   "name": "Dash, front view",
+   "kind": "file",
+   "where": "bots/dash/dash-front.png",
+   "what": "Dash facing the room.",
+   "easy": "Easy: colours and clothes, keep 138×241. Change D01 with it.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "dash-front.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "D05",
+    "layout.json dash.glow"
+   ],
+   "notes": "",
+   "id": "D03",
+   "section": "D",
+   "name": "Dash's laptop",
+   "kind": "file",
+   "where": "bots/dash/dash-laptop.png (layout.json dash)",
+   "what": "The laptop Dash holds on the bean bag.",
+   "easy": "Easy: colours and screen. Size: layout.json dash.size too.",
+   "pics": [
+    {
+     "label": "laptop",
+     "dusk": {
+      "file": "dash-laptop.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "D05",
+    "layout.json dash.mugAt"
+   ],
+   "notes": "",
+   "id": "D04",
+   "section": "D",
+   "name": "Dash's mug",
+   "kind": "file",
+   "where": "bots/dash/dash-mug.png (layout.json dash)",
+   "what": "Dash's mug beside her on the bean bag.",
+   "easy": "Easy: colour and pattern. Size: layout.json dash.size too.",
+   "pics": [
+    {
+     "label": "mug",
+     "dusk": {
+      "file": "dash-mug.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "D01–D04",
+    "L02 (blue bean bag)",
+    "config.js BEHAVIOR byBot 14"
+   ],
+   "notes": "Today Dash has a desk seat (scene.js PLAN: 4th seat of the back-right desk), and the shot shows her there. A forced trip to the blue bag (loungeTrip) did not put her on it, so the bean-bag drawing was not seen.",
+   "id": "D05",
+   "section": "D",
+   "name": "Dash on the bean bag",
+   "kind": "code",
+   "where": "main.js#drawOnBag, main.js#drawDash",
+   "what": "Dash sitting on the blue bean bag with her laptop and mug.",
+   "easy": "Pose changes: ask David.",
+   "pics": [
+    {
+     "label": "Dash at the back-right desk",
+     "dusk": {
+      "shot": "shots/D05-dusk.png"
+     },
+     "night": {
+      "shot": "shots/D05-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "P02 (same grid)",
+    "layout.json corgi (frame order)",
+    "config.js DOG.size"
+   ],
+   "notes": "",
+   "id": "P01",
+   "section": "P",
+   "name": "Red-and-white corgi",
+   "kind": "cell",
+   "where": "pets/corgi.png (174×155 cells, layout.json corgi)",
+   "what": "Every pose cell of this dog, one by one: the walk cycle, sit, beg, sleep, belly, happy and lie.",
+   "easy": "Easy: coat colours. Keep the 174×155 grid and frame order. New pose: ask David.",
+   "pics": [
+    {
+     "label": "cell 1 · walk 1",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 0,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 2 · walk 2",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 174,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 3 · walk 3",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 348,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 4 · walk 4",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 522,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 5 · walk 5",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 0,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 6 · walk 6",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 174,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 7 · sit",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 348,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 8 · beg",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 522,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 9 · sleep",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 0,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 10 · belly",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 174,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 11 · happy",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 348,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 12 · lie",
+     "dusk": {
+      "cell": {
+       "file": "corgi.png",
+       "x": 522,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "P01 (same grid)",
+    "layout.json corgi (frame order)",
+    "config.js DOG.size"
+   ],
+   "notes": "",
+   "id": "P02",
+   "section": "P",
+   "name": "Brown corgi",
+   "kind": "cell",
+   "where": "pets/corgi-brown.png (174×155 cells, layout.json corgi)",
+   "what": "Every pose cell of this dog, one by one: the walk cycle, sit, beg, sleep, belly, happy and lie.",
+   "easy": "Easy: coat colours. Keep the 174×155 grid and frame order. New pose: ask David.",
+   "pics": [
+    {
+     "label": "cell 1 · walk 1",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 0,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 2 · walk 2",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 174,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 3 · walk 3",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 348,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 4 · walk 4",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 522,
+       "y": 0,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 5 · walk 5",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 0,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 6 · walk 6",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 174,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 7 · sit",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 348,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 8 · beg",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 522,
+       "y": 155,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 9 · sleep",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 0,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 10 · belly",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 174,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 11 · happy",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 348,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    },
+    {
+     "label": "cell 12 · lie",
+     "dusk": {
+      "cell": {
+       "file": "corgi-brown.png",
+       "x": 522,
+       "y": 310,
+       "w": 174,
+       "h": 155
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "P01, P02",
+    "config.js DOG_MOODS"
+   ],
+   "notes": "",
+   "id": "P03",
+   "section": "P",
+   "name": "Dog moods",
+   "kind": "code",
+   "where": "main.js#dogMood, main.js#dogNext",
+   "what": "What the dogs choose to do: affection, ask, belly, nap, rest, beg. Shown: one on its back (belly), one begging.",
+   "easy": "How often each mood happens is a setting. New mood: ask David.",
+   "pics": [
+    {
+     "label": "belly and beg",
+     "dusk": {
+      "shot": "shots/P03-dusk.png"
+     },
+     "night": {
+      "shot": "shots/P03-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "P01, P02",
+    "layout.json dog (paths)",
+    "config.js DOG.size"
+   ],
+   "notes": "",
+   "id": "P04",
+   "section": "P",
+   "name": "Dog movement, sleeping z’s",
+   "kind": "code",
+   "where": "main.js#stepDog, main.js#drawDog",
+   "what": "Walking along the paths, the little bounce, and the z’s over a sleeping dog.",
+   "easy": "Easy: z colour and size. Movement: ask David.",
+   "pics": [
+    {
+     "label": "asleep, and sniffing",
+     "dusk": {
+      "shot": "shots/P04-dusk.png"
+     },
+     "night": {
+      "shot": "shots/P04-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K02 (stands beside it)",
+    "dusk and night plates"
+   ],
+   "notes": "",
+   "id": "K01",
+   "section": "K",
+   "name": "Fridge",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1b, FR",
+   "what": "Retro two-door fridge with chrome bar handles, in the kitchen corner on the left.",
+   "easy": "Easy: colour, handles (scene.js, then rebuild the plates). Size or place: scene.js FR and the floor shadow.",
+   "pics": [
+    {
+     "label": "fridge",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 856,
+       "w": 168,
+       "h": 284
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 856,
+       "w": 168,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K03, K04 (stand on it)",
+    "K08 (lamp pole beside it)",
+    "L01–L03 (bean bags in front)"
+   ],
+   "notes": "The coffee machine’s and the jug’s cut-outs reach over the stand’s front lip, so the lip looks notched under them.",
+   "id": "K02",
+   "section": "K",
+   "name": "Kitchen stand and its drawers",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1b, CT",
+   "what": "The wooden stand beside the fridge with nine drawers and brass pulls.",
+   "easy": "Easy: wood colour, pulls. Size: scene.js CT.",
+   "pics": [
+    {
+     "label": "stand",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 156,
+       "y": 964,
+       "w": 284,
+       "h": 168
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 156,
+       "y": 964,
+       "w": 284,
+       "h": 168
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K10 (steam)",
+    "K11 (coffee pour, main.js KIT)"
+   ],
+   "notes": "",
+   "id": "K03",
+   "section": "K",
+   "name": "Coffee machine",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1b, ITEMS[0] (kept from the seed painting)",
+   "what": "The espresso machine on the stand, with its small blue display.",
+   "easy": "Colour: medium (it is cut from the painting). Moving it: KIT positions in main.js move too.",
+   "pics": [
+    {
+     "label": "coffee machine",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 176,
+       "y": 810,
+       "w": 164,
+       "h": 190
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 176,
+       "y": 810,
+       "w": 164,
+       "h": 190
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K10 (steam above it)"
+   ],
+   "notes": "",
+   "id": "K04",
+   "section": "K",
+   "name": "Milk jug and coffee canister",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1b, ITEMS[1] (kept from the seed painting)",
+   "what": "A steel jug with a handle and a small canister in front of it, right of the coffee machine.",
+   "easy": "Colour: medium (cut from the painting).",
+   "pics": [
+    {
+     "label": "jug and canister",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 330,
+       "y": 880,
+       "w": 82,
+       "h": 112
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 330,
+       "y": 880,
+       "w": 82,
+       "h": 112
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K02"
+   ],
+   "notes": "Not in the pack and not in ITEMS: it survived the kitchen rebuild from the old painting.",
+   "id": "K05",
+   "section": "K",
+   "name": "Small canister left of the machine",
+   "kind": "baked",
+   "where": "seed painting (not in scene.js ITEMS)",
+   "what": "A small dark lidded canister on the stand, left of the coffee machine.",
+   "easy": "Medium: it is part of the painting; to change it, add it to scene.js.",
+   "pics": [
+    {
+     "label": "canister",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 160,
+       "y": 916,
+       "w": 60,
+       "h": 64
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 160,
+       "y": 916,
+       "w": 60,
+       "h": 64
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K07 (string lights)"
+   ],
+   "notes": "",
+   "id": "K06",
+   "section": "K",
+   "name": "Snack shelves",
+   "kind": "baked",
+   "where": "seed painting (commit 83b9edb)",
+   "what": "Walnut shelves on the back wall with jars, coffee bags and mugs.",
+   "easy": "Medium: part of the painting; needs a scene.js step.",
+   "pics": [
+    {
+     "label": "shelves",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 480,
+       "w": 192,
+       "h": 360
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 480,
+       "w": 192,
+       "h": 360
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K06"
+   ],
+   "notes": "Not in the pack.",
+   "id": "K07",
+   "section": "K",
+   "name": "String lights over the shelves",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "A string of warm bulbs hanging across the shelves.",
+   "easy": "Medium: painted in; making them twinkle needs code (ask David).",
+   "pics": [
+    {
+     "label": "string lights",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 560,
+       "w": 200,
+       "h": 110
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 560,
+       "w": 200,
+       "h": 110
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O13 (its glow)",
+    "layout.json lamps[0]"
+   ],
+   "notes": "",
+   "id": "K08",
+   "section": "K",
+   "name": "Floor lamp",
+   "kind": "baked",
+   "where": "seed painting (shade) + portable/art/scene.js step 1b, POLE",
+   "what": "The warm floor lamp between the stand and the bean bags.",
+   "easy": "Easy: pole colour (scene.js). Shade: part of the painting.",
+   "pics": [
+    {
+     "label": "floor lamp",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 396,
+       "y": 796,
+       "w": 124,
+       "h": 308
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 396,
+       "y": 796,
+       "w": 124,
+       "h": 308
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K03"
+   ],
+   "notes": "Not in the pack.",
+   "id": "K09",
+   "section": "K",
+   "name": "Potted plant behind the coffee machine",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "A big leafy plant in the kitchen corner, behind the machine.",
+   "easy": "Medium: part of the painting.",
+   "pics": [
+    {
+     "label": "plant",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 150,
+       "y": 470,
+       "w": 200,
+       "h": 380
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 150,
+       "y": 470,
+       "w": 200,
+       "h": 380
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "layout.json steam",
+    "K04",
+    "L04"
+   ],
+   "notes": "",
+   "id": "K10",
+   "section": "K",
+   "name": "Coffee steam",
+   "kind": "code",
+   "where": "main.js#drawSteam, main.js#curl",
+   "what": "Thin curls of steam over the jug on the stand and the mug on the coffee table.",
+   "easy": "Easy: colour, how thick, how high.",
+   "pics": [
+    {
+     "label": "over the jug",
+     "dusk": {
+      "shot": "shots/K10-kettle-dusk.png"
+     },
+     "night": {
+      "shot": "shots/K10-kettle-night.png"
+     }
+    },
+    {
+     "label": "over the mug",
+     "dusk": {
+      "shot": "shots/K10-table-dusk.png"
+     },
+     "night": {
+      "shot": "shots/K10-table-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K03",
+    "config.js LOITER"
+   ],
+   "notes": "Shown: Shopper idling, and Studio sent to the coffee machine.",
+   "id": "K11",
+   "section": "K",
+   "name": "Kitchen bots with mugs",
+   "kind": "code",
+   "where": "main.js#drawKitchen, main.js#drawHeld, main.js#drawLoiter",
+   "what": "Bots at the coffee machine pulling a coffee, then carrying the mug; bots without a desk idle here.",
+   "easy": "Mug colour: easy. New actions: ask David.",
+   "pics": [
+    {
+     "label": "Shopper idling",
+     "dusk": {
+      "shot": "shots/K11-loiter-dusk.png"
+     },
+     "night": {
+      "shot": "shots/K11-loiter-night.png"
+     }
+    },
+    {
+     "label": "Studio at the coffee machine",
+     "dusk": {
+      "shot": "shots/K11-coffee-dusk.png"
+     },
+     "night": {
+      "shot": "shots/K11-coffee-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "every baked item",
+    "the -hi plates (3840×2160, rebuilt together)",
+    "room/masks"
+   ],
+   "notes": "The plate also has the two big airships, the moon and the sun painted in (see W07, W08).",
+   "id": "O01",
+   "section": "O",
+   "name": "The whole room",
+   "kind": "file",
+   "where": "room/plate-dusk.webp, room/plate-night.webp (2560×1440)",
+   "what": "The painted office as one picture: everything that does not move. Dusk and night line up pixel for pixel.",
+   "easy": "Never paint by hand: change scene.js and run run-scene.js --install.",
+   "pics": [
+    {
+     "label": "room",
+     "dusk": {
+      "file": "plate-dusk.webp"
+     },
+     "night": {
+      "file": "plate-night.webp"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "all desks and chairs stand on it"
+   ],
+   "notes": "",
+   "id": "O02",
+   "section": "O",
+   "name": "Floor",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 1",
+   "what": "One clean wood floor, boards running towards the window, with warm pools of light.",
+   "easy": "Easy: wood colour and board width (scene.js BOARD).",
+   "pics": [
+    {
+     "label": "floor",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 1120,
+       "w": 2560,
+       "h": 320
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 1120,
+       "w": 2560,
+       "h": 320
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O17 (corner repairs)"
+   ],
+   "notes": "",
+   "id": "O03",
+   "section": "O",
+   "name": "Walls and ceiling",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The dark ceiling beams and the side walls round the window.",
+   "easy": "Medium: part of the painting.",
+   "pics": [
+    {
+     "label": "ceiling",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 0,
+       "w": 2560,
+       "h": 72
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 0,
+       "w": 2560,
+       "h": 72
+      }
+     }
+    },
+    {
+     "label": "left wall",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 0,
+       "w": 180,
+       "h": 480
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 0,
+       "w": 180,
+       "h": 480
+      }
+     }
+    },
+    {
+     "label": "right wall",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 2440,
+       "y": 0,
+       "w": 120,
+       "h": 1120
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 2440,
+       "y": 0,
+       "w": 120,
+       "h": 1120
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O09 (monitor frames)",
+    "O10 (keyboards)",
+    "O11 (empty-seat patches)",
+    "layout.json desks"
+   ],
+   "notes": "",
+   "id": "O04",
+   "section": "O",
+   "name": "Back-left desk",
+   "kind": "baked",
+   "where": "portable/art/scene.js DESKS.video, PLAN",
+   "what": "Black four-leg desk with its monitors, keyboards and chairs. Sits here: Studio, Media, LF.",
+   "easy": "Easy: desk colour. Size or seats: scene.js DESKS and PLAN, then rebuild.",
+   "pics": [
+    {
+     "label": "Back-left desk",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 510,
+       "y": 810,
+       "w": 480,
+       "h": 310
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 510,
+       "y": 810,
+       "w": 480,
+       "h": 310
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O09 (monitor frames)",
+    "O10 (keyboards)",
+    "O11 (empty-seat patches)",
+    "layout.json desks"
+   ],
+   "notes": "",
+   "id": "O05",
+   "section": "O",
+   "name": "Back-right desk",
+   "kind": "baked",
+   "where": "portable/art/scene.js DESKS.sbp, PLAN",
+   "what": "Black four-leg desk with its monitors, keyboards and chairs. Sits here: Ops, Usage, Archives, Dash.",
+   "easy": "Easy: desk colour. Size or seats: scene.js DESKS and PLAN, then rebuild.",
+   "pics": [
+    {
+     "label": "Back-right desk",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1340,
+       "y": 810,
+       "w": 730,
+       "h": 310
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1340,
+       "y": 810,
+       "w": 730,
+       "h": 310
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O09 (monitor frames)",
+    "O10 (keyboards)",
+    "O11 (empty-seat patches)",
+    "layout.json desks"
+   ],
+   "notes": "",
+   "id": "O06",
+   "section": "O",
+   "name": "Right desk (SB Pallet)",
+   "kind": "baked",
+   "where": "portable/art/scene.js DESKS.housekeeping, PLAN",
+   "what": "Black four-leg desk with its monitors, keyboards and chairs. Sits here: SBP, Cyber.",
+   "easy": "Easy: desk colour. Size or seats: scene.js DESKS and PLAN, then rebuild.",
+   "pics": [
+    {
+     "label": "Right desk (SB Pallet)",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 2040,
+       "y": 860,
+       "w": 480,
+       "h": 420
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 2040,
+       "y": 860,
+       "w": 480,
+       "h": 420
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O09 (monitor frames)",
+    "O10 (keyboards)",
+    "O11 (empty-seat patches)",
+    "layout.json desks",
+    "X05 (desk-fr mask)"
+   ],
+   "notes": "",
+   "id": "O07",
+   "section": "O",
+   "name": "Front-right desk (Numbers)",
+   "kind": "baked",
+   "where": "portable/art/scene.js DESKS.numbers, PLAN",
+   "what": "Black four-leg desk with its monitors, keyboards and chairs. Sits here: $tonks, Sports.",
+   "easy": "Easy: desk colour. Size or seats: scene.js DESKS and PLAN, then rebuild.",
+   "pics": [
+    {
+     "label": "Front-right desk (Numbers)",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1640,
+       "y": 1010,
+       "w": 480,
+       "h": 390
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1640,
+       "y": 1010,
+       "w": 480,
+       "h": 390
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "M16 (screen glow)",
+    "X04 (boss mask)"
+   ],
+   "notes": "",
+   "id": "O08",
+   "section": "O",
+   "name": "Boss desk",
+   "kind": "baked",
+   "where": "portable/art/scene.js DESKS.boss",
+   "what": "Grok’s desk at the front centre, with two monitors and one chair.",
+   "easy": "Easy: desk colour. Size: scene.js DESKS.boss.",
+   "pics": [
+    {
+     "label": "boss desk",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1010,
+       "y": 1000,
+       "w": 420,
+       "h": 400
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1010,
+       "y": 1000,
+       "w": 420,
+       "h": 400
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "M01–M14 (screens inside)",
+    "layout.json desks[].monitors"
+   ],
+   "notes": "",
+   "id": "O09",
+   "section": "O",
+   "name": "Monitor frames",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 4 (copied from the painted monitors)",
+   "what": "The monitor bezels, necks and feet on every desk; the pictures inside are drawn in code (M).",
+   "easy": "Medium: they are copies of the painted monitor.",
+   "pics": [
+    {
+     "label": "back-right desk monitors",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1352,
+       "y": 816,
+       "w": 708,
+       "h": 108
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1352,
+       "y": 816,
+       "w": 708,
+       "h": 108
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O04–O08"
+   ],
+   "notes": "Not listed in the pack’s baked list.",
+   "id": "O10",
+   "section": "O",
+   "name": "Keyboards",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 4 (a slim keyboard in front of every seat)",
+   "what": "A slim dark keyboard in front of every seat.",
+   "easy": "Easy: colour and size (scene.js).",
+   "pics": [
+    {
+     "label": "boss desk keyboard",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1180,
+       "y": 1150,
+       "w": 200,
+       "h": 90
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1180,
+       "y": 1150,
+       "w": 200,
+       "h": 90
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O04–O08 (chairs)",
+    "layout.json nochair"
+   ],
+   "notes": "Both files are completely transparent (2 KB each, the same file) since commit 379e1f5, so these patches draw nothing.",
+   "id": "O11",
+   "section": "O",
+   "name": "Empty-seat patches",
+   "kind": "file",
+   "where": "room/nochair-dusk.webp, room/nochair-night.webp (cells: layout.json nochair)",
+   "what": "Patches of floor and desk without the chair, shown behind a bot while it turns.",
+   "easy": "Rebuilt by run-scene.js; never by hand.",
+   "pics": [
+    {
+     "label": "patch sheet (2968×286)",
+     "dusk": {
+      "file": "nochair-dusk.webp"
+     },
+     "night": {
+      "file": "nochair-night.webp"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [],
+   "notes": "",
+   "id": "O12",
+   "section": "O",
+   "name": "Wall clock",
+   "kind": "code",
+   "where": "main.js#drawClock",
+   "what": "Big digital clock in a walnut case, top left, on Bangkok time.",
+   "easy": "Easy: colours, digit style, case.",
+   "pics": [
+    {
+     "label": "clock",
+     "dusk": {
+      "shot": "shots/O12-dusk.png"
+     },
+     "night": {
+      "shot": "shots/O12-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "K08",
+    "W09",
+    "layout.json lamps"
+   ],
+   "notes": "",
+   "id": "O13",
+   "section": "O",
+   "name": "Lamp glow",
+   "kind": "code",
+   "where": "fx.js#lamps",
+   "what": "The warm glow round the floor lamp and the lamp outside the window.",
+   "easy": "Easy: colour and size.",
+   "pics": [
+    {
+     "label": "lamps",
+     "dusk": {
+      "shot": "shots/O13-dusk.png"
+     },
+     "night": {
+      "shot": "shots/O13-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O15"
+   ],
+   "notes": "Very faint; hard to see in a still.",
+   "id": "O14",
+   "section": "O",
+   "name": "Dust in the light",
+   "kind": "code",
+   "where": "fx.js#motes",
+   "what": "Tiny floating specks in the light from the window.",
+   "easy": "Easy: how many, how bright.",
+   "pics": [
+    {
+     "label": "motes",
+     "dusk": {
+      "shot": "shots/O14-dusk.png"
+     },
+     "night": {
+      "shot": "shots/O14-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "layout.json shafts",
+    "W16 (time of day)"
+   ],
+   "notes": "Not in the pack’s drawn list.",
+   "id": "O15",
+   "section": "O",
+   "name": "Light shafts, bloom and vignette",
+   "kind": "code",
+   "where": "main.js#paintBase",
+   "what": "Soft beams of window light on the floor at dusk, and the darkened picture edges.",
+   "easy": "Easy: strength and colour.",
+   "pics": [
+    {
+     "label": "shafts",
+     "dusk": {
+      "shot": "shots/O15-dusk.png"
+     },
+     "night": {
+      "shot": "shots/O15-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "C14",
+    "P04"
+   ],
+   "notes": "",
+   "id": "O16",
+   "section": "O",
+   "name": "Soft floor shadow",
+   "kind": "code",
+   "where": "main.js#buildStatic",
+   "what": "The soft shadow under every bot and dog.",
+   "easy": "Easy: darkness and size.",
+   "pics": [
+    {
+     "label": "shadow under a dog",
+     "dusk": {
+      "shot": "shots/O16-dusk.png"
+     },
+     "night": {
+      "shot": "shots/O16-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X10, X11 (room-l, room-r masks)"
+   ],
+   "notes": "",
+   "id": "O17",
+   "section": "O",
+   "name": "Corner repairs",
+   "kind": "baked",
+   "where": "portable/art/room.js (run-room.js)",
+   "what": "The two front corners, where the old bamboo was painted out and the gaps filled.",
+   "easy": "Rebuild with run-room.js; do not bring the bamboo back.",
+   "pics": [
+    {
+     "label": "left corner",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 0,
+       "y": 1080,
+       "w": 320,
+       "h": 360
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 0,
+       "y": 1080,
+       "w": 320,
+       "h": 360
+      }
+     }
+    },
+    {
+     "label": "right corner",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 2180,
+       "y": 880,
+       "w": 380,
+       "h": 560
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 2180,
+       "y": 880,
+       "w": 380,
+       "h": 560
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X01 (fg-mask: drawn over the city effects)"
+   ],
+   "notes": "Not a separate item in the pack (only named in the fg-mask label).",
+   "id": "O18",
+   "section": "O",
+   "name": "Hanging vines",
+   "kind": "baked",
+   "where": "seed painting (cut out by fg-mask)",
+   "what": "Vines hanging from the ceiling in front of the window.",
+   "easy": "Medium: painted in; the mask must change with them.",
+   "pics": [
+    {
+     "label": "vines",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1660,
+       "y": 0,
+       "w": 540,
+       "h": 260
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1660,
+       "y": 0,
+       "w": 540,
+       "h": 260
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [],
+   "notes": "Not in the pack.",
+   "id": "O19",
+   "section": "O",
+   "name": "Potted plant on the right",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "Leafy plant behind the right desk, under the wall monitors.",
+   "easy": "Medium: part of the painting.",
+   "pics": [
+    {
+     "label": "plant",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 2300,
+       "y": 740,
+       "w": 240,
+       "h": 220
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 2300,
+       "y": 740,
+       "w": 240,
+       "h": 220
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "pack folder props/"
+   ],
+   "notes": "None placed now (PROPS is empty), so there is no picture.",
+   "id": "O20",
+   "section": "O",
+   "name": "Extra pictures in the room",
+   "kind": "code",
+   "where": "main.js#propImgs, config.js PROPS",
+   "what": "Any extra picture placed in the room through config.js PROPS.",
+   "easy": "Easy: add a picture in props/ and a PROPS line.",
+   "pics": []
+  },
+  {
+   "linked": [
+    "X07 (bag-r mask)",
+    "layout.json lounge.bags"
+   ],
+   "notes": "",
+   "id": "L01",
+   "section": "L",
+   "name": "Red bean bag",
+   "kind": "baked",
+   "where": "seed painting (commit 83b9edb)",
+   "what": "The red bean bag on the left of the rug.",
+   "easy": "Medium: painted in; recolour in scene.js and keep the mask.",
+   "pics": [
+    {
+     "label": "red bag",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 166,
+       "y": 1074,
+       "w": 292,
+       "h": 256
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 166,
+       "y": 1074,
+       "w": 292,
+       "h": 256
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X08 (bag-b mask)",
+    "D05"
+   ],
+   "notes": "Reads grey-blue at dusk, almost grey.",
+   "id": "L02",
+   "section": "L",
+   "name": "Blue bean bag",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The blue bean bag in the middle (Dash’s seat in the code).",
+   "easy": "Medium: painted in.",
+   "pics": [
+    {
+     "label": "blue bag",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 420,
+       "y": 1024,
+       "w": 248,
+       "h": 220
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 420,
+       "y": 1024,
+       "w": 248,
+       "h": 220
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X09 (bag-m mask)"
+   ],
+   "notes": "Looks orange rather than mustard.",
+   "id": "L03",
+   "section": "L",
+   "name": "Mustard bean bag",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The mustard bean bag on the right of the rug.",
+   "easy": "Medium: painted in.",
+   "pics": [
+    {
+     "label": "mustard bag",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 668,
+       "y": 1026,
+       "w": 288,
+       "h": 238
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 668,
+       "y": 1026,
+       "w": 288,
+       "h": 238
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X06 (table mask)",
+    "K10 (steam over the mug)"
+   ],
+   "notes": "",
+   "id": "L04",
+   "section": "L",
+   "name": "Coffee table",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "Small round table with a mug and a bowl of snacks.",
+   "easy": "Medium: painted in.",
+   "pics": [
+    {
+     "label": "table",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 510,
+       "y": 1200,
+       "w": 236,
+       "h": 176
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 510,
+       "y": 1200,
+       "w": 236,
+       "h": 176
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "L01–L04"
+   ],
+   "notes": "",
+   "id": "L05",
+   "section": "L",
+   "name": "Rug",
+   "kind": "baked",
+   "where": "seed painting (kept by scene.js RUG)",
+   "what": "The round patterned rug under the lounge.",
+   "easy": "Medium: painted in.",
+   "pics": [
+    {
+     "label": "rug",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 270,
+       "y": 1136,
+       "w": 680,
+       "h": 288
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 270,
+       "y": 1136,
+       "w": 680,
+       "h": 288
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "L01–L03",
+    "layout.json lounge"
+   ],
+   "notes": "",
+   "id": "L06",
+   "section": "L",
+   "name": "Bean bag visits",
+   "kind": "code",
+   "where": "main.js#initLounge, main.js#drawLounge",
+   "what": "Bots walk over and sit on a bean bag for a while. Shown: Media on the mustard bag.",
+   "easy": "How often is a setting. New poses: ask David.",
+   "pics": [
+    {
+     "label": "Media on the mustard bag",
+     "dusk": {
+      "shot": "shots/L06-dusk.png"
+     },
+     "night": {
+      "shot": "shots/L06-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "Drawn here without data (it shows live numbers on the site; the gallery loads no bot data).",
+   "id": "M01",
+   "section": "M",
+   "name": "Screen: Portfolio",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.portfolio",
+   "what": "The \"portfolio\" picture on a desk monitor ($tonks; Numbers desk, left).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M01-flat.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M02",
+   "section": "M",
+   "name": "Screen: NFL scores",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.nfl",
+   "what": "The \"nfl\" picture on a desk monitor (Sports; Numbers desk, right).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M02-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M02-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M02-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M03",
+   "section": "M",
+   "name": "Screen: Reels edit",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.reels",
+   "what": "The \"reels\" picture on a desk monitor (Studio and LF; back-left desk, 1st and 3rd).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M03-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M03-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M03-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M04",
+   "section": "M",
+   "name": "Screen: Filmstrip render",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.filmstrip",
+   "what": "The \"filmstrip\" picture on a desk monitor (Media; back-left desk, middle).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M04-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M04-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M04-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M05",
+   "section": "M",
+   "name": "Screen: Security shield",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.shield",
+   "what": "The \"shield\" picture on a desk monitor (SBP; SB Pallet desk, left).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M05-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M05-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M05-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it. Not in the brief’s list of twelve; found in screens.js.",
+   "id": "M06",
+   "section": "M",
+   "name": "Screen: Pallet checks",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.shieldlist",
+   "what": "The \"shieldlist\" picture on a desk monitor (Cyber; SB Pallet desk, right).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M06-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M06-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M06-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "Brief list item; no desk uses it today. Not in the brief’s list of twelve; found in screens.js.",
+   "id": "M07",
+   "section": "M",
+   "name": "Screen: Routing map",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.planes",
+   "what": "The \"planes\" picture on a desk monitor (not on any desk now (theme messages)).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M07-flat.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "Brief list item; no desk uses it today.",
+   "id": "M08",
+   "section": "M",
+   "name": "Screen: Inbox",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.inbox",
+   "what": "The \"inbox\" picture on a desk monitor (not on any desk now (theme messages)).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M08-flat.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M09",
+   "section": "M",
+   "name": "Screen: Archive sync",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.books",
+   "what": "The \"books\" picture on a desk monitor (Ops and Archives; back-right desk, 1st and 3rd).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M09-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M09-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M09-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M10",
+   "section": "M",
+   "name": "Screen: Weekly pool gauge",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.gauge",
+   "what": "The \"gauge\" picture on a desk monitor (Usage and Dash; back-right desk, 2nd and 4th).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M10-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M10-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M10-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "Drawn here without data (it shows live numbers on the site; the gallery loads no bot data).",
+   "id": "M11",
+   "section": "M",
+   "name": "Screen: Pool by bot",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.usage",
+   "what": "The \"usage\" picture on a desk monitor (Grok; boss desk, left).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M11-flat.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "On the desk the seated bot’s head covers most of it.",
+   "id": "M12",
+   "section": "M",
+   "name": "Screen: Router",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.router",
+   "what": "The \"router\" picture on a desk monitor (Grok; boss desk, right).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M12-flat.png"
+     }
+    },
+    {
+     "label": "on the desk",
+     "dusk": {
+      "shot": "shots/M12-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M12-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "Brief list item; no desk uses it today.",
+   "id": "M13",
+   "section": "M",
+   "name": "Screen: Code",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.code",
+   "what": "The \"code\" picture on a desk monitor (not on any desk now (default theme)).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M13-flat.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "screens.js THEME_KINDS (which desk shows it)",
+    "O09 (the frame round it)",
+    "M17 (fitted in perspective)"
+   ],
+   "notes": "Brief list item; no desk uses it today.",
+   "id": "M14",
+   "section": "M",
+   "name": "Screen: Log",
+   "kind": "code",
+   "where": "screens.js#drawScreen, PICS.log",
+   "what": "The \"log\" picture on a desk monitor (not on any desk now (default theme)).",
+   "easy": "Easy: colours, layout and text inside the screen.",
+   "pics": [
+    {
+     "label": "drawn flat (screens.js)",
+     "dusk": {
+      "shot": "shots/M14-flat.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "layout.json wall"
+   ],
+   "notes": "",
+   "id": "M15",
+   "section": "M",
+   "name": "Wall monitors",
+   "kind": "code",
+   "where": "screens.js#drawWall (positions: layout.json wall)",
+   "what": "Two tall slim monitors on the right wall: the Grok and Claude usage pools as bars.",
+   "easy": "Easy: colours, fonts, bar style.",
+   "pics": [
+    {
+     "label": "wall monitors",
+     "dusk": {
+      "shot": "shots/M15-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M15-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O08",
+    "M11, M12"
+   ],
+   "notes": "",
+   "id": "M16",
+   "section": "M",
+   "name": "Boss desk screen glow",
+   "kind": "code",
+   "where": "main.js#drawBossFx",
+   "what": "Extra glow and scanlines over the two boss desk monitors.",
+   "easy": "Easy: strength and colour.",
+   "pics": [
+    {
+     "label": "boss monitors",
+     "dusk": {
+      "shot": "shots/M16-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M16-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "layout.json desks[].monitors",
+    "O09"
+   ],
+   "notes": "",
+   "id": "M17",
+   "section": "M",
+   "name": "Fitting the screens onto the monitors",
+   "kind": "code",
+   "where": "main.js#buildMonitors, main.js#warpMonitor",
+   "what": "Each flat screen picture is bent in perspective onto its painted monitor.",
+   "easy": "Positions only (layout.json); not art.",
+   "pics": [
+    {
+     "label": "back-right desk",
+     "dusk": {
+      "shot": "shots/M17-dusk.png"
+     },
+     "night": {
+      "shot": "shots/M17-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W02–W09",
+    "X01, X02, X03 (window masks)"
+   ],
+   "notes": "",
+   "id": "W01",
+   "section": "W",
+   "name": "The whole view through the window",
+   "kind": "baked",
+   "where": "seed painting + portable/art/scene.js step 2b",
+   "what": "The city, river and sky through the big window, as a still.",
+   "easy": "Never paint by hand; the masks must match.",
+   "pics": [
+    {
+     "label": "window",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 168,
+       "y": 68,
+       "w": 2276,
+       "h": 758
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 168,
+       "y": 68,
+       "w": 2276,
+       "h": 758
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X02 (sky-mask)",
+    "W10 (lights on it)",
+    "layout.json lights"
+   ],
+   "notes": "",
+   "id": "W02",
+   "section": "W",
+   "name": "Skyline",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The towers on both sides of the river.",
+   "easy": "Hard: city lights are placed on the painted windows.",
+   "pics": [
+    {
+     "label": "left towers",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 180,
+       "y": 80,
+       "w": 940,
+       "h": 660
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 180,
+       "y": 80,
+       "w": 940,
+       "h": 660
+      }
+     }
+    },
+    {
+     "label": "right towers",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1800,
+       "y": 80,
+       "w": 640,
+       "h": 680
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1800,
+       "y": 80,
+       "w": 640,
+       "h": 680
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W11 (traffic on them)",
+    "layout.json lanes"
+   ],
+   "notes": "",
+   "id": "W03",
+   "section": "W",
+   "name": "Bridges",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The two low bridges reaching across the water.",
+   "easy": "Hard: the traffic lanes follow them.",
+   "pics": [
+    {
+     "label": "left bridge",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 500,
+       "y": 710,
+       "w": 620,
+       "h": 150
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 500,
+       "y": 710,
+       "w": 620,
+       "h": 150
+      }
+     }
+    },
+    {
+     "label": "right bridge",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1440,
+       "y": 720,
+       "w": 720,
+       "h": 110
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1440,
+       "y": 720,
+       "w": 720,
+       "h": 110
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X03 (water-mask)",
+    "H14",
+    "W14"
+   ],
+   "notes": "",
+   "id": "W04",
+   "section": "W",
+   "name": "River",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The river between the towers, where the boats run.",
+   "easy": "Hard: the boats and light paths stay inside the mask.",
+   "pics": [
+    {
+     "label": "river",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 780,
+       "y": 680,
+       "w": 780,
+       "h": 150
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 780,
+       "y": 680,
+       "w": 780,
+       "h": 150
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X03 (water-mask)",
+    "W04"
+   ],
+   "notes": "Not a separate item in the pack (only in the window notes).",
+   "id": "W05",
+   "section": "W",
+   "name": "Balcony rail and window band",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 2b",
+   "what": "The lower band behind the back-right desk: the water running on, a balcony rail and the window’s bottom frame.",
+   "easy": "Easy: rail colour and post spacing (scene.js VB).",
+   "pics": [
+    {
+     "label": "rail and band",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1030,
+       "y": 790,
+       "w": 1050,
+       "h": 150
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1030,
+       "y": 790,
+       "w": 1050,
+       "h": 150
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [],
+   "notes": "Not in the pack.",
+   "id": "W06",
+   "section": "W",
+   "name": "Mountain",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The volcano-shaped mountain on the horizon behind the river.",
+   "easy": "Medium: part of the painting.",
+   "pics": [
+    {
+     "label": "mountain",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1120,
+       "y": 550,
+       "w": 460,
+       "h": 130
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1120,
+       "y": 550,
+       "w": 460,
+       "h": 130
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W14 (their light paths on the water)"
+   ],
+   "notes": "Not in the pack. The sun stays painted in at night (look at the night plate).",
+   "id": "W07",
+   "section": "W",
+   "name": "Painted moon and sun",
+   "kind": "baked",
+   "where": "seed painting (positions: layout.json moon, sun)",
+   "what": "The moon high in the sky and the setting sun on the horizon, both painted in.",
+   "easy": "Medium: painted in; moving one moves its light path.",
+   "pics": [
+    {
+     "label": "moon",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1220,
+       "y": 210,
+       "w": 100,
+       "h": 100
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1220,
+       "y": 210,
+       "w": 100,
+       "h": 100
+      }
+     }
+    },
+    {
+     "label": "sun",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1500,
+       "y": 570,
+       "w": 90,
+       "h": 70
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1500,
+       "y": 570,
+       "w": 90,
+       "h": 70
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W17, W18 (the drifting airships)"
+   ],
+   "notes": "Not in the pack. They sit where the drifting airships (W17, W18) start, so the sky can show four airships at once.",
+   "id": "W08",
+   "section": "W",
+   "name": "Painted airships",
+   "kind": "baked",
+   "where": "seed painting",
+   "what": "The two big airships painted into the sky, which never move.",
+   "easy": "Medium: painted in.",
+   "pics": [
+    {
+     "label": "airships",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 1550,
+       "y": 224,
+       "w": 480,
+       "h": 126
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 1550,
+       "y": 224,
+       "w": 480,
+       "h": 126
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "O13 (its glow)"
+   ],
+   "notes": "Not in the pack.",
+   "id": "W09",
+   "section": "W",
+   "name": "Street lamp outside the window",
+   "kind": "baked",
+   "where": "seed painting (layout.json lamps[1])",
+   "what": "A lamp post just outside the glass, left of the middle.",
+   "easy": "Medium: part of the painting.",
+   "pics": [
+    {
+     "label": "lamp post",
+     "dusk": {
+      "crop": {
+       "plate": "dusk",
+       "x": 990,
+       "y": 780,
+       "w": 46,
+       "h": 160
+      }
+     },
+     "night": {
+      "crop": {
+       "plate": "night",
+       "x": 990,
+       "y": 780,
+       "w": 46,
+       "h": 160
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W02",
+    "layout.json lights"
+   ],
+   "notes": "",
+   "id": "W10",
+   "section": "W",
+   "name": "City lights, neon and tower lights",
+   "kind": "code",
+   "where": "fx.js#near (layout.json lights)",
+   "what": "Windows switching on and off, neon outlines and blinking tower lights.",
+   "easy": "Easy: colours and how many.",
+   "pics": [
+    {
+     "label": "left towers",
+     "dusk": {
+      "shot": "shots/W10-dusk.png"
+     },
+     "night": {
+      "shot": "shots/W10-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W03",
+    "layout.json lanes"
+   ],
+   "notes": "",
+   "id": "W11",
+   "section": "W",
+   "name": "Bridge traffic",
+   "kind": "code",
+   "where": "fx.js#near (layout.json lanes)",
+   "what": "Head and tail lights moving across the bridges.",
+   "easy": "Easy: colours, how many cars.",
+   "pics": [
+    {
+     "label": "left bridge",
+     "dusk": {
+      "shot": "shots/W11-dusk.png"
+     },
+     "night": {
+      "shot": "shots/W11-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "X02 (sky-mask)"
+   ],
+   "notes": "",
+   "id": "W12",
+   "section": "W",
+   "name": "Clouds and planes",
+   "kind": "code",
+   "where": "fx.js#far",
+   "what": "Clouds drifting and small planes crossing behind the skyline.",
+   "easy": "Easy: colours, speed, how many.",
+   "pics": [
+    {
+     "label": "sky",
+     "dusk": {
+      "shot": "shots/W12-dusk.png"
+     },
+     "night": {
+      "shot": "shots/W12-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "layout.json stars"
+   ],
+   "notes": "Part of fx.js#far; not listed on its own in the pack.",
+   "id": "W13",
+   "section": "W",
+   "name": "Stars",
+   "kind": "code",
+   "where": "fx.js#far (layout.json stars)",
+   "what": "Stars that come out and shimmer as it gets dark.",
+   "easy": "Easy: brightness and colour.",
+   "pics": [
+    {
+     "label": "sky",
+     "dusk": {
+      "shot": "shots/W13-dusk.png"
+     },
+     "night": {
+      "shot": "shots/W13-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "W07",
+    "W04"
+   ],
+   "notes": "Not in the pack’s drawn list.",
+   "id": "W14",
+   "section": "W",
+   "name": "Sun and moon paths on the water",
+   "kind": "code",
+   "where": "fx.js#makeFx lightPaths (layout.json sun, moon)",
+   "what": "A column of glitter on the river under the painted sun at sunset and under the moon at night.",
+   "easy": "Easy: colour and strength.",
+   "pics": [
+    {
+     "label": "river",
+     "dusk": {
+      "shot": "shots/W14-dusk.png"
+     },
+     "night": {
+      "shot": "shots/W14-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [],
+   "notes": "Night only: the shot is the same in both modes.",
+   "id": "W15",
+   "section": "W",
+   "name": "Fireworks",
+   "kind": "code",
+   "where": "fx.js#fireworks",
+   "what": "Fireworks over the river at night.",
+   "easy": "Easy: colours, size, how often.",
+   "pics": [
+    {
+     "label": "fireworks",
+     "dusk": {
+      "shot": "shots/W15-night.png"
+     },
+     "night": {
+      "shot": "shots/W15-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "everything"
+   ],
+   "notes": "",
+   "id": "W16",
+   "section": "W",
+   "name": "Dusk and night colours",
+   "kind": "code",
+   "where": "time.js#envAt, time.js#grade",
+   "what": "The colour wash over the whole picture by time of day (Bangkok time).",
+   "easy": "Easy: the tints; test with ?t=18:30 and ?t=22:30.",
+   "pics": [
+    {
+     "label": "the view",
+     "dusk": {
+      "shot": "shots/W16-dusk.png"
+     },
+     "night": {
+      "shot": "shots/W16-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "airship-dusk and airship-night (change together)",
+    "W12"
+   ],
+   "notes": "",
+   "id": "W17",
+   "section": "W",
+   "name": "Airship 1",
+   "kind": "file",
+   "where": "sky/airship-dusk.png, sky/airship-night.png (layout.json airships)",
+   "what": "Drifting airship 1, in its dusk and night colours.",
+   "easy": "Easy: colours and details; keep the size and the transparent background.",
+   "pics": [
+    {
+     "label": "airship",
+     "dusk": {
+      "file": "airship-dusk.png"
+     },
+     "night": {
+      "file": "airship-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "airship1-dusk and airship1-night (change together)",
+    "W12"
+   ],
+   "notes": "",
+   "id": "W18",
+   "section": "W",
+   "name": "Airship 2",
+   "kind": "file",
+   "where": "sky/airship1-dusk.png, sky/airship1-night.png (layout.json airships)",
+   "what": "Drifting airship 2, in its dusk and night colours.",
+   "easy": "Easy: colours and details; keep the size and the transparent background.",
+   "pics": [
+    {
+     "label": "airship",
+     "dusk": {
+      "file": "airship1-dusk.png"
+     },
+     "night": {
+      "file": "airship1-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "boats.webp and boats-lit.webp (same cell)",
+    "layout.json boats.kinds"
+   ],
+   "notes": "Loaded by the site but no longer drawn: the river’s boats are drawn in code (H07–H13).",
+   "id": "H01",
+   "section": "H",
+   "name": "Longtail (picture sheet)",
+   "kind": "cell",
+   "where": "harbour/boats.webp and boats-lit.webp, cell 0 (360×180)",
+   "what": "The painted longtail and its lights layer.",
+   "easy": "Keep the 360×180 grid.",
+   "pics": [
+    {
+     "label": "boat",
+     "dusk": {
+      "cell": {
+       "file": "boats.webp",
+       "x": 0,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    },
+    {
+     "label": "its lights",
+     "dusk": {
+      "cell": {
+       "file": "boats-lit.webp",
+       "x": 0,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "boats.webp and boats-lit.webp (same cell)",
+    "layout.json boats.kinds"
+   ],
+   "notes": "Loaded by the site but no longer drawn: the river’s boats are drawn in code (H07–H13). There is no freighter in code (David: no cargo ships).",
+   "id": "H02",
+   "section": "H",
+   "name": "Freighter (picture sheet)",
+   "kind": "cell",
+   "where": "harbour/boats.webp and boats-lit.webp, cell 1 (360×180)",
+   "what": "The painted freighter and its lights layer.",
+   "easy": "Keep the 360×180 grid.",
+   "pics": [
+    {
+     "label": "boat",
+     "dusk": {
+      "cell": {
+       "file": "boats.webp",
+       "x": 360,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    },
+    {
+     "label": "its lights",
+     "dusk": {
+      "cell": {
+       "file": "boats-lit.webp",
+       "x": 360,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "boats.webp and boats-lit.webp (same cell)",
+    "layout.json boats.kinds"
+   ],
+   "notes": "Loaded by the site but no longer drawn: the river’s boats are drawn in code (H07–H13).",
+   "id": "H03",
+   "section": "H",
+   "name": "Speedboat (picture sheet)",
+   "kind": "cell",
+   "where": "harbour/boats.webp and boats-lit.webp, cell 2 (360×180)",
+   "what": "The painted speedboat and its lights layer.",
+   "easy": "Keep the 360×180 grid.",
+   "pics": [
+    {
+     "label": "boat",
+     "dusk": {
+      "cell": {
+       "file": "boats.webp",
+       "x": 720,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    },
+    {
+     "label": "its lights",
+     "dusk": {
+      "cell": {
+       "file": "boats-lit.webp",
+       "x": 720,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "boats.webp and boats-lit.webp (same cell)",
+    "layout.json boats.kinds"
+   ],
+   "notes": "Loaded by the site but no longer drawn: the river’s boats are drawn in code (H07–H13).",
+   "id": "H04",
+   "section": "H",
+   "name": "Ferry (picture sheet)",
+   "kind": "cell",
+   "where": "harbour/boats.webp and boats-lit.webp, cell 3 (360×180)",
+   "what": "The painted ferry and its lights layer.",
+   "easy": "Keep the 360×180 grid.",
+   "pics": [
+    {
+     "label": "boat",
+     "dusk": {
+      "cell": {
+       "file": "boats.webp",
+       "x": 1080,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    },
+    {
+     "label": "its lights",
+     "dusk": {
+      "cell": {
+       "file": "boats-lit.webp",
+       "x": 1080,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "boats.webp and boats-lit.webp (same cell)",
+    "layout.json boats.kinds"
+   ],
+   "notes": "Loaded by the site but no longer drawn: the river’s boats are drawn in code (H07–H13).",
+   "id": "H05",
+   "section": "H",
+   "name": "Sailboat (picture sheet)",
+   "kind": "cell",
+   "where": "harbour/boats.webp and boats-lit.webp, cell 4 (360×180)",
+   "what": "The painted sailboat and its lights layer.",
+   "easy": "Keep the 360×180 grid.",
+   "pics": [
+    {
+     "label": "boat",
+     "dusk": {
+      "cell": {
+       "file": "boats.webp",
+       "x": 1440,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    },
+    {
+     "label": "its lights",
+     "dusk": {
+      "cell": {
+       "file": "boats-lit.webp",
+       "x": 1440,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "boats.webp and boats-lit.webp (same cell)",
+    "layout.json boats.kinds"
+   ],
+   "notes": "Loaded by the site but no longer drawn: the river’s boats are drawn in code (H07–H13).",
+   "id": "H06",
+   "section": "H",
+   "name": "Yacht (picture sheet)",
+   "kind": "cell",
+   "where": "harbour/boats.webp and boats-lit.webp, cell 5 (360×180)",
+   "what": "The painted yacht and its lights layer.",
+   "easy": "Keep the 360×180 grid.",
+   "pics": [
+    {
+     "label": "boat",
+     "dusk": {
+      "cell": {
+       "file": "boats.webp",
+       "x": 1800,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    },
+    {
+     "label": "its lights",
+     "dusk": {
+      "cell": {
+       "file": "boats-lit.webp",
+       "x": 1800,
+       "y": 0,
+       "w": 360,
+       "h": 180
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller.",
+   "id": "H07",
+   "section": "H",
+   "name": "Longtail (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.longtail (boats.js#buildBoat)",
+   "what": "The longtail the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "Longtail",
+     "dusk": {
+      "shot": "shots/H07-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H07-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller.",
+   "id": "H08",
+   "section": "H",
+   "name": "Speedboat (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.speedboat (boats.js#buildBoat)",
+   "what": "The speedboat the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "Speedboat",
+     "dusk": {
+      "shot": "shots/H08-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H08-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller.",
+   "id": "H09",
+   "section": "H",
+   "name": "River ferry (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.ferry (boats.js#buildBoat)",
+   "what": "The river ferry the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "River ferry",
+     "dusk": {
+      "shot": "shots/H09-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H09-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller.",
+   "id": "H10",
+   "section": "H",
+   "name": "Sailboat (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.sailboat (boats.js#buildBoat)",
+   "what": "The sailboat the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "Sailboat",
+     "dusk": {
+      "shot": "shots/H10-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H10-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller.",
+   "id": "H11",
+   "section": "H",
+   "name": "Superyacht (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.yacht (boats.js#buildBoat)",
+   "what": "The superyacht the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "Superyacht",
+     "dusk": {
+      "shot": "shots/H11-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H11-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller. Not in the pack’s boat sheet.",
+   "id": "H12",
+   "section": "H",
+   "name": "Dinner-cruise catamaran (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.partycat (boats.js#buildBoat)",
+   "what": "The dinner-cruise catamaran the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "Dinner-cruise catamaran",
+     "dusk": {
+      "shot": "shots/H12-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H12-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H14",
+    "boats.js KINDS (size, speed, wake)"
+   ],
+   "notes": "Drawn flat at 300 px wide; on the site it is much smaller. Not in the pack’s boat sheet.",
+   "id": "H13",
+   "section": "H",
+   "name": "Neon hydrofoil (drawn)",
+   "kind": "code",
+   "where": "boats.js KINDS.neonfoil (boats.js#buildBoat)",
+   "what": "The neon hydrofoil the river shows, drawn in code; at night its windows and LEDs light up.",
+   "easy": "Easy: colours and details in its draw function.",
+   "pics": [
+    {
+     "label": "Neon hydrofoil",
+     "dusk": {
+      "shot": "shots/H13-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H13-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "H07–H13",
+    "layout.json boatLanes",
+    "X03"
+   ],
+   "notes": "",
+   "id": "H14",
+   "section": "H",
+   "name": "Boats moving on the river",
+   "kind": "code",
+   "where": "fx.js#near, boats.js#buildBoat, boats.js#drawLeds",
+   "what": "Boats crossing the river with wakes and, after dark, lights.",
+   "easy": "Speeds and lanes: layout.json (not art).",
+   "pics": [
+    {
+     "label": "river",
+     "dusk": {
+      "shot": "shots/H14-dusk.png"
+     },
+     "night": {
+      "shot": "shots/H14-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "audio.js TRACK"
+   ],
+   "notes": "About 19 MB: the gallery does not download it unless you press play.",
+   "id": "S01",
+   "section": "S",
+   "name": "Music: Lofi Trance Mix · Velvet Vinyl",
+   "kind": "file",
+   "where": "music/ac-music.mp3 (title in pack.json), ../audio.js#TRACK",
+   "what": "The music button’s track, looped with a 7-second crossfade. There is no picture.",
+   "easy": "Only music David has the rights to; no video or pop-up.",
+   "pics": [],
+   "audio": "ac-music.mp3"
+  },
+  {
+   "linked": [
+    "changes together with W01, O18"
+   ],
+   "notes": "",
+   "id": "X01",
+   "section": "X",
+   "name": "Window frame, mullions and vines",
+   "kind": "file",
+   "where": "room/masks/fg-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "fg-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with W02, W12"
+   ],
+   "notes": "",
+   "id": "X02",
+   "section": "X",
+   "name": "Skyline (clouds and planes pass behind)",
+   "kind": "file",
+   "where": "room/masks/sky-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "sky-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with W04, W05, H14"
+   ],
+   "notes": "",
+   "id": "X03",
+   "section": "X",
+   "name": "River (boats stay inside)",
+   "kind": "file",
+   "where": "room/masks/water-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "water-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with O08"
+   ],
+   "notes": "",
+   "id": "X04",
+   "section": "X",
+   "name": "Boss desk front",
+   "kind": "file",
+   "where": "room/masks/boss-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "boss-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with O07"
+   ],
+   "notes": "",
+   "id": "X05",
+   "section": "X",
+   "name": "Front-right desk front",
+   "kind": "file",
+   "where": "room/masks/desk-fr-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "desk-fr-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with L04"
+   ],
+   "notes": "",
+   "id": "X06",
+   "section": "X",
+   "name": "Coffee table",
+   "kind": "file",
+   "where": "room/masks/table-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "table-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with L01"
+   ],
+   "notes": "",
+   "id": "X07",
+   "section": "X",
+   "name": "Red bean bag",
+   "kind": "file",
+   "where": "room/masks/bag-r-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "bag-r-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with L02"
+   ],
+   "notes": "",
+   "id": "X08",
+   "section": "X",
+   "name": "Blue bean bag",
+   "kind": "file",
+   "where": "room/masks/bag-b-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "bag-b-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with L03"
+   ],
+   "notes": "",
+   "id": "X09",
+   "section": "X",
+   "name": "Mustard bean bag",
+   "kind": "file",
+   "where": "room/masks/bag-m-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "bag-m-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with O17"
+   ],
+   "notes": "",
+   "id": "X10",
+   "section": "X",
+   "name": "Left corner (art tools only)",
+   "kind": "file",
+   "where": "room/masks/room-l-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "room-l-mask.png"
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "changes together with O17"
+   ],
+   "notes": "",
+   "id": "X11",
+   "section": "X",
+   "name": "Right corner (art tools only)",
+   "kind": "file",
+   "where": "room/masks/room-r-mask.png",
+   "what": "White is the part cut out of the room picture, so moving things pass in front of or behind it.",
+   "easy": "Made by the scene builder with the plates; never edit alone.",
+   "pics": [
+    {
+     "label": "mask",
+     "dusk": {
+      "file": "room-r-mask.png"
+     }
+    }
+   ]
+  }
+ ]
+}
