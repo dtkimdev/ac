@@ -19,6 +19,10 @@
    "Kitchen"
   ],
   [
+   "B",
+   "Skill books"
+  ],
+  [
    "O",
    "Office"
   ],
@@ -2248,6 +2252,57 @@
        "w": 352,
        "h": 356
       }
+     }
+    }
+   ]
+  },
+  {
+   "id": "B01",
+   "section": "B",
+   "name": "Skill books",
+   "kind": "code",
+   "where": "main.js#initBooks, main.js#drawShelfBooks; BOOKS in config.js; layout.json bookcase",
+   "what": "Twenty books, sk1 to sk20, four to a shelf, top shelf first, drawn in code on the bookcase (K12). A book that is out leaves a gap. At night they sit in the room's shade.",
+   "linked": [
+    "K12 (the case)",
+    "B02 (Grok's book run)"
+   ],
+   "easy": "Easy: BOOKS.labels (names, order) and BOOKS.colors in config.js.",
+   "notes": "Added 2026-11-12 (David). Drawn once into a cached bitmap; redrawn only when a book moves.",
+   "pics": [
+    {
+     "label": "bookcase with books",
+     "dusk": {
+      "shot": "shots/B01-dusk.png"
+     },
+     "night": {
+      "shot": "shots/B01-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": "B02",
+   "section": "B",
+   "name": "Grok's book run",
+   "kind": "code",
+   "where": "main.js#bookRun, main.js#stepErrand, main.js#drawDeskBooks, main.js#drawCarried; BOOKS in config.js",
+   "what": "Now and then Grok (found by name) walks round the lounge to the bookcase, takes up to three books to a bot at its desk, and they talk about using them in bubbles. The books stay on that desk; a few hours later he fetches them back, or carries them on to another bot that needs them. Test: __office2d.bookRun() or __office2d.bookRun('Media'); __office2d.bookState().",
+   "linked": [
+    "B01",
+    "K12",
+    "L06 (walking)"
+   ],
+   "easy": "Easy: BOOKS.every, keep, passOn, talk and lines in config.js.",
+   "notes": "Added 2026-11-12 (David). Uses the normal walk and the walking cap; lite mode repaints once when a book moves.",
+   "pics": [
+    {
+     "label": "Grok and Media talk about the books",
+     "dusk": {
+      "shot": "shots/B02-dusk.png"
+     },
+     "night": {
+      "shot": "shots/B02-night.png"
      }
     }
    ]

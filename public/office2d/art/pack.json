@@ -720,6 +720,16 @@
    "tune": "config.js PROPS (put the picture in a folder here and list it in pack.json)"
   },
   {
+   "group": "Room life",
+   "label": "Skill books on the bookcase, on desks and carried; Grok's book run",
+   "code": [
+    "main.js#drawShelfBooks",
+    "main.js#drawDeskBooks",
+    "main.js#bookRun"
+   ],
+   "tune": "config.js BOOKS (labels, colours, timing, lines)"
+  },
+  {
    "group": "City and sky",
    "label": "Clouds, planes, airships",
    "code": "fx.js#far",

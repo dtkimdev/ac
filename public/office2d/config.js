@@ -54,6 +54,29 @@ export const DOG = { size: 1.5 };
 // their desks; walks for real interactions from the feed still happen.
 export const WALK = { maxMoving: 3, quietShare: 0.5 };
 
+// ---------- skill books (David, 2026-11-12) ----------
+// The tall bookcase under the clock holds one book per skill, 4 to a shelf, top shelf first. Rename or reorder labels freely; keep them short,
+// they are printed on the spine. Grok (found by name) now and then takes up to 3 books to a bot at its desk, they talk about using them, and
+// the books stay on that desk until he fetches them back (keep) or carries them on to another bot that needs them (passOn). Times in seconds.
+export const BOOKS = {
+  labels: ['sk1', 'sk2', 'sk3', 'sk4', 'sk5', 'sk6', 'sk7', 'sk8', 'sk9', 'sk10', 'sk11', 'sk12', 'sk13', 'sk14', 'sk15', 'sk16', 'sk17', 'sk18', 'sk19', 'sk20'],
+  colors: ['#7b2d26', '#2d4b6e', '#3f5e3a', '#8a6326', '#5b3a6e', '#2a5f5c', '#8c4a2a', '#3e3f70', '#6e5232', '#1f4a3c'], // spine colours, repeating
+  carrier: 'Grok',          // the bot that fetches the books
+  first: [120, 360],        // before the first run after the page loads
+  every: [900, 2400],       // between runs
+  keep: [7200, 14400],      // how long books stay on a desk before Grok takes them back (2-4 hours)
+  passOn: 0.35,             // chance a run carries books from one desk straight on to another bot
+  talk: 12, line: 2.3,      // talk at the desk, and each bubble
+  lines: {                  // {b} = the books, {1} {2} = the first and second book
+    give: ['brought you {b}', '{b} for this job', 'try {b} here'],
+    grok: ['start with {1}', '{1} covers step one', 'then {2} for the rest', 'ping me if stuck', 'keep them a while'],
+    worker: ['oh, {1}!', 'how do I use {1}?', 'got it 👍', 'perfect, thanks', 'makes sense'],
+    collect: ['done with {b}?', 'need {b} back'],
+    passOn: ['{b} is needed next door', 'borrowing {b} 🙏'],
+    thanks: ['all yours', 'thanks!', 'sure 👍'],
+  },
+};
+
 // ---------- items ----------
 // Extra pictures placed in the room. Put the image in art/props/ and list it in art/pack.json, then add a line here. x, y, w, h are in plate pixels (the room is 1280 x 720).
 // depth is the floor line: things lower on screen (bigger y) draw in front. Use the item's bottom edge, y + h, unless it should sit behind something.

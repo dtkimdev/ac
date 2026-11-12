@@ -315,6 +315,7 @@ Find the function named in the "code" column (search for it); "tune" is a settin
 | Dust in the light | `fx.js#motes` |  |
 | Soft floor shadow under bots and dogs | `main.js#buildStatic` |  |
 | Extra pictures placed in the room | `main.js#propImgs` | config.js PROPS (put the picture in a folder here and list it in pack.json) |
+| Skill books on the bookcase, on desks and carried; Grok's book run | `main.js#drawShelfBooks`, `main.js#drawDeskBooks`, `main.js#bookRun` | config.js BOOKS (labels, colours, timing, lines) |
 
 **City and sky**
 
