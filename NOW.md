@@ -9,3 +9,4 @@ A line older than a day is stale. Ask David before taking over someone else's cl
 Format: `- <bot> · <what> · <files or area> · <date time, Bangkok>`
 
 <!-- claims below this line -->
+- grokbot · art gallery + art edits · public/gallery, public/office2d/art, portable/art/scene.js, drawn-art functions · 2026-11-12 19:10 Bangkok
