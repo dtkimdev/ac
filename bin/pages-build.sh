@@ -18,6 +18,8 @@ rm -f "$OUT/office2d/art/README.md"
 # each file gets a content stamp in the published pack.json: browsers fetch again only the pictures that changed
 node bin/art-pack.js stamp "$OUT/office2d/art"
 touch "$OUT/.nojekyll"
+# the art gallery (David, 2026-11-12): a page that shows every art item with an ID, so David can ask a bot to change one; it reads ../office2d/art
+if [ -d public/gallery ]; then cp -r public/gallery "$OUT/gallery"; fi
 FUNNEL=$(tr -d '\n' < data/public_url.txt 2>/dev/null || true)
 FUNNEL=${FUNNEL:-https://agentcity.tailacdee6.ts.net}
 FUNNEL=${FUNNEL%/}

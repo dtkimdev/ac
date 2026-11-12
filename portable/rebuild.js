@@ -51,6 +51,8 @@ const pack = require(path.join(ROOT, 'bin', 'art-pack.js')), ART_OUT = path.join
 cpDir(path.join(SRC, 'office2d', 'art'), ART_OUT);
 pack.stamp(ART_OUT);
 for (const p of Object.keys(pack.files(pack.load()))) cpFile(path.join(ART_OUT, p), path.join(OUT, 'office2d', 'assets', path.basename(p)));
+// the art gallery (public/gallery), served at /gallery/ in the preview as on the live site
+if (fs.existsSync(path.join(SRC, 'gallery'))) cpDir(path.join(SRC, 'gallery'), path.join(OUT, 'gallery'));
 cpFile(SNAP, path.join(OUT, 'state.json'));
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
