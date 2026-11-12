@@ -1,12 +1,42 @@
 name: refresh
-# The doorbell for the live site's ↻ button. It does nothing itself: the publisher on the shared computer checks for new
-# runs of this workflow about once a minute and publishes fresh data at once (bin/pages-pull.sh, refresh_requested).
+# The live site's ↻ button (also: Actions > refresh > Run workflow, or `gh workflow run refresh.yml -R dtkimdev/ac`).
+# David, 2026-11-12: the site wakes up and refreshes when he presses ↻, when he asks a bot, and after events that change it.
+# 1. Awake shared computer: its publisher sees this run within a minute (bin/pages-pull.sh, refresh_requested) and publishes
+#    fresh data. Nothing else is spent.
+# 2. Asleep: if gh-pages has not moved about 105 s after the press, ring the Agent City usage-refresh routine (same secrets as
+#    wake-on-push). That wakes the computer; its publisher then sees this run and publishes. One ring per press, only when needed.
+# Neither the webhook URL nor the key is ever printed; GitHub also masks secrets in logs.
 on:
   workflow_dispatch:
-permissions: {}
+permissions:
+  contents: read
+concurrency:
+  group: refresh
+  cancel-in-progress: false
 jobs:
   ring:
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 4
     steps:
-      - run: echo "refresh requested"
+      - name: Wait for the publisher; wake the computer if it is asleep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          URL: ${{ secrets.AC_USAGE_WEBHOOK_URL }}
+          KEY: ${{ secrets.AC_USAGE_WEBHOOK_KEY }}
+          HEADER: ${{ secrets.AC_USAGE_WEBHOOK_HEADER }}
+        run: |
+          start=$(date -u +%s)
+          for i in 1 2 3 4 5 6 7; do
+            sleep 15
+            t=$(gh api "repos/$REPO/commits/gh-pages" --jq '.commit.committer.date' 2>/dev/null || true)
+            if [ -n "$t" ] && [ "$(date -u -d "$t" +%s)" -ge "$start" ]; then
+              echo "publisher is awake: gh-pages updated at $t"; exit 0
+            fi
+          done
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then echo "::notice::computer looks asleep, but the webhook secrets are not set; nothing rung"; exit 0; fi
+          if [ -n "$HEADER" ]; then AUTH="$HEADER: $KEY"; else AUTH="Authorization: Bearer $KEY"; fi
+          BODY=$(printf '{"source":"agent-city-refresh","run":"%s","ts":"%s"}' "$GITHUB_RUN_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' -m 20 -X POST -H 'Content-Type: application/json' -H "$AUTH" --data "$BODY" "$URL" 2>/dev/null || echo 000)
+          echo "computer looked asleep; routine answered HTTP $CODE"
+          case "$CODE" in 2??) ;; *) echo "::warning::routine did not accept the ring (HTTP $CODE)";; esac

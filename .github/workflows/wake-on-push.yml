@@ -1,7 +1,10 @@
 name: wake-on-push
 # The shared computer is suspended while no bot works, so the publisher sleeps and pushes wait (2026-11-10: about 50 minutes).
-# This rings the Agent City usage-refresh routine on a push that changes what the site shows. The routine wakes that computer,
-# refreshes the Grok usage and publishes. Approved by David on 2026-11-10, filtered so that baton and docs pushes cost nothing.
+# This rings the Agent City usage-refresh routine on a push that only the shared computer can put live. The routine wakes that
+# computer, refreshes the Grok usage and publishes. Approved by David on 2026-11-10, filtered so that baton and docs pushes cost nothing.
+# Since 2026-11-12 (David): `public/` pushes no longer ring it. publish.yml already puts them live on GitHub without that computer,
+# so ringing cost a Grok run per art push for nothing. Fresh data comes from the ↻ button (refresh.yml), a bot asked to refresh,
+# or the publisher whenever the computer is awake.
 # Secrets (repo Settings > Secrets and variables > Actions), set by David:
 #   AC_USAGE_WEBHOOK_URL, AC_USAGE_WEBHOOK_KEY, and optionally AC_USAGE_WEBHOOK_HEADER (a header name; default: Authorization: Bearer)
 # Neither the URL nor the key is ever printed; GitHub also masks secrets in logs. Workflows started by other people's pull requests
@@ -10,7 +13,6 @@ on:
   push:
     branches: [main]
     paths:
-      - 'public/**'
       - 'bin/**'
       - 'lib/**'
       - 'server.js'
