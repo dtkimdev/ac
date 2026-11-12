@@ -160,6 +160,10 @@ One picture per character seen from behind: sitting at the desk facing the monit
 | `w09.png` | Sports, back view | 137×213 |
 | `w10.png` | SBP, back view | 138×226 |
 | `w11.png` | Shopper, back view | 137×229 |
+| `w12.png` | New-bot design 1 (curly hair, cream hoodie), back view | 137×225 |
+| `w13.png` | New-bot design 2 (blonde space buns, burgundy hoodie), back view | 137×225 |
+| `w14.png` | New-bot design 3 (ginger hair, grey hoodie), back view | 137×225 |
+| `w15.png` | New-bot design 4 (black braid, mint hoodie), back view | 137×225 |
 
 ### bots/front/ — Bots seen from the front
 
@@ -181,17 +185,21 @@ The same characters facing the room: turned round in the chair, or walking towar
 | `f09.png` | Sports, front view | 137×213 |
 | `f10.png` | SBP, front view | 138×226 |
 | `f11.png` | Shopper, front view | 137×229 |
+| `f12.png` | New-bot design 1 (curly hair, cream hoodie), front view | 137×225 |
+| `f13.png` | New-bot design 2 (blonde space buns, burgundy hoodie), front view | 137×225 |
+| `f14.png` | New-bot design 3 (ginger hair, grey hoodie), front view | 137×225 |
+| `f15.png` | New-bot design 4 (black braid, mint hoodie), front view | 137×225 |
 
 ### bots/turning/ — Bots turning in the chair
 
-Pose sheets for turning from back to front (back, 3/4 back, side, 3/4 front, front): bodies and heads separately, one row per character in the bots/back numbering. Cells: layout.json turn.
+Pose sheets for turning from back to front (back, 3/4 back, side, 3/4 front, front): bodies and heads separately, one row per character in the bots/back numbering (rows 12-15: designs for new bots, row 16: Dashboards). Cells: layout.json turn.
 
 **To change:** Cells are 190 x 266 (bodies) and 220 x 232 (heads). A repaint must keep the grid.
 
 | file | what it is | size |
 |---|---|---|
-| `turn-bodies.webp` | Turning poses, bodies (one row per character) | 1140×3192 |
-| `turn-heads.webp` | Turning poses, heads (one row per character) | 1320×2784 |
+| `turn-bodies.webp` | Turning poses, bodies (one row per character) | 1140×4522 |
+| `turn-heads.webp` | Turning poses, heads (one row per character) | 1320×3944 |
 
 ### bots/walking/ — Bots walking
 
@@ -201,21 +209,21 @@ walk-side: every character in profile, for walking sideways. legs: the painted l
 
 | file | what it is | size |
 |---|---|---|
-| `walk-side.webp` | Every character in side view, for walking sideways (one cell each) | 2376×284 |
+| `walk-side.webp` | Every character in side view, for walking sideways (one cell each) | 3366×284 |
 | `legs.png` | Walking legs, shared by all bots (side, front, back steps) | 1600×300 |
 
-### bots/dash/ — Dash (Dashboards) and her things
+### bots/dash/ — Dashboards and their things
 
-Dash lives on the blue bean bag instead of at a desk.
+Dashboards (bot14) sits at the 4th seat of the back-right desk and visits the blue bean bag. Redesigned 2026-11-12: silver hair, amber glasses, charcoal hoodie with mint lining; turning row 16 and walk-side cell 16 match.
 
 **To change:** Same sizes; positions in layout.json dash.
 
 | file | what it is | size |
 |---|---|---|
-| `dash-back.png` | Dash, back view | 138×243 |
-| `dash-front.png` | Dash, front view | 138×241 |
-| `dash-laptop.png` | Dash's laptop (on the bean bag) | 200×314 |
-| `dash-mug.png` | Dash's mug | 212×337 |
+| `dash-back.png` | Dashboards, back view | 138×243 |
+| `dash-front.png` | Dashboards, front view | 138×241 |
+| `dash-laptop.png` | Dashboards with the laptop (on the bean bag) | 200×314 |
+| `dash-mug.png` | Dashboards with the mug (on the bean bag) | 212×337 |
 
 ### pets/ — Corgis
 

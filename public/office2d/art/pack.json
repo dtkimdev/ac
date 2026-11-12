@@ -236,6 +236,34 @@
       137,
       229
      ]
+    },
+    "w12.png": {
+     "label": "New-bot design 1 (curly hair, cream hoodie), back view",
+     "size": [
+      137,
+      225
+     ]
+    },
+    "w13.png": {
+     "label": "New-bot design 2 (blonde space buns, burgundy hoodie), back view",
+     "size": [
+      137,
+      225
+     ]
+    },
+    "w14.png": {
+     "label": "New-bot design 3 (ginger hair, grey hoodie), back view",
+     "size": [
+      137,
+      225
+     ]
+    },
+    "w15.png": {
+     "label": "New-bot design 4 (black braid, mint hoodie), back view",
+     "size": [
+      137,
+      225
+     ]
     }
    }
   },
@@ -328,27 +356,55 @@
       137,
       229
      ]
+    },
+    "f12.png": {
+     "label": "New-bot design 1 (curly hair, cream hoodie), front view",
+     "size": [
+      137,
+      225
+     ]
+    },
+    "f13.png": {
+     "label": "New-bot design 2 (blonde space buns, burgundy hoodie), front view",
+     "size": [
+      137,
+      225
+     ]
+    },
+    "f14.png": {
+     "label": "New-bot design 3 (ginger hair, grey hoodie), front view",
+     "size": [
+      137,
+      225
+     ]
+    },
+    "f15.png": {
+     "label": "New-bot design 4 (black braid, mint hoodie), front view",
+     "size": [
+      137,
+      225
+     ]
     }
    }
   },
   {
    "path": "bots/turning",
    "label": "Bots turning in the chair",
-   "about": "Pose sheets for turning from back to front (back, 3/4 back, side, 3/4 front, front): bodies and heads separately, one row per character in the bots/back numbering. Cells: layout.json turn.",
+   "about": "Pose sheets for turning from back to front (back, 3/4 back, side, 3/4 front, front): bodies and heads separately, one row per character in the bots/back numbering (rows 12-15: designs for new bots, row 16: Dashboards). Cells: layout.json turn.",
    "edit": "Cells are 190 x 266 (bodies) and 220 x 232 (heads). A repaint must keep the grid.",
    "files": {
     "turn-bodies.webp": {
      "label": "Turning poses, bodies (one row per character)",
      "size": [
       1140,
-      3192
+      4522
      ]
     },
     "turn-heads.webp": {
      "label": "Turning poses, heads (one row per character)",
      "size": [
       1320,
-      2784
+      3944
      ]
     }
    }
@@ -362,7 +418,7 @@
     "walk-side.webp": {
      "label": "Every character in side view, for walking sideways (one cell each)",
      "size": [
-      2376,
+      3366,
       284
      ]
     },
@@ -377,33 +433,33 @@
   },
   {
    "path": "bots/dash",
-   "label": "Dash (Dashboards) and her things",
-   "about": "Dash lives on the blue bean bag instead of at a desk.",
+   "label": "Dashboards and their things",
+   "about": "Dashboards (bot14) sits at the 4th seat of the back-right desk and visits the blue bean bag. Redesigned 2026-11-12: silver hair, amber glasses, charcoal hoodie with mint lining; turning row 16 and walk-side cell 16 match.",
    "edit": "Same sizes; positions in layout.json dash.",
    "files": {
     "dash-back.png": {
-     "label": "Dash, back view",
+     "label": "Dashboards, back view",
      "size": [
       138,
       243
      ]
     },
     "dash-front.png": {
-     "label": "Dash, front view",
+     "label": "Dashboards, front view",
      "size": [
       138,
       241
      ]
     },
     "dash-laptop.png": {
-     "label": "Dash's laptop (on the bean bag)",
+     "label": "Dashboards with the laptop (on the bean bag)",
      "size": [
       200,
       314
      ]
     },
     "dash-mug.png": {
-     "label": "Dash's mug",
+     "label": "Dashboards with the mug (on the bean bag)",
      "size": [
       212,
       337

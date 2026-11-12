@@ -8,7 +8,7 @@
   ],
   [
    "D",
-   "Dash"
+   "Dashboards"
   ],
   [
    "P",
@@ -55,7 +55,7 @@
     "walk-side cell 0",
     "layout.json sprites[0] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: blue cap, headphones, blue hoodie.",
    "id": "C00",
    "section": "C",
    "name": "Usage",
@@ -121,7 +121,7 @@
     "walk-side cell 1",
     "layout.json sprites[1] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Now a navy hoodie instead of the striped sweater; black hair, glasses and red-white scarf kept.",
    "id": "C01",
    "section": "C",
    "name": "Grok",
@@ -187,7 +187,7 @@
     "walk-side cell 2",
     "layout.json sprites[2] (size and hem)"
    ],
-   "notes": "Repainted without the cap, yellow hoodie, dark hair (run-chars.js).",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: brown hair, yellow hoodie.",
    "id": "C02",
    "section": "C",
    "name": "Studio",
@@ -253,7 +253,7 @@
     "walk-side cell 3",
     "layout.json sprites[3] (size and hem)"
    ],
-   "notes": "Dark blue hoodie (run-chars.js).",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: brown hair, navy hoodie.",
    "id": "C03",
    "section": "C",
    "name": "LF",
@@ -319,7 +319,7 @@
     "walk-side cell 4",
     "layout.json sprites[4] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: long brown hair, pink hoodie (hair now falls the same in every view).",
    "id": "C04",
    "section": "C",
    "name": "Archives",
@@ -385,7 +385,7 @@
     "walk-side cell 5",
     "layout.json sprites[5] (size and hem)"
    ],
-   "notes": "Repainted without the hair bun (portable/art/run-chars.js).",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Orange cap now faces forward in every view (the front used to show the strap hole); orange hoodie kept.",
    "id": "C05",
    "section": "C",
    "name": "Cyber",
@@ -451,7 +451,7 @@
     "walk-side cell 6",
     "layout.json sprites[6] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: purple beanie with the eye-ball, brown hair.",
    "id": "C06",
    "section": "C",
    "name": "Ops",
@@ -517,7 +517,7 @@
     "walk-side cell 7",
     "layout.json sprites[7] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: glasses, cream-teal scarf, teal hoodie.",
    "id": "C07",
    "section": "C",
    "name": "$tonks",
@@ -583,7 +583,7 @@
     "walk-side cell 8",
     "layout.json sprites[8] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: dark hair, brown hoodie.",
    "id": "C08",
    "section": "C",
    "name": "Media",
@@ -649,7 +649,7 @@
     "walk-side cell 9",
     "layout.json sprites[9] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: pink cap, headphones, purple hoodie.",
    "id": "C09",
    "section": "C",
    "name": "Sports",
@@ -715,7 +715,7 @@
     "walk-side cell 10",
     "layout.json sprites[10] (size and hem)"
    ],
-   "notes": "",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Same look: teal beanie, teal hoodie.",
    "id": "C10",
    "section": "C",
    "name": "SBP",
@@ -781,7 +781,7 @@
     "walk-side cell 11",
     "layout.json sprites[11] (size and hem)"
    ],
-   "notes": "Has no desk; idles in the kitchen beside the floor lamp.",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Redesigned: curly auburn ponytail, gold hoops, freckles, cherry-red hoodie (no more green hoodie and hat). Has no desk; idles in the kitchen beside the floor lamp.",
    "id": "C11",
    "section": "C",
    "name": "Shopper",
@@ -909,7 +909,7 @@
     "C00–C11 (the pictures it uses)",
     "config.js BEHAVIOR turnEvery, fidgetEvery"
    ],
-   "notes": "",
+   "notes": "Shot retaken 2026-11-12 with the redrawn art.",
    "id": "C13",
    "section": "C",
    "name": "Seated bot, turning and fidgets",
@@ -935,7 +935,7 @@
     "walk-side cells in C00–C11",
     "config.js WALK"
    ],
-   "notes": "",
+   "notes": "Shot retaken 2026-11-12 with the redrawn art.",
    "id": "C14",
    "section": "C",
    "name": "Walking bot",
@@ -984,7 +984,7 @@
     "config.js BUBBLE.size (0.8, must not grow)",
     "config.js BEHAVIOR deskChat, loungeChat"
    ],
-   "notes": "The bubbles are small and short-lived; in this shot only the two bots turned towards each other show clearly.",
+   "notes": "The bubbles are small and short-lived; in this shot only the two bots turned towards each other show clearly. Shot retaken 2026-11-12 with the redrawn art.",
    "id": "C16",
    "section": "C",
    "name": "Speech bubbles and desk chats",
@@ -1008,7 +1008,7 @@
    "linked": [
     "bot status from the data (not art)"
    ],
-   "notes": "Faint at this size: hard to see on Cyber in the shot.",
+   "notes": "Faint at this size: hard to see on Cyber in the shot. Shot retaken 2026-11-12 with the redrawn art.",
    "id": "C17",
    "section": "C",
    "name": "Red error glow",
@@ -1030,15 +1030,279 @@
   },
   {
    "linked": [
+    "f12 and w12 (front and back)",
+    "turn-bodies and turn-heads row 12",
+    "walk-side cell 12",
+    "layout.json sprites[12] (size and hem)"
+   ],
+   "notes": "Drawn 2026-11-12. Every current bot is pinned (config.js BOTS.spriteByNum), so a new bot takes a free row 12-15 from its sprite seed.",
+   "id": "C18",
+   "section": "C",
+   "name": "New-bot design 1",
+   "kind": "cell",
+   "where": "bots/front/f12.png, bots/back/w12.png, bots/turning/turn-bodies.webp + turn-heads.webp row 12, bots/walking/walk-side.webp cell 12",
+   "what": "A design kept free for a new bot (curly hair, cream hoodie): front, back, the turning rows and the side view for walking. Sits at: wherever the new bot is seated.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f12.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w12.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 3192,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 2784,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 2376,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f13 and w13 (front and back)",
+    "turn-bodies and turn-heads row 13",
+    "walk-side cell 13",
+    "layout.json sprites[13] (size and hem)"
+   ],
+   "notes": "Drawn 2026-11-12. Every current bot is pinned (config.js BOTS.spriteByNum), so a new bot takes a free row 12-15 from its sprite seed.",
+   "id": "C19",
+   "section": "C",
+   "name": "New-bot design 2",
+   "kind": "cell",
+   "where": "bots/front/f13.png, bots/back/w13.png, bots/turning/turn-bodies.webp + turn-heads.webp row 13, bots/walking/walk-side.webp cell 13",
+   "what": "A design kept free for a new bot (blonde space buns, burgundy hoodie): front, back, the turning rows and the side view for walking. Sits at: wherever the new bot is seated.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f13.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w13.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 3458,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 3016,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 2574,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f14 and w14 (front and back)",
+    "turn-bodies and turn-heads row 14",
+    "walk-side cell 14",
+    "layout.json sprites[14] (size and hem)"
+   ],
+   "notes": "Drawn 2026-11-12. Every current bot is pinned (config.js BOTS.spriteByNum), so a new bot takes a free row 12-15 from its sprite seed.",
+   "id": "C20",
+   "section": "C",
+   "name": "New-bot design 3",
+   "kind": "cell",
+   "where": "bots/front/f14.png, bots/back/w14.png, bots/turning/turn-bodies.webp + turn-heads.webp row 14, bots/walking/walk-side.webp cell 14",
+   "what": "A design kept free for a new bot (ginger hair, grey hoodie): front, back, the turning rows and the side view for walking. Sits at: wherever the new bot is seated.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f14.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w14.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 3724,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 3248,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 2772,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
+    "f15 and w15 (front and back)",
+    "turn-bodies and turn-heads row 15",
+    "walk-side cell 15",
+    "layout.json sprites[15] (size and hem)"
+   ],
+   "notes": "Drawn 2026-11-12. Every current bot is pinned (config.js BOTS.spriteByNum), so a new bot takes a free row 12-15 from its sprite seed.",
+   "id": "C21",
+   "section": "C",
+   "name": "New-bot design 4",
+   "kind": "cell",
+   "where": "bots/front/f15.png, bots/back/w15.png, bots/turning/turn-bodies.webp + turn-heads.webp row 15, bots/walking/walk-side.webp cell 15",
+   "what": "A design kept free for a new bot (black braid, mint hoodie): front, back, the turning rows and the side view for walking. Sits at: wherever the new bot is seated.",
+   "easy": "Easy: colours and clothes (repaint all five views together). Hard: size or proportions (layout.json sprites and turn too). New pose: ask David.",
+   "pics": [
+    {
+     "label": "front",
+     "dusk": {
+      "file": "f15.png"
+     }
+    },
+    {
+     "label": "back",
+     "dusk": {
+      "file": "w15.png"
+     }
+    },
+    {
+     "label": "turning, bodies (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-bodies.webp",
+       "x": 0,
+       "y": 3990,
+       "w": 1140,
+       "h": 266
+      }
+     }
+    },
+    {
+     "label": "turning, heads (6 cells)",
+     "dusk": {
+      "cell": {
+       "file": "turn-heads.webp",
+       "x": 0,
+       "y": 3480,
+       "w": 1320,
+       "h": 232
+      }
+     }
+    },
+    {
+     "label": "walking, side view",
+     "dusk": {
+      "cell": {
+       "file": "walk-side.webp",
+       "x": 2970,
+       "y": 0,
+       "w": 198,
+       "h": 284
+      }
+     }
+    }
+   ]
+  },
+  {
+   "linked": [
     "D02 (front view)"
    ],
-   "notes": "",
+   "notes": "Redesigned 2026-11-12: silver-grey hair, round glasses, charcoal hoodie with a mint pocket. The bot is the new Dashboards (bot14, id e0bf5277-), who took the old 14 seat; the old 14 is hidden (config.js BOTS.hiddenIds). ",
    "id": "D01",
    "section": "D",
-   "name": "Dash, back view",
+   "name": "Dashboards, back view",
    "kind": "file",
    "where": "bots/dash/dash-back.png",
-   "what": "Dash (Dashboards) seen from behind, at her seat.",
+   "what": "Dashboards seen from behind, at her seat.",
    "easy": "Easy: colours and clothes, keep 138×243 and the placement. Change D02 with it.",
    "pics": [
     {
@@ -1053,13 +1317,13 @@
    "linked": [
     "D01 (back view)"
    ],
-   "notes": "",
+   "notes": "Redesigned 2026-11-12: silver-grey hair, round glasses, charcoal hoodie with a mint pocket. The bot is the new Dashboards (bot14, id e0bf5277-), who took the old 14 seat; the old 14 is hidden (config.js BOTS.hiddenIds). ",
    "id": "D02",
    "section": "D",
-   "name": "Dash, front view",
+   "name": "Dashboards, front view",
    "kind": "file",
    "where": "bots/dash/dash-front.png",
-   "what": "Dash facing the room.",
+   "what": "Dashboards facing the room.",
    "easy": "Easy: colours and clothes, keep 138×241. Change D01 with it.",
    "pics": [
     {
@@ -1075,13 +1339,13 @@
     "D05",
     "layout.json dash.glow"
    ],
-   "notes": "",
+   "notes": "Redesigned 2026-11-12: silver-grey hair, round glasses, charcoal hoodie with a mint pocket. The bot is the new Dashboards (bot14, id e0bf5277-), who took the old 14 seat; the old 14 is hidden (config.js BOTS.hiddenIds). ",
    "id": "D03",
    "section": "D",
-   "name": "Dash's laptop",
+   "name": "Dashboards' laptop",
    "kind": "file",
    "where": "bots/dash/dash-laptop.png (layout.json dash)",
-   "what": "The laptop Dash holds on the bean bag.",
+   "what": "The laptop Dashboards holds on the bean bag.",
    "easy": "Easy: colours and screen. Size: layout.json dash.size too.",
    "pics": [
     {
@@ -1097,13 +1361,13 @@
     "D05",
     "layout.json dash.mugAt"
    ],
-   "notes": "",
+   "notes": "Redesigned 2026-11-12: silver-grey hair, round glasses, charcoal hoodie with a mint pocket. The bot is the new Dashboards (bot14, id e0bf5277-), who took the old 14 seat; the old 14 is hidden (config.js BOTS.hiddenIds). ",
    "id": "D04",
    "section": "D",
-   "name": "Dash's mug",
+   "name": "Dashboards' mug",
    "kind": "file",
    "where": "bots/dash/dash-mug.png (layout.json dash)",
-   "what": "Dash's mug beside her on the bean bag.",
+   "what": "Her mug beside her on the bean bag.",
    "easy": "Easy: colour and pattern. Size: layout.json dash.size too.",
    "pics": [
     {
@@ -1120,17 +1384,17 @@
     "L02 (blue bean bag)",
     "config.js BEHAVIOR byBot 14"
    ],
-   "notes": "Today Dash has a desk seat (scene.js PLAN: 4th seat of the back-right desk), and the shot shows her there. A forced trip to the blue bag (loungeTrip) did not put her on it, so the bean-bag drawing was not seen.",
+   "notes": "Redesigned 2026-11-12: silver-grey hair, round glasses, charcoal hoodie with a mint pocket. The bot is the new Dashboards (bot14, id e0bf5277-), who took the old 14 seat; the old 14 is hidden (config.js BOTS.hiddenIds). Shot: Dashboards at the 4th seat of the back-right desk, turned to face the room (she now has turning row 16 and walk-side cell 16).",
    "id": "D05",
    "section": "D",
-   "name": "Dash on the bean bag",
+   "name": "Dashboards at her desk and on the bean bag",
    "kind": "code",
    "where": "main.js#drawOnBag, main.js#drawDash",
-   "what": "Dash sitting on the blue bean bag with her laptop and mug.",
+   "what": "Dashboards at her seat (she now also turns round in her chair), and on the blue bean bag with her laptop and mug.",
    "easy": "Pose changes: ask David.",
    "pics": [
     {
-     "label": "Dash at the back-right desk",
+     "label": "Dashboards at the back-right desk, turned round",
      "dusk": {
       "shot": "shots/D05-dusk.png"
      },
