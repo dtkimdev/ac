@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent City — Office</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css">
+<style>
+html, body { background: #1c1622; }
+canvas#office { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#tags { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+/* name tags + bubbles are painted on the canvas from cached bitmaps; these transparent pills are the click targets */
+#tags .w { position: absolute; left: 0; top: 0; will-change: transform; }
+#tags .tag { pointer-events: auto; cursor: pointer; opacity: 0; border-radius: 999px; overflow: hidden; font-size: 1px; color: transparent; }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; font: 500 13px var(--sans); color: var(--dim); }
+#fps { position: fixed; left: 10px; bottom: 10px; z-index: 4; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.7); color: #b8f0a0; font: 600 16px ui-monospace, monospace; pointer-events: none; }
+#fps[hidden] { display: none; }
+/* lite (smart TVs): blur and spare layers are expensive there */
+body.lite * { backdrop-filter: none !important; }
+body.lite #tags .w { will-change: auto; }
+</style>
+</head>
+<body class="pages">
+<div id="loading">Opening the office…</div>
+<canvas id="office" aria-label="Agent City office: each bot is a worker at a desk"></canvas>
+<div id="tags"></div>
+<button type="button" id="refresh" title="Refresh live data (once per hour)" aria-label="Refresh live data">↻</button><span id="last-update"></span><div id="refresh-toast" role="status" aria-live="polite"></div>
+<div id="ctrl"><button class="m" id="music" aria-pressed="false" title="Lofi Trance Mix by Velvet Vinyl (loops)">♪ lofi off</button></div>
+<div id="card" role="dialog" aria-label="Worker card"></div>
+<ul id="roster" class="sr" aria-label="Workers"></ul>
+<div id="fps" hidden></div>
+<script>window.AC = window.AC || {}; window.AC_STATIC = true; window.AC_REFRESH = 'https://agentcity.tailacdee6.ts.net/api/pages-refresh';</script><script src="audio.js?b=6dec116"></script>
+<script type="module" src="office2d/main.js?b=6dec116"></script>
+</body></html>
