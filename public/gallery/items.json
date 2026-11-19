@@ -1787,7 +1787,7 @@
     "K12 (bookcase on its left)",
     "dusk and night plates"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Moved right of the new bookcase; drawn at a person's height.",
+   "notes": "Redrawn 2026-11-12 (round 2). Moved right of the new bookcase; drawn at a person's height. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
    "id": "K01",
    "section": "K",
    "name": "Fridge",
@@ -1825,7 +1825,7 @@
     "K08 (lamp pole beside it)",
     "L01–L03 (bean bags in front)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). One clean picture with everything on it, no notches.",
+   "notes": "Redrawn 2026-11-12 (round 2). One clean picture with everything on it, no notches. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
    "id": "K02",
    "section": "K",
    "name": "Kitchen stand and its drawers",
@@ -1862,7 +1862,7 @@
     "K10 (steam)",
     "K11 (coffee pour, main.js KIT)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). KIT in main.js matched to its spout, drip tray and display.",
+   "notes": "Redrawn 2026-11-12 (round 2). KIT in main.js matched to its spout, drip tray and display. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
    "id": "K03",
    "section": "K",
    "name": "Coffee machine",
@@ -2043,7 +2043,7 @@
     "O13 (its glow)",
     "layout.json lamps[0]"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Its glow moved with it (layout.json lamps[0]).",
+   "notes": "Redrawn 2026-11-12 (round 2). Its glow moved with it (layout.json lamps[0]). Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
    "id": "K08",
    "section": "K",
    "name": "Floor lamp",
@@ -2194,7 +2194,7 @@
     "O12 (clock above it)"
    ],
    "easy": "Medium: a new source picture (props_prep2.py), then rebuild; the books are code (B01).",
-   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock.",
+   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). A walnut ladder leans on it (B03).",
    "pics": [
     {
      "label": "bookcase",
@@ -2203,7 +2203,7 @@
        "plate": "dusk",
        "x": 0,
        "y": 232,
-       "w": 192,
+       "w": 210,
        "h": 908
       }
      },
@@ -2212,7 +2212,7 @@
        "plate": "night",
        "x": 0,
        "y": 232,
-       "w": 192,
+       "w": 210,
        "h": 908
       }
      }
@@ -2225,32 +2225,32 @@
    "name": "Kitchen nook wall",
    "kind": "baked",
    "where": "portable/art/scene.js step 1b, WS",
-   "what": "Walnut back wall of the kitchen nook: upper boards with string lights and a COFFEE board, wainscot below.",
+   "what": "Walnut left wall of the kitchen, in perspective: upper boards with string lights and a COFFEE board, wainscot below.",
    "linked": [
     "K07",
     "K02"
    ],
    "easy": "Easy: colours, the board's words (scene.js WS).",
-   "notes": "Added 2026-11-12 (round 2) where the old kitchen's leftovers were.",
+   "notes": "Added 2026-11-12 (round 2) where the old kitchen's leftovers were. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). It now runs the whole left wall to the window corner; no return piece.",
    "pics": [
     {
      "label": "nook wall",
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 176,
-       "y": 784,
-       "w": 352,
-       "h": 356
+       "x": 200,
+       "y": 730,
+       "w": 330,
+       "h": 420
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 176,
-       "y": 784,
-       "w": 352,
-       "h": 356
+       "x": 200,
+       "y": 730,
+       "w": 330,
+       "h": 420
       }
      }
     }
@@ -2262,13 +2262,13 @@
    "name": "Skill books",
    "kind": "code",
    "where": "main.js#initBooks, main.js#drawShelfBooks; BOOKS in config.js; layout.json bookcase",
-   "what": "Twenty books, sk1 to sk20, four to a shelf, top shelf first, drawn in code on the bookcase (K12). A book that is out leaves a gap. At night they sit in the room's shade.",
+   "what": "Twenty books, sk1 to sk20, four to a shelf, top shelf first, drawn in code on the bookcase (K12); each spine is laid onto the slanted wall (layout.json bookcase.warp). A book that is out leaves a gap. At night they sit in the room's shade.",
    "linked": [
     "K12 (the case)",
     "B02 (Grok's book run)"
    ],
    "easy": "Easy: BOOKS.labels (names, order) and BOOKS.colors in config.js.",
-   "notes": "Added 2026-11-12 (David). Drawn once into a cached bitmap; redrawn only when a book moves.",
+   "notes": "Added 2026-11-12 (David). Drawn once into a cached bitmap; redrawn only when a book moves. Shots retaken 2026-11-19 (round 5).",
    "pics": [
     {
      "label": "bookcase with books",
@@ -2287,22 +2287,48 @@
    "name": "Grok's book run",
    "kind": "code",
    "where": "main.js#bookRun, main.js#stepErrand, main.js#drawDeskBooks, main.js#drawCarried; BOOKS in config.js",
-   "what": "Now and then Grok (found by name) walks round the lounge to the bookcase, takes up to three books to a bot at its desk, and they talk about using them in bubbles. The books stay on that desk; a few hours later he fetches them back, or carries them on to another bot that needs them. Test: __office2d.bookRun() or __office2d.bookRun('Media'); __office2d.bookState().",
+   "what": "At least every 40 s Grok (bot 1, found by name) walks to the bookcase, climbs the ladder (B03), takes one or two books from one shelf, climbs down, takes them to a random bot at its desk and they talk in bubbles (two or four). A run still going when the next is due goes straight on to the ladder. A desk that still has books gives them back on his next visit; due desks, or any with books when the shelf runs low, are visited first. Test: __office2d.bookRun() or __office2d.bookRun('Media'); __office2d.bookState(); __office2d.bookStarts().",
    "linked": [
     "B01",
     "K12",
     "L06 (walking)"
    ],
-   "easy": "Easy: BOOKS.every, keep, passOn, talk and lines in config.js.",
-   "notes": "Added 2026-11-12 (David). Uses the normal walk and the walking cap; lite mode repaints once when a book moves.",
+   "easy": "Easy: BOOKS.every, chain, hurry, keep, low, most, pace, climb, talk and lines in config.js.",
+   "notes": "Added 2026-11-12 (David). Uses the normal walk and the walking cap; lite mode repaints once when a book moves. Round 5 (2026-11-19): a handoff at least every 40 s (measured 24-35 s), every one by the ladder; Grok takes no lounge breaks and walks briskly (BOOKS.pace).",
    "pics": [
     {
-     "label": "Grok and Media talk about the books",
+     "label": "Grok hands Studio a book",
      "dusk": {
       "shot": "shots/B02-dusk.png"
      },
      "night": {
       "shot": "shots/B02-night.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": "B03",
+   "section": "B",
+   "name": "Book ladder and the climb",
+   "kind": "code",
+   "where": "main.js#drawLadder, main.js#stepErrand (take/shelve), main.js#drawWalker (lift); layout.json bookcase.ladder",
+   "what": "A walnut library ladder leaning on the skill bookcase, rungs along the wall's slope, brass hooks on the top rail. Grok climbs it with his back to the room, takes the books (or puts returned ones back) and climbs down.",
+   "linked": [
+    "K12",
+    "B01",
+    "B02"
+   ],
+   "easy": "Easy: BOOKS.climb, reach in config.js; the ladder's place is LAD in portable/art/scene.js (rebuild).",
+   "notes": "Added 2026-11-19 (round 5, David).",
+   "pics": [
+    {
+     "label": "Grok on the ladder",
+     "dusk": {
+      "shot": "shots/B03-dusk.png"
+     },
+     "night": {
+      "shot": "shots/B03-night.png"
      }
     }
    ]

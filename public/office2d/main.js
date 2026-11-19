@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=34'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=35'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -65,6 +65,7 @@ async function load() {
   sideImg = L.walkSide ? await img(L.walkSide.file).catch(() => null) : null; // side-view walk bodies; without them sideways walkers keep the front/back body
   buildErasers();
   initLounge(); initBooks();
+  if (L.kitchen) { const K = L.kitchen; KIT.spout = K.spout; KIT.tray = K.tray; KIT.screen = K.screen; KIT.mug = 0.62 * K.s; } // round 5: the kitchen on the slanted wall
   fx = makeFx(L, rnd, { ships: shipImgs, water: waterM, boats: boatI, boatsLit: boatL });
   D.city = () => fx.counts(); D.fireworks = () => fx.fireworks(); D.fw = () => fx.fwCount();
   D.glassClip = { panes: fx.glassPanes(), masks: ['fg', 'sky'], water: !!waterM };
@@ -586,7 +587,7 @@ function stepWalk(w, dt) {
     return;
   }
   if (g.phase === 'settle') return;
-  const hu = hAt(g.y), cruise = Math.max(42, hu * 0.75), rem = (g.dir > 0 ? g.i === g.len.length - 1 ? (1 - g.f) * g.len[g.i] : 99 : g.i === 0 ? g.f * g.len[0] : 99);
+  const hu = hAt(g.y), cruise = Math.max(42, hu * 0.75) * (g.errand ? BOOKS.pace : 1), rem = (g.dir > 0 ? g.i === g.len.length - 1 ? (1 - g.f) * g.len[g.i] : 99 : g.i === 0 ? g.f * g.len[0] : 99);
   g.v += (cruise * Math.max(0.4, Math.min(1, rem / 16)) - g.v) * Math.min(1, dt * 6); // eased start and stop
   let d = g.v * dt;
   while (d > 0) {
@@ -821,9 +822,10 @@ function stepAmbient(dt) {
     // Dashboards keeps roaming even while her status is working (laptop life in the kitchen)
     if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if ((busy(w) && !isDash(w.bot) && !w.seat.roam || !QUIET.has(w.bot.id)) && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || (g.phase === 'hang' || g.phase === 'petting') && freeWalkers())) recall(w); }
   }
+  const carrier = BK.box && bookCarrier();
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], dash = isDash(w.bot);
-    if (w.walk || w.seat.stand || w.chatting) continue;
+    if (w.walk || w.seat.stand || w.chatting || w === carrier) continue; // the book carrier takes no breaks: a handoff is due every 40 s
     if (busy(w) && !dash && !w.seat.roam) continue; // only Dashboards and the kitchen bots wander while working
     if (!w.b.wanders || !QUIET.has(w.bot.id) || (w.tripT -= dt) > 0) continue; // only the quieter bots go on breaks
     w.tripT = span(...w.b.tripEvery);
@@ -845,16 +847,26 @@ D.loungeTrip = (i, spot) => { const w = typeof i === 'number' ? wl[i] : findWork
 // so a taken book leaves a gap. Grok (found by name, BOOKS.carrier) now and then walks round the lounge to the case, takes up to 3 books to
 // a bot at its desk and they talk about using them; the books stay on that desk until he fetches them back a few hours later, or carries
 // them on to another bot that needs them. Cosmetic and client-side; one walker at a time, inside the walking cap. ----------
-const BK = { slots: [], stacks: new Map(), run: null, runT: 0, clock: 0, checkT: 0, n: 0, key: '', spr: null, box: null };
+// Round 5 (David, 2026-11-19): the case stands on the slanted left wall (layout bookcase.warp; the slots are in front-on coordinates and each
+// spine is laid onto the wall), with a ladder. Grok climbs it for every handoff, and a new handoff starts at least every 40 s (BOOKS.every):
+// one run chains into the next, and a desk that still has books gives them back when he brings the next ones.
+const BK = { slots: [], stacks: new Map(), run: null, runT: 0, clock: 0, checkT: 0, n: 0, key: '', spr: null, box: null, wp: (x, y) => [x, y], lad: null, last: 0, starts: [], log: [] };
 function initBooks() {
   const B = L.bookcase; BK.slots = []; BK.box = null; if (!B) return;
+  const wv = B.warp && { vx: B.warp.vp[0] * PW, vy: B.warp.vp[1] * PH, ds: B.warp.ds * PW };
+  BK.wp = wv ? (x, y) => { const s = 1 / (1 + x / wv.ds); return [wv.vx * (1 - s), wv.vy + (y - wv.vy) * s]; } : (x, y) => [x, y];
+  BK.lad = B.ladder ? { top: B.ladder.top.map(([x, y]) => [x * PW, y * PH]), foot: B.ladder.foot.map(([x, y]) => [x * PW, y * PH]) } : null;
   const [x0] = B.inner.map(v => v * PW), per = B.slots || 4, W = [15, 13, 16, 14, 12];
   BOOKS.labels.slice(0, B.shelves.length * per).forEach((label, i) => {
     const r = (i / per) | 0, c = i % per, [top, floor] = [B.shelves[r][0] * PH, B.shelves[r][1] * PH], h = (floor - top) * (0.74 + 0.04 * ((i * 7) % 5));
     let x = x0 + 3; for (let j = 0; j < c; j++) x += W[(j + r) % W.length] + 1.6;
-    BK.slots.push({ i, label: String(label), x, y: floor - h, w: W[(c + r) % W.length], h, col: BOOKS.colors[i % BOOKS.colors.length], at: null }); // at: null = on the shelf, else the bot that has it
+    const b = { i, r, label: String(label), x, y: floor - h, w: W[(c + r) % W.length], h, col: BOOKS.colors[i % BOOKS.colors.length], at: null }; // at: null = on the shelf, else the bot that has it
+    const [ax, ay] = BK.wp(b.x, b.y), [bx, by] = BK.wp(b.x + b.w, b.y), [cx, cy] = BK.wp(b.x, b.y + b.h), m = [(bx - ax) / b.w, (by - ay) / b.w, (cx - ax) / b.h, (cy - ay) / b.h];
+    b.m = [...m, ax - m[0] * b.x - m[2] * b.y, ay - m[1] * b.x - m[3] * b.y]; // the spine on the wall: an affine fit of the perspective at this book
+    b.cy = BK.wp(b.x + b.w / 2, b.y + b.h / 2)[1]; // its middle on screen, where Grok's hands go
+    BK.slots.push(b);
   });
-  BK.box = [B.rect[0] * PW, B.rect[1] * PH, B.rect[2] * PW, B.rect[3] * PH];
+  BK.box = B.box ? [B.box[0] * PW, B.box[1] * PH, B.box[2] * PW, B.box[3] * PH] : [B.rect[0] * PW, B.rect[1] * PH, B.rect[2] * PW, B.rect[3] * PH];
   BK.runT = span(...BOOKS.first);
 }
 const shadeHex = (h, f) => { const n = parseInt(h.slice(1), 16); return `rgb(${(n >> 16 & 255) * f | 0},${(n >> 8 & 255) * f | 0},${(n & 255) * f | 0})`; };
@@ -874,11 +886,26 @@ function drawShelfBooks() { // one cached bitmap at screen resolution, redrawn o
   if (BK.key !== key) {
     BK.key = key; const c = BK.spr || (BK.spr = mk(1, 1)); c.width = Math.ceil((bx1 - bx0) * k) + 2; c.height = Math.ceil((by1 - by0) * k) + 2;
     const g = c.getContext('2d'); g.setTransform(k, 0, 0, k, -bx0 * k, -by0 * k);
-    for (const b of BK.slots) if (!b.at) drawSpine(g, b);
+    for (const b of BK.slots) if (!b.at) { g.save(); g.transform(...b.m); drawSpine(g, b); g.restore(); }
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(BK.spr, Math.round(offX + bx0 * k), Math.round(offY + by0 * k));
-  if (env.n > 0) { P(); ctx.globalAlpha = 0.42 * env.n; ctx.fillStyle = '#0d0a18'; for (const b of BK.slots) if (!b.at) ctx.fillRect(b.x, b.y, b.w + 1, b.h); ctx.globalAlpha = 1; } // night: in the room's shade
+  if (env.n > 0) { P(); ctx.globalAlpha = 0.42 * env.n; ctx.fillStyle = '#0d0a18'; for (const b of BK.slots) if (!b.at) { ctx.save(); ctx.transform(...b.m); ctx.fillRect(b.x, b.y, b.w + 1, b.h); ctx.restore(); } ctx.globalAlpha = 1; } // night: in the room's shade
+  drawLadder();
 }
+function drawLadder() { // a walnut library ladder leaning on the case: rungs along the wall's slope, the far rail darker, brass hooks on top
+  const Ld = BK.lad; if (!Ld) return;
+  P(); const [ta, tb] = Ld.top, [fa, fb] = Ld.foot, f = 1 - 0.45 * env.n, N = 15;
+  ctx.lineCap = 'round';
+  for (let i = 1; i < N; i++) { const u = i / N, a = lerp2(ta, fa, u), b = lerp2(tb, fb, u);
+    ctx.strokeStyle = shadeHex('#7a5232', f); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,214,160,${0.22 * f})`; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(a[0], a[1] - 0.9); ctx.lineTo(b[0], b[1] - 0.9); ctx.stroke(); }
+  const rail = (t, b, w, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(t[0] - w / 2, t[1]); ctx.lineTo(t[0] + w / 2, t[1]); ctx.lineTo(b[0] + w / 2 + 0.6, b[1]); ctx.lineTo(b[0] - w / 2 - 0.6, b[1]); ctx.closePath(); ctx.fill(); };
+  rail(tb, fb, 3, shadeHex('#4a2f1b', f)); rail(ta, fa, 3.6, shadeHex('#62402a', f));
+  ctx.fillStyle = `rgba(255,220,170,${0.25 * f})`; ctx.beginPath(); ctx.moveTo(ta[0] - 1.6, ta[1]); ctx.lineTo(fa[0] - 2.2, fa[1]); ctx.lineTo(fa[0] - 1.2, fa[1]); ctx.lineTo(ta[0] - 0.8, ta[1]); ctx.fill();
+  ctx.fillStyle = shadeHex('#c9a25a', f); for (const t of [ta, tb]) ctx.fillRect(t[0] - 2, t[1] - 3, 4, 3.2); // hooks on the case's top rail
+  ctx.fillStyle = 'rgba(6,3,2,.4)'; for (const b of [fa, fb]) { ctx.beginPath(); ctx.ellipse(b[0], b[1] + 0.5, 4, 1.3, 0, 0, 7); ctx.fill(); }
+}
+const ladX = y => { const Ld = BK.lad, t = lerp2(Ld.top[0], Ld.top[1], 0.5), b = lerp2(Ld.foot[0], Ld.foot[1], 0.5); return t[0] + (b[0] - t[0]) * Math.max(0, Math.min(1, (y - t[1]) / (b[1] - t[1]))); }; // the ladder's middle at a height
 function deskBooksAt(s) { // where a stack lies on a desk: beside the monitor foot, in front of the screen, behind the bot
   if (s.bk) return s.bk;
   const m = monitors.find(m => m.desk === s.desk && m.idx === s.idx), side = s.idx ? 1 : -1;
@@ -904,26 +931,39 @@ const pickNew = (list, R) => { let s = pick(list); for (let i = 0; i < 4 && R.us
 const fillBooks = (s, books) => s.replace('{b}', books.map(b => b.label).join(' + ')).replace('{1}', books[0]?.label || '').replace('{2}', (books[1] || books[0])?.label || '');
 const bookCarrier = () => findWorker(BOOKS.carrier);
 const deskBot = o => !o.seat.bag && !o.seat.roam && !o.seat.stand && !o.walk && !visiting(o) && !o.chatting;
-// a run is a list of stops: take (at the case), collect (at a desk), talk (leave the books at a desk), shelve (at the case); then home
+// a run is a list of stops: take (at the case, up the ladder), collect (at a desk), talk (leave the books at a desk), shelve (at the case); then home
+function planRun(w, toRef) { // one handoff: the ladder, then a random desk bot (one whose books are due, or any with books when the shelf runs low, first)
+  const B = L.bookcase, cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = o => ({ node: o.seat.node, pos: visitOf(o.seat), to: o });
+  const held = [...BK.stacks].filter(([o]) => o !== w && wl.includes(o) && !visiting(o)), free = BK.slots.filter(b => !b.at);
+  const named = toRef && findWorker(toRef);
+  let pool = named ? [named] : wl.filter(o => o !== w && deskBot(o));
+  if (!named) {
+    const back = pool.filter(o => BK.stacks.has(o) && (BK.stacks.get(o).due <= BK.clock || free.length < BOOKS.low));
+    if (back.length) pool = back; else { const busyPool = pool.filter(busy); if (busyPool.length && rnd() < 0.7) pool = busyPool; }
+  }
+  const o = pool[(rnd() * pool.length) | 0];
+  if (!o || o === w || !deskBot(o)) return null;
+  const from = held.filter(([h]) => h !== o);
+  if (from.length && (rnd() < BOOKS.passOn || free.length === 0)) { const [h, st] = from[(rnd() * from.length) | 0]; return [{ ...at(h), kind: 'collect', pass: true, books: st.books }, { ...at(o), kind: 'talk' }]; }
+  if (!free.length) return null;
+  const first = free[(rnd() * free.length) | 0], row = free.filter(b => b.r === first.r && b !== first), pickB = [first]; // the books come off one shelf: one climb
+  const n = BOOKS.most[0] + ((rnd() * (BOOKS.most[1] - BOOKS.most[0] + 1)) | 0);
+  while (pickB.length < n && row.length) pickB.push(row.splice((rnd() * row.length) | 0, 1)[0]);
+  return [{ ...cs, kind: 'take', books: pickB, put: [] }, { ...at(o), kind: 'talk' }];
+}
+const runName = stops => stops.map(s => s.kind + (s.to ? ':' + s.to.bot.name : '')).join(' > ');
+function handoffStarted(stops) { if (!stops.some(s => s.kind === 'talk')) return; BK.last = BK.clock; BK.starts.push(+BK.clock.toFixed(2)); if (BK.starts.length > 50) BK.starts.shift(); BK.runT = span(...BOOKS.every); }
 function bookRun(force, toRef, retOnly) {
   const w = bookCarrier(), B = L.bookcase;
-  if (!w || !B || BK.run || w.walk || w.seat.bag || w.seat.stand || (!force && (!freeWalkers() || w.chatting || w.pose.dur > 0))) return false;
-  const now = BK.clock, cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = o => ({ node: o.seat.node, pos: visitOf(o.seat), to: o });
-  const held = [...BK.stacks].filter(([o]) => o !== w && wl.includes(o) && !visiting(o));
-  const due = held.filter(([, st]) => st.due <= now).sort((a, b) => a[1].due - b[1].due)[0];
+  const late = BK.clock - BK.last > BOOKS.every[1]; // overdue: the walking cap no longer holds him back
+  if (!w || !B || BK.run || w.walk || w.seat.bag || w.seat.stand || (!force && (!late && !freeWalkers() || w.chatting || w.pose.dur > 0))) return false;
+  const cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = o => ({ node: o.seat.node, pos: visitOf(o.seat), to: o });
   let stops = null;
-  if (due || retOnly) { const [o, st] = due || held[0] || []; if (o) stops = [{ ...at(o), kind: 'collect', books: st.books }, { ...cs, kind: 'shelve', books: st.books }]; }
-  else {
-    const named = toRef && findWorker(toRef), pool = named ? [named] : wl.filter(o => o !== w && deskBot(o) && !BK.stacks.has(o));
-    const busyPool = pool.filter(busy), list = busyPool.length && rnd() < 0.7 ? busyPool : pool, o = list[(rnd() * list.length) | 0];
-    if (!o || o === w || !deskBot(o)) return false;
-    const free = BK.slots.filter(b => !b.at), from = held.filter(([h]) => h !== o);
-    if (from.length && (rnd() < BOOKS.passOn || free.length === 0)) { const [h, st] = from[(rnd() * from.length) | 0]; stops = [{ ...at(h), kind: 'collect', pass: true, books: st.books }, { ...at(o), kind: 'talk' }]; }
-    else if (free.length) { const n = Math.min(free.length, 1 + ((rnd() * 3) | 0)), pickB = []; while (pickB.length < n) { const b = free[(rnd() * free.length) | 0]; if (!pickB.includes(b)) pickB.push(b); } stops = [{ ...cs, kind: 'take', books: pickB }, { ...at(o), kind: 'talk' }]; }
-  }
+  if (retOnly) { const held = [...BK.stacks].filter(([o]) => o !== w && wl.includes(o) && !visiting(o)), [o, st] = held.sort((a, b) => a[1].due - b[1].due)[0] || []; if (o) stops = [{ ...at(o), kind: 'collect', books: st.books }, { ...cs, kind: 'shelve', books: st.books }]; }
+  else stops = planRun(w, toRef);
   if (!stops) return false;
-  const R = BK.run = { w, stops, i: -1, t: 0, n: 0, next: 0, done: 0, said: 0, books: [], node: w.seat.node, used: new Set() };
-  nextStop(w, R); D.books.run = stops.map(s => s.kind + (s.to ? ':' + s.to.bot.name : '')).join(' > ');
+  const R = BK.run = { w, stops, i: -1, t: 0, n: 0, next: 0, done: 0, said: 0, books: [], ret: [], node: w.seat.node, used: new Set() };
+  handoffStarted(stops); nextStop(w, R); D.books.run = runName(stops);
   return true;
 }
 function legTo(w, R, from, st) { // a walk from `from` (the seat or where the bot stands) to the stop
@@ -933,8 +973,10 @@ function legTo(w, R, from, st) { // a walk from `from` (the seat or where the bo
   return { pts, len };
 }
 function nextStop(w, R) {
-  R.i++; R.t = 0; R.n = 0; R.next = 0.3; R.done = 0; R.said = 0;
-  const g = w.walk, st = R.stops[R.i];
+  R.i++; R.t = 0; R.n = 0; R.next = 0.3; R.done = 0; R.said = 0; R.cl = null; R.used.clear();
+  const g = w.walk; let st = R.stops[R.i];
+  if (!st && g && BK.runT <= BOOKS.chain) { const more = planRun(w); if (more) { if (more[0].put) more[0].put = R.ret.slice(); R.stops.push(...more); handoffStarted(more); D.books.run = runName(more); st = R.stops[R.i]; } } // the next handoff is due: straight on
+  if (!st && g && R.ret.length) { const B = L.bookcase; R.stops.push({ node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH], kind: 'shelve', books: R.ret.slice() }); st = R.stops[R.i]; } // what he brought back goes up first
   if (!st) { // home: walk the last leg's network back to the seat
     const pts = pathPts([w.seat.feet, ...navPath(w.seat.node, R.node).map(n => nav[n]), [g.x, g.y]]), len = [];
     if (pts.length < 2) pts.unshift([w.seat.feet[0] - 0.5, w.seat.feet[1]]);
@@ -946,21 +988,32 @@ function nextStop(w, R) {
     w.walk = { to: st.to || null, pts, len, i: 0, front: true, f: 0, dir: 1, phase: 'rise', t: 0, x: pts[0][0], y: pts[0][1], stride: 0, v: 0, face: 1, legs: 'side', prev: null, fade: 0, note: '', demo: false, say: null, sayOff: 0, errand: R, holding: null, books: R.books };
     leave(w, w.walk);
   } else { const { pts, len } = legTo(w, R, [g.x, g.y], st); Object.assign(g, { pts, len, i: 0, f: 0, dir: 1, phase: 'go', t: 0, v: 0, to: st.to || null }); }
-  R.node = st.node; layoutDirty = true;
+  R.node = st.node; layoutDirty = true; BK.log.push([+BK.clock.toFixed(1), st.kind + (st.to ? ':' + st.to.bot.name : '')]); if (BK.log.length > 60) BK.log.shift();
 }
 function releaseBot(o, R) { if (!o) return; if (o.chatting === R) o.chatting = null; o.sayNow = null; o.pose.chatTo = 0; o.pose.nod = 0; o.look = 0; if (!o.walk && o.pose.b > 0) turnTo(o, 0, TURN_T); layoutDirty = true; }
 function stepErrand(w, g, dt) {
   const R = g.errand, st = R.stops[R.i], o = st.to; R.t += dt;
   if (g.say && (g.sayOff -= dt) <= 0) { g.say = null; layoutDirty = true; }
-  if (st.kind === 'take' || st.kind === 'shelve') { // at the case, back to the viewer: the books leave (or go back to) their slots one by one
-    if (R.t < dt * 1.5) { g.prev = { front: g.front, face: g.face }; g.fade = FADE; g.front = false; }
-    const n = st.books.length, t0 = 0.7, per = 0.45;
-    while (R.done < n && R.t >= t0 + R.done * per) {
-      const b = st.books[R.done++];
-      if (st.kind === 'take') { b.at = w; R.books.push(b); } else { b.at = null; const j = R.books.indexOf(b); if (j >= 0) R.books.splice(j, 1); }
+  if (st.kind === 'take' || st.kind === 'shelve') { // at the case, back to the viewer: up the ladder, the books leave (or go back to) their slots one by one, down again
+    if (!R.cl) {
+      g.prev = { front: g.front, face: g.face }; g.fade = FADE; g.front = false;
+      const put = st.kind === 'shelve' ? st.books : st.put || [], take = st.kind === 'take' ? st.books : [], all = [...put, ...take], hu = hAt(g.y);
+      const high = all.length ? Math.min(...all.map(b => b.cy)) : g.y, topY = BK.lad ? Math.max(...BK.lad.top.map(p => p[1])) : g.y;
+      const lift = BK.lad ? Math.max(0, Math.min(g.y - topY - hu * 0.45, g.y - hu * BOOKS.reach - high)) : 0, up = lift / BOOKS.climb;
+      R.cl = { x0: g.x, lift, up, put, take, t1: 0.3 + up, t2: 0.3 + up + 0.25 + all.length * 0.42 + 0.3 };
+    }
+    const C = R.cl, n = C.put.length + C.take.length;
+    const u = R.t < 0.3 ? 0 : R.t < C.t1 ? (R.t - 0.3) / C.up : R.t < C.t2 ? 1 : Math.max(0, 1 - (R.t - C.t2) / C.up), e = u * u * (3 - 2 * u);
+    const prevLift = g.lift || 0; g.lift = C.lift * e; g.climb = R.t >= 0.3 && (R.t < C.t1 || R.t >= C.t2) && C.lift > 0;
+    if (g.climb) g.stride += Math.abs(g.lift - prevLift) / Math.max(20, hAt(g.y) * 0.3) * Math.PI;
+    if (BK.lad) g.x = C.x0 + (ladX(g.y - g.lift) - ladX(g.y)) * 0.9; // lean in with the ladder
+    while (R.done < n && R.t >= C.t1 + 0.25 + R.done * 0.42) {
+      const b = R.done < C.put.length ? C.put[R.done] : C.take[R.done - C.put.length]; R.done++;
+      if (R.done <= C.put.length) { b.at = null; for (const A of [R.books, R.ret]) { const j = A.indexOf(b); if (j >= 0) A.splice(j, 1); } }
+      else { b.at = w; R.books.push(b); }
       booksChanged();
     }
-    if (R.t >= t0 + n * per + 0.4) { g.prev = { front: g.front, face: g.face }; g.fade = FADE; g.front = true; g.holding = R.books.length ? 'books' : null; g.books = R.books; nextStop(w, R); }
+    if (R.t >= C.t2 + C.up + 0.2) { g.lift = 0; g.climb = false; g.x = C.x0; g.prev = { front: g.front, face: g.face }; g.fade = FADE; g.front = true; g.holding = R.books.length ? 'books' : null; g.books = R.books; nextStop(w, R); }
     return;
   }
   g.front = true;
@@ -983,29 +1036,32 @@ function stepErrand(w, g, dt) {
     else { g.say = null; o.sayNow = fillBooks(pickNew(Lb.worker, R), R.books); o.sayOff = BOOKS.line; o.pose.chatTo = 1; o.pose.nod = 0; }
     layoutDirty = true; R.next = R.t + BOOKS.line + 0.25;
   }
-  if (gone || (R.t > BOOKS.talk && R.n % 2 === 0 && R.t >= R.next - 0.1)) { // the books stay on the desk
-    if (o && R.books.length) { BK.stacks.set(o, { books: R.books.slice(), due: BK.clock + span(...BOOKS.keep) }); for (const b of R.books) b.at = o; }
-    R.books.length = 0; g.holding = null; booksChanged(); releaseBot(o, R); g.say = null; nextStop(w, R);
+  if (gone || ((R.t > BOOKS.talk || BK.clock - BK.last > BOOKS.hurry) && R.n % 2 === 0 && R.t >= R.next - 0.1)) { // the books stay on the desk (a late run keeps it to two bubbles)
+    if (o && R.books.length) {
+      const old = BK.stacks.get(o); if (old) for (const b of old.books) { b.at = w; if (!R.ret.includes(b)) R.ret.push(b); } // the last ones go back with him
+      BK.stacks.set(o, { books: R.books.slice(), due: BK.clock + span(...BOOKS.keep) }); for (const b of R.books) b.at = o;
+    }
+    R.books.length = 0; g.books = R.ret; g.holding = R.ret.length ? 'books' : null; booksChanged(); releaseBot(o, R); g.say = null; nextStop(w, R);
   }
 }
 function abortRun(R) { // the carrier's walk was replaced (seat change): whatever he carried is back on the shelf
-  for (const b of R.books) b.at = null; R.books.length = 0;
+  for (const b of [...R.books, ...R.ret]) b.at = null; R.books.length = 0; R.ret.length = 0;
   for (const st of R.stops) if (st.to) releaseBot(st.to, R);
   BK.run = null; booksChanged();
 }
 function stepBooks(dt) {
   if (!BK.box) return;
-  BK.clock += dt;
+  BK.clock += dt; BK.runT -= dt; // the next handoff counts from the start of the last one
   if (BK.run) { if (BK.run.w.walk?.errand !== BK.run) abortRun(BK.run); return; }
   if ((BK.checkT -= dt) <= 0) {
     BK.checkT = 10;
     for (const [o, st] of BK.stacks) if (!wl.includes(o)) { for (const b of st.books) b.at = null; BK.stacks.delete(o); booksChanged(); } // a bot that left: its books go home
-    if ([...BK.stacks.values()].some(st => st.due <= BK.clock) && bookRun(false)) return;
   }
-  if ((BK.runT -= dt) <= 0) { BK.runT = bookRun(false) ? span(...BOOKS.every) : 20 + rnd() * 40; }
+  if (BK.runT <= 0 && !bookRun(false)) BK.runT = span(...BOOKS.retry);
 }
 D.books = { run: '' };
 D.bookRun = (to, ret) => bookRun(true, to, ret); // test aid: Grok fetches books now (optionally for a named bot); ret = take a desk's books back
+D.bookStarts = () => BK.starts.slice(); D.bookLog = () => BK.log.slice(); // test aids: book clock (s) at each handoff start, and when each stop's walk began
 D.bookState = () => ({ shelf: BK.slots.filter(b => !b.at).map(b => b.label), desks: [...BK.stacks].map(([o, st]) => ({ bot: o.bot.name, books: st.books.map(b => b.label), dueIn: Math.round(st.due - BK.clock) })), run: BK.run ? D.books.run : null });
 
 // ---------- seated fidgets (idle only): lean, swivel, stretch, look around, head scratch; soft envelopes, no two alike ----------
@@ -1189,7 +1245,8 @@ function buildItems() {
   for (const s of seats) if (s.chair) items.push({ k: s.clip + 0.2, t: 2, r: s });
   for (const w of workers.values()) items.push({ k: 0, t: 3, r: w });
   items.push({ k: 9997, t: 8, r: 'steam' }); for (const n of FRONT()) items.push({ k: 9998, t: 4, r: n });
-  if (BK.box) { items.push({ k: BK.box[3] - 1, t: 11, r: 'books' }); for (const w of workers.values()) items.push({ k: 0, t: 12, r: w }); } // the books on the shelves, and any left on a desk
+  // round 5: the case and its ladder stand against the slanted wall, so they sort just behind the ladder's feet: a climber is drawn over them
+  if (BK.box) { items.push({ k: BK.lad ? Math.min(BK.lad.foot[0][1], BK.lad.foot[1][1]) - 2 : BK.box[3] - 1, t: 11, r: 'books' }); for (const w of workers.values()) items.push({ k: 0, t: 12, r: w }); } // the books on the shelves, and any left on a desk
   items.push({ k: 590, t: 10, r: 'kitchen' }); // the coffee pour: over the painted kitchen, behind the bots standing there
   items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
   for (const d of dogs) items.push({ k: 0, t: 5, r: d });
@@ -1300,16 +1357,16 @@ function drawUpper(w, g, front, face, x, hip, hu0, sway, alpha, side) {
   return hip + hu0 * 0.035 - hu * hem[0];
 }
 function drawWalker(w, t, alpha = 1) {
-  const g = w.walk, moving = g.phase === 'go' || g.phase === 'back', front = g.front, x = g.x, f = g.y, hu = hAt(f), ww = hu * 0.64, cyc = g.stride / (Math.PI * 2);
+  const g = w.walk, moving = g.phase === 'go' || g.phase === 'back', front = g.front, x = g.x, lift = g.lift || 0, f = g.y - lift, hu = hAt(g.y), ww = hu * 0.64, cyc = g.stride / (Math.PI * 2); // lift: up the book ladder
   const petting = g.phase === 'petting', crouch = petting ? 0.34 + Math.sin(t * 7) * 0.04 : 0, bag = g.trip?.spot?.bag && g.sitK > 0 ? g.trip.spot : null, sk = bag ? g.sitK * g.sitK * (3 - 2 * g.sitK) : 0;
   let set = front ? 'front' : 'back', i = 0;
-  if (moving) { set = g.legs; const n = L.legs[set].length; i = ((cyc * n) % n + n) % n | 0; }
+  if (moving || g.climb) { set = moving ? g.legs : 'back'; const n = L.legs[set].length; i = ((cyc * n) % n + n) % n | 0; }
   const bob = moving ? Math.sin(g.stride * 2) * hu * 0.006 : g.phase === 'hang' ? Math.sin(t * 2.3 + w.ph) * hu * 0.005 : Math.sin(t * 2 + w.ph) * hu * 0.004;
   const foot = L.legs[set + 'Foot'][i], ref = L.legs[set === 'side' ? 'sideFoot' : set + 'Foot'][0]; // side frames carry their own hip drop
   const hip = f - hu * LEG_H * (1 - crouch) * (foot - L.legs.hip) / (ref - L.legs.hip) + bob;
   const sway = moving ? Math.sin(g.stride) * 0.03 : g.phase === 'talk' ? Math.sin(t * 3.2) * 0.03 : petting ? 0.16 * g.face + Math.sin(t * 7) * 0.03 : 0;
   if (sk < 1) {
-    P(); ctx.globalAlpha = 0.42 * alpha * (1 - sk); ctx.drawImage(shadowSpr, x - ww * 0.42, f - hu * 0.05, ww * 0.84, hu * 0.11);
+    P(); ctx.globalAlpha = 0.42 * alpha * (1 - sk) * Math.max(0.25, 1 - lift / 80); ctx.drawImage(shadowSpr, x - ww * 0.42, g.y - hu * 0.05, ww * 0.84, hu * 0.11);
     ctx.globalAlpha = alpha * (1 - sk); drawLegSet(set, i, x, hip, f, hu, ww, g.face);
     let top;
     if (g.fade > 0 && g.prev) { const m = g.fade / FADE; drawUpper(w, g, g.prev.front, g.prev.face, x, hip, hu, sway, m, g.prev.side && moving); top = drawUpper(w, g, front, g.face, x, hip, hu, sway, 1 - m * 0.5, g.side && moving); }
@@ -1696,7 +1753,7 @@ function renderLite(t, dt) {
   }
   if (KIT.live > 0) { // the coffee task: only the mug changes; the whole corner (with the bot turning) at the start and the end
     KIT.live -= dt; const k = kitTask();
-    if (!k || k.t < 0.3) dirty.push(dev(90, 440, 275, 640)); else dirty.push(dev(160, 468, 206, 522)); // round 2: the machine moved right
+    if (!k || k.t < 0.3) dirty.push(dev(90, 420, 275, 640)); else dirty.push(dev(Math.min(KIT.screen[0], KIT.spout[0]) - 16, Math.min(KIT.screen[1], KIT.spout[1]) - 12, Math.max(KIT.screen[2], KIT.spout[0]) + 18, KIT.tray + 8)); // round 5: the box follows the machine on the slanted wall
   }
   cityDt += dt;
   if ((cityT -= dt) <= 0) { cityT = LITE.cityEvery; renderCity(t, cityDt); cityDt = 0; dirty.push(cityBox); }

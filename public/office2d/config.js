@@ -60,18 +60,29 @@ export const DOG = { size: 1.5 };
 export const WALK = { maxMoving: 3, quietShare: 0.5 };
 
 // ---------- skill books (David, 2026-11-12) ----------
-// The tall bookcase under the clock holds one book per skill, 4 to a shelf, top shelf first. Rename or reorder labels freely; keep them short,
-// they are printed on the spine. Grok (found by name) now and then takes up to 3 books to a bot at its desk, they talk about using them, and
-// the books stay on that desk until he fetches them back (keep) or carries them on to another bot that needs them (passOn). Times in seconds.
+// The tall bookcase on the left wall holds one book per skill, 4 to a shelf, top shelf first. Rename or reorder labels freely; keep them short,
+// they are printed on the spine. Grok (found by name) climbs the ladder on the case, takes a book or two from one shelf, climbs down, takes
+// them to a random bot at its desk and they talk about using them. Round 5 (David, 2026-11-19): a new handoff starts at least every 40 s;
+// a run that is still going when the next one is due goes straight on to it. The books stay on that desk until Grok brings that bot the next
+// ones (he takes the old ones back up the ladder), or until they are due (keep) or the shelf runs low (low): then those desks are visited first.
+// Times in seconds.
 export const BOOKS = {
   labels: ['sk1', 'sk2', 'sk3', 'sk4', 'sk5', 'sk6', 'sk7', 'sk8', 'sk9', 'sk10', 'sk11', 'sk12', 'sk13', 'sk14', 'sk15', 'sk16', 'sk17', 'sk18', 'sk19', 'sk20'],
   colors: ['#7b2d26', '#2d4b6e', '#3f5e3a', '#8a6326', '#5b3a6e', '#2a5f5c', '#8c4a2a', '#3e3f70', '#6e5232', '#1f4a3c'], // spine colours, repeating
-  carrier: 'Grok',          // the bot that fetches the books
-  first: [120, 360],        // before the first run after the page loads
-  every: [900, 2400],       // between runs
-  keep: [7200, 14400],      // how long books stay on a desk before Grok takes them back (2-4 hours)
-  passOn: 0.35,             // chance a run carries books from one desk straight on to another bot
-  talk: 12, line: 2.3,      // talk at the desk, and each bubble
+  carrier: 'Grok',          // the bot that fetches the books (bot 1); he takes no lounge breaks
+  first: [4, 10],           // before the first handoff after the page loads
+  every: [28, 36],          // from one handoff's start to the next (keep the top under 40); a late one ignores the walking cap
+  chain: 6,                 // a run ending this close to the next handoff goes straight back to the ladder instead of home
+  retry: [2, 4],            // when Grok cannot go yet (mid-chat, walking cap)
+  keep: [120, 300],         // how long books stay on a desk before Grok brings them back (was 2-4 hours before round 5)
+  low: 10,                  // fewer books than this on the shelf: the next handoffs go to desks that have books, which give them back
+  most: [1, 2],             // books per handoff, all from one shelf
+  passOn: 0,                // chance a run carries books from one desk straight on to another (no ladder); used anyway if the shelf is empty
+  pace: 1.7,                // Grok walks this much faster than a stroll on book runs (a handoff every 40 s)
+  climb: 130,               // ladder speed, plate px per second
+  reach: 0.62,              // hands at this many upper-body heights above the feet when he takes a book
+  talk: 7, line: 2.3,       // talk at the desk (4 bubbles), and each bubble
+  hurry: 28,                // a handoff this long after the last one started keeps the talk to two bubbles, so the next starts in time
   lines: {                  // {b} = the books, {1} {2} = the first and second book
     give: ['brought you {b}', '{b} for this job', 'try {b} here'],
     grok: ['start with {1}', '{1} covers step one', 'then {2} for the rest', 'ping me if stuck', 'keep them a while'],
