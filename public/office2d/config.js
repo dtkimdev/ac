@@ -52,7 +52,7 @@ export const BUBBLE = { size: 0.8 };
 // beg / begWithVisitors: beg near the lounge visitors. wander and zoomies (running about alone) are off; nap and rest are short breaks.
 export const DOG_MOODS = { wander: 0, affection: 24, ask: 10, belly: 12, nap: 6, rest: 5, beg: 4, begWithVisitors: 30, zoomies: 0 };
 // Corgi size: 1 = the original size, 1.5 = 50% bigger (David, 2026-11-10).
-export const DOG = { size: 1.5 };
+export const DOG = { size: 1.5, bedNap: 0.5 }; // bedNap: share of naps taken curled up on the dog beds under the lounge table (round 6)
 // Walking: at most this many bots move about the room at once (David, 2026-11-10: no more than 3). Others wait their turn: a trip, a visit
 // or the walk home starts when someone else has arrived. Real interactions from the feed wait too (up to 90 s).
 // quietShare: only this share of the bots, those with the lowest usage, take breaks, loiter or roam (0.5 = the bottom half). Busy bots stay at

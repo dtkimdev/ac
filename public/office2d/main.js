@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=35'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=36'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -807,7 +807,7 @@ function stepHang(w, g, dt) {
     g.petted = g.pet = true; g.pts.push([tx, ty]); g.len.push(Math.hypot(tx - g.x, ty - g.y)); g.i = g.len.length - 1; g.f = 0; g.dir = 1; g.phase = 'go'; g.t = 0; g.say = null;
   } else say(g, pick(w.b.snacks), 2.2);
 }
-const dogNear = g => dogs.filter(d => d.y > 590 && d.x > 60 && d.x < 480).sort((a, b) => Math.hypot(a.x - g.x, a.y - g.y) - Math.hypot(b.x - g.x, b.y - g.y))[0];
+const dogNear = g => dogs.filter(d => d.pose !== 'curl' && d.y > 590 && d.x > 60 && d.x < 480).sort((a, b) => Math.hypot(a.x - g.x, a.y - g.y) - Math.hypot(b.x - g.x, b.y - g.y))[0];
 let ambT = 0;
 function dashVisit(w) { // Dashboards leaves the bean bag to check in at a desk, then walks back
   const targets = wl.filter(o => o !== w && !o.seat.stand && !o.seat.bag && !o.walk && !visiting(o) && !busy(o) && !o.chatting);
@@ -853,8 +853,8 @@ D.loungeTrip = (i, spot) => { const w = typeof i === 'number' ? wl[i] : findWork
 const BK = { slots: [], stacks: new Map(), run: null, runT: 0, clock: 0, checkT: 0, n: 0, key: '', spr: null, box: null, wp: (x, y) => [x, y], lad: null, last: 0, starts: [], log: [] };
 function initBooks() {
   const B = L.bookcase; BK.slots = []; BK.box = null; if (!B) return;
-  const wv = B.warp && { vx: B.warp.vp[0] * PW, vy: B.warp.vp[1] * PH, ds: B.warp.ds * PW };
-  BK.wp = wv ? (x, y) => { const s = 1 / (1 + x / wv.ds); return [wv.vx * (1 - s), wv.vy + (y - wv.vy) * s]; } : (x, y) => [x, y];
+  const wv = B.warp && { vx: B.warp.vp[0] * PW, vy: B.warp.vp[1] * PH, ds: B.warp.ds * PW, u: (B.warp.u || 0) * PW }; // u: round 6, the case's front stands out from the wall
+  BK.wp = wv ? (x, y) => { const s = 1 / (1 + x / wv.ds); return [wv.vx - (wv.vx - wv.u) * s, wv.vy + (y - wv.vy) * s]; } : (x, y) => [x, y];
   BK.lad = B.ladder ? { top: B.ladder.top.map(([x, y]) => [x * PW, y * PH]), foot: B.ladder.foot.map(([x, y]) => [x * PW, y * PH]) } : null;
   const [x0] = B.inner.map(v => v * PW), per = B.slots || 4, W = [15, 13, 16, 14, 12];
   BOOKS.labels.slice(0, B.shelves.length * per).forEach((label, i) => {
@@ -1090,6 +1090,10 @@ const zoneKey = (x, y, hw = 0) => { for (let i = 0; i < zones.length; i++) { con
 // ---------- corgi: mood state machine on the floor graph (layout.dog): weighted random moods, variable durations, eased
 // starts and stops, smooth turns; poses come from the painted atlas; depth-sorted by its feet ----------
 let dog = null, dogs = [], zSpr = null; // `dog` is the one being stepped; outside the step it is the primary (corgi), dogs[1] is its brown twin
+// Round 6 (David, 2026-11-19): two dog beds under the lounge table (layout lounge.beds, drawn into the room picture). Some naps (DOG.bedNap)
+// are taken there, curled up; a dog on its bed sorts just behind the table, so the table's legs and top stand in front of it.
+let beds = [];
+const bedKey = () => (occluders.find(o => o.mask === 'table')?.depth ?? 652) - 0.5;
 function newDog(start, im) {
   const N = nav, adj = dogAdj();
   return { im, N, adj, fr: L.corgi.frames, x: N[start][0], y: N[start][1], node: start, path: [], mood: 'nap', pose: DEMO ? 'sit' : 'sleep', t: DEMO ? 1.5 : 5 + rnd() * 6, face: 1, fs: 1, ph: 0, v: 0, pace: 1, seq: [], by: null, zoom: 0 };
@@ -1097,6 +1101,7 @@ function newDog(start, im) {
 function initDog() {
   const twin = L.dog.rest.find(r => r[0] !== L.dog.start)[0];
   dogs = [newDog(L.dog.start, dogImg), newDog(twin, dogImg2)]; dog = dogs[0];
+  beds = (L.lounge.beds || []).map((b, i) => ({ i, node: b.node, x: b.p[0] * PW, y: b.p[1] * PH }));
   zSpr = mk(48, 48); { const g = zSpr.getContext('2d'); g.font = `italic 700 34px Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.shadowColor = 'rgba(200,220,255,.9)'; g.shadowBlur = 8; g.fillStyle = 'rgba(250,246,255,.95)'; g.fillText('z', 24, 25); }
   dogs.forEach((d, i) => { d.out = { mode: d.pose, mood: d.mood, x: d.x, y: d.y, node: d.node, by: null }; D[i ? 'corgi2' : 'corgi'] = d.out; });
@@ -1106,7 +1111,7 @@ function initDog() {
 const DOG_SKIP = ['j3'];
 let dogAdjC = null; const dogAdj = () => { if (dogAdjC) return dogAdjC; const skip = new Set(DOG_SKIP.map(n => L.nav.name[n])); dogAdjC = navAdj().map((a, i) => skip.has(i) ? [] : a.filter(([b]) => !skip.has(b))); return dogAdjC; };
 const dogPath = (a, b) => navPath(a, b, dogAdj());
-const nearestNode = (x, y) => { let best = 0, bd = 1e9; const adj = dogAdj(); dog.N.forEach(([nx, ny], i) => { if (!adj[i].length) return; const d = Math.hypot(nx - x, ny - y); if (d < bd) { bd = d; best = i; } }); return [best, bd]; };
+const nearestNode = (x, y) => { let best = 0, bd = 1e9; const adj = dogAdj(); dog.N.forEach(([nx, ny], i) => { if (!adj[i].length || beds.some(b => b.node === i)) return; const d = Math.hypot(nx - x, ny - y); if (d < bd) { bd = d; best = i; } }); return [best, bd]; };
 const span = (a, b) => a + rnd() * (b - a);
 function dogGo(node, pace, seq) { // walk to node at pace, then play seq = [[pose, seconds, fn?], ...]; an empty path plays seq right here
   const d = dog, o = dogs.find(x => x !== d), to = o.path.length ? o.path[o.path.length - 1] : o.node;
@@ -1127,7 +1132,7 @@ function pickFriend() { // a bot the dog can reach: at a desk, in the kitchen or
 }
 function loungeBots() { const o = []; for (let i = 0; i < wl.length; i++) if (wl[i].walk?.phase === 'hang') o.push(wl[i]); return o; }
 function dogMood(m, w) {
-  const d = dog, K = L.dog.beg; d.mood = m; d.by = null; d.zoom = 0;
+  const d = dog, K = L.dog.beg; d.mood = m; d.by = null; d.zoom = 0; d.bed = null;
   switch (m) {
     case 'wander': { // varied pace: a trot, or a slow sniff with pauses
       const slow = rnd() < 0.5, n = (rnd() * d.N.length) | 0;
@@ -1148,7 +1153,9 @@ function dogMood(m, w) {
       const [node] = nearestNode(...at());
       return dogGo(node, span(1, 1.3), seq);
     }
-    case 'nap': { const c = L.dog.rest.filter(r => r[1] === 'sleep'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.9), [['sleep', span(30, 95)]]); }
+    case 'nap': { const o = dogs.find(x => x !== d), free = beds.filter(b => b.i !== o?.bed);
+      if (free.length && rnd() < DOG.bedNap) { const b = free[(rnd() * free.length) | 0]; d.bed = b.i; return dogGo(b.node, span(0.6, 0.9), [['curl', span(40, 110), () => { d.face = b.x < 310 ? 1 : -1; }]]); } // curled up on a bed under the table
+      const c = L.dog.rest.filter(r => r[1] === 'sleep'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.9), [['sleep', span(30, 95)]]); }
     case 'rest': { const c = L.dog.rest.filter(r => r[1] === 'lie'), r = c[(rnd() * c.length) | 0]; return dogGo(r[0], span(0.6, 0.95), [['lie', span(14, 42)]]); }
     case 'beg': {
       const treat = () => { const b = loungeBots(); if (b.length && rnd() < 0.5) { const o = b[(rnd() * b.length) | 0]; say(o.walk, '🍪', 2.2); d.seq.unshift(['happy', span(2, 3.2)]); } };
@@ -1166,9 +1173,10 @@ function dogNext() {
   for (const [m, wt] of W) if ((r -= wt) <= 0) return dogMood(m);
   dogMood('wander');
 }
-function dogPetted(w) { const d = dog = w.walk.petDog; d.mood = 'happy'; d.by = w; d.path = []; d.v = 0; d.zoom = 0; d.face = w.walk.x > d.x ? 1 : -1; d.seq = [['happy', 3.6], ['sit', span(2, 4)]]; dogSeq(); dog = dogs[0]; }
+function dogPetted(w) { const d = dog = w.walk.petDog; d.bed = null; d.mood = 'happy'; d.by = w; d.path = []; d.v = 0; d.zoom = 0; d.face = w.walk.x > d.x ? 1 : -1; d.seq = [['happy', 3.6], ['sit', span(2, 4)]]; dogSeq(); dog = dogs[0]; }
 D.dogPut = (i, node) => { const d = dogs[i]; d.path = []; d.seq = []; d.v = 0; d.node = node; [d.x, d.y] = d.N[node]; d.pose = 'sit'; d.t = 600; return [d.x, d.y]; };
 D.dogAt = (i, x, y, pose = 'walk') => { const d = dogs[i]; d.path = []; d.seq = []; d.v = 0; d.x = x; d.y = y; d.pose = pose === 'walk' ? 'sniff' : pose; d.t = 600; return [d.x, d.y]; };
+D.dogsToBed = () => dogs.map((d, i) => { const b = beds[i]; if (!b) return null; d.path = []; d.seq = []; d.v = 0; d.zoom = 0; d.by = null; d.mood = 'nap'; d.bed = i; d.node = b.node; [d.x, d.y] = d.N[b.node]; d.pose = 'curl'; d.t = 600; d.face = d.fs = b.x < 310 ? 1 : -1; return [d.x, d.y]; }); // test aid: both dogs asleep on their beds
 D.dogMood = m => { if (!dog) return false; dog.path = []; dog.seq = []; dog.v = 0; dogMood(m); return true; };
 function stepDog(dt) {
   const d = dog;
@@ -1190,13 +1198,14 @@ function stepDog(dt) {
       }
     }
   }
+  const b = d.bed != null && beds[d.bed]; d.key = b && Math.hypot(d.x - b.x, d.y - b.y) < 30 ? bedKey() : null; // under the table
   const c = d.out; c.mode = d.pose === 'walk' && d.zoom ? 'zoomies' : d.pose; c.mood = d.mood; c.x = Math.round(d.x); c.y = Math.round(d.y); c.node = d.node; c.by = d.by ? d.by.bot.name : null;
 }
 function drawDog(d, t) {
   const C = L.corgi, hu = hAt(d.y), [cw, ch] = C.cell, W = 0.507 * DOG.size * hu / C.bodyW, H = W * ch / cw; // DOG.size: 1 = the old atlas body length
-  const pose = d.pose, fi = pose === 'walk' ? C.walk[(d.ph | 0) % C.walk.length] : pose === 'sniff' ? C.walk[0] : C[pose] ?? C.sit, f = d.fr[fi];
-  let sy = 1, rot = 0, hop = 0;
-  if (pose === 'sleep' || pose === 'lie') sy = 1 + Math.sin(t * (pose === 'sleep' ? 1.6 : 2)) * 0.022;
+  const curl = d.pose === 'curl', pose = curl ? 'sleep' : d.pose, fi = pose === 'walk' ? C.walk[(d.ph | 0) % C.walk.length] : pose === 'sniff' ? C.walk[0] : C[pose] ?? C.sit, f = d.fr[fi];
+  let sy = 1, rot = 0, hop = 0, sx = curl ? 0.72 : 1; // curled up on a bed: the sleeping pose drawn shorter and a little rounder
+  if (pose === 'sleep' || pose === 'lie') sy = (curl ? 0.94 : 1) + Math.sin(t * (pose === 'sleep' ? 1.6 : 2)) * 0.022;
   else if (pose === 'sit') { sy = 1 + Math.sin(t * 2.2) * 0.012; rot = Math.sin(t * 8) * 0.008; }
   else if (pose === 'sniff') { rot = 0.03 + Math.sin(t * 5) * 0.022; sy = 1 + Math.sin(t * 9) * 0.006; }
   else if (pose === 'beg') { sy = 1 + Math.sin(t * 3.4) * 0.022; rot = Math.sin(t * 5.5) * 0.02; }
@@ -1205,8 +1214,8 @@ function drawDog(d, t) {
   else if (pose === 'walk') hop = Math.abs(Math.sin(d.ph * Math.PI / 3)) * H * 0.012 * Math.min(2, d.pace);
   const dir = (d.fs < 0 ? -1 : 1) * Math.max(0.22, Math.abs(d.fs));
   P();
-  ctx.globalAlpha = 0.5 - hop / H; ctx.drawImage(shadowSpr, d.x - W * 0.42, d.y - H * 0.08, W * 0.84, H * 0.17); ctx.globalAlpha = 1;
-  ctx.save(); ctx.translate(d.x, d.y - hop); ctx.scale(dir, 1); ctx.rotate(rot);
+  ctx.globalAlpha = 0.5 - hop / H; ctx.drawImage(shadowSpr, d.x - W * 0.42 * sx, d.y - H * 0.08, W * 0.84 * sx, H * 0.17); ctx.globalAlpha = 1;
+  ctx.save(); ctx.translate(d.x, d.y - hop); ctx.scale(dir * sx, 1); ctx.rotate(rot);
   ctx.drawImage(d.im, f[0], f[1], f[2], f[3], -W * C.ax, -H * sy, W, H * sy);
   ctx.restore();
   if (pose === 'sleep') for (let i = 0; i < 3; i++) { // tiny rising "z" puffs
@@ -1594,7 +1603,7 @@ function sortItems() { // painter's order by plate depth; returns how many are o
     }
   }
   D.walking = walking;
-  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = zoneKey(items[i].r.x, items[i].r.y, hAt(items[i].r.y) * 0.27 * DOG.size);
+  for (let i = 0; i < items.length; i++) if (items[i].t === 5) items[i].k = items[i].r.key ?? zoneKey(items[i].r.x, items[i].r.y, hAt(items[i].r.y) * 0.27 * DOG.size);
   items.sort(byKey);
   return walking;
 }

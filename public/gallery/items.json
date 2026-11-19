@@ -1735,7 +1735,7 @@
     "P01, P02",
     "config.js DOG_MOODS"
    ],
-   "notes": "",
+   "notes": " Round 6 (2026-11-19): naps (DOG_MOODS.nap) are taken on the dog beds half the time (DOG.bedNap 0.5, see P05).",
    "id": "P03",
    "section": "P",
    "name": "Dog moods",
@@ -1782,12 +1782,39 @@
    ]
   },
   {
+   "id": "P05",
+   "section": "P",
+   "name": "Dog beds under the lounge table",
+   "kind": "baked",
+   "where": "portable/art/scene.js step 5b (BEDS, drawBeds); main.js#dogMood (nap), main.js#drawDog (curl); layout.json lounge.beds",
+   "what": "Two round dog beds (sage and slate, cream cushions) under the coffee table. Some naps are taken there: the dog walks to a free bed and sleeps curled up, sorted behind the table so its legs and top stand in front.",
+   "linked": [
+    "P01, P02",
+    "P03 (nap)",
+    "L04 (table)",
+    "config.js DOG.bedNap"
+   ],
+   "easy": "Easy: DOG.bedNap in config.js; bed colours and size in scene.js BEDS/BED (rebuild).",
+   "notes": "Added 2026-11-19 (round 6, David). Test: __office2d.dogsToBed() puts both dogs on their beds asleep.",
+   "pics": [
+    {
+     "label": "both dogs asleep on the beds",
+     "dusk": {
+      "shot": "shots/P05-dusk.png"
+     },
+     "night": {
+      "shot": "shots/P05-night.png"
+     }
+    }
+   ]
+  },
+  {
    "linked": [
     "K02 (stands beside it)",
     "K12 (bookcase on its left)",
     "dusk and night plates"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Moved right of the new bookcase; drawn at a person's height. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
+   "notes": "Redrawn 2026-11-12 (round 2). Moved right of the new bookcase; drawn at a person's height. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). Round 6 (2026-11-19): stands 36 px out from the wall, with a side face, a top face, shading and lit edges (scene.js DEPTH, PARTS).",
    "id": "K01",
    "section": "K",
    "name": "Fridge",
@@ -1801,19 +1828,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 188,
-       "y": 932,
-       "w": 100,
-       "h": 206
+       "x": 200,
+       "y": 904,
+       "w": 144,
+       "h": 160
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 188,
-       "y": 932,
-       "w": 100,
-       "h": 206
+       "x": 200,
+       "y": 904,
+       "w": 144,
+       "h": 160
       }
      }
     }
@@ -1825,7 +1852,7 @@
     "K08 (lamp pole beside it)",
     "L01–L03 (bean bags in front)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). One clean picture with everything on it, no notches. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
+   "notes": "Redrawn 2026-11-12 (round 2). One clean picture with everything on it, no notches. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). Round 6 (2026-11-19): stands 30 px out from the wall: top face, shading, lit edges; its near side is behind the fridge (scene.js DEPTH, PARTS).",
    "id": "K02",
    "section": "K",
    "name": "Kitchen stand and its drawers",
@@ -1839,19 +1866,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 276,
-       "y": 1024,
-       "w": 200,
-       "h": 116
+       "x": 320,
+       "y": 904,
+       "w": 144,
+       "h": 92
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 276,
-       "y": 1024,
-       "w": 200,
-       "h": 116
+       "x": 320,
+       "y": 904,
+       "w": 144,
+       "h": 92
       }
      }
     }
@@ -1862,7 +1889,7 @@
     "K10 (steam)",
     "K11 (coffee pour, main.js KIT)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). KIT in main.js matched to its spout, drip tray and display. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
+   "notes": "Redrawn 2026-11-12 (round 2). KIT in main.js matched to its spout, drip tray and display. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). Round 6 (2026-11-19): moves out with the stand (layout.json kitchen; KIT follows).",
    "id": "K03",
    "section": "K",
    "name": "Coffee machine",
@@ -1876,19 +1903,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 310,
-       "y": 936,
-       "w": 96,
-       "h": 116
+       "x": 344,
+       "y": 860,
+       "w": 84,
+       "h": 92
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 310,
-       "y": 936,
-       "w": 96,
-       "h": 116
+       "x": 344,
+       "y": 860,
+       "w": 84,
+       "h": 92
       }
      }
     }
@@ -1898,7 +1925,7 @@
    "linked": [
     "K10 (steam above it)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). ",
+   "notes": "Redrawn 2026-11-12 (round 2). Round 6 (2026-11-19): moves out with the stand.",
    "id": "K04",
    "section": "K",
    "name": "Kettle and small jar",
@@ -1912,19 +1939,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 396,
-       "y": 980,
-       "w": 80,
-       "h": 68
+       "x": 408,
+       "y": 880,
+       "w": 50,
+       "h": 60
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 396,
-       "y": 980,
-       "w": 80,
-       "h": 68
+       "x": 408,
+       "y": 880,
+       "w": 50,
+       "h": 60
       }
      }
     }
@@ -1934,7 +1961,7 @@
    "linked": [
     "K02"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Now part of the kitchen picture.",
+   "notes": "Redrawn 2026-11-12 (round 2). Now part of the kitchen picture. Round 6 (2026-11-19): moves out with the stand.",
    "id": "K05",
    "section": "K",
    "name": "Small canister left of the machine",
@@ -1948,19 +1975,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 280,
-       "y": 992,
-       "w": 60,
-       "h": 56
+       "x": 330,
+       "y": 918,
+       "w": 40,
+       "h": 40
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 280,
-       "y": 992,
-       "w": 60,
-       "h": 56
+       "x": 330,
+       "y": 918,
+       "w": 40,
+       "h": 40
       }
      }
     }
@@ -2043,7 +2070,7 @@
     "O13 (its glow)",
     "layout.json lamps[0]"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Its glow moved with it (layout.json lamps[0]). Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP).",
+   "notes": "Redrawn 2026-11-12 (round 2). Its glow moved with it (layout.json lamps[0]). Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). Round 6 (2026-11-19): drawn round in code (scene.js LAMP): brass foot, pole, a cone shade lit from inside with its open top glowing; its glow (lamps[0]) follows.",
    "id": "K08",
    "section": "K",
    "name": "Floor lamp",
@@ -2057,19 +2084,19 @@
      "dusk": {
       "crop": {
        "plate": "dusk",
-       "x": 452,
-       "y": 920,
-       "w": 92,
-       "h": 220
+       "x": 408,
+       "y": 826,
+       "w": 72,
+       "h": 166
       }
      },
      "night": {
       "crop": {
        "plate": "night",
-       "x": 452,
-       "y": 920,
-       "w": 92,
-       "h": 220
+       "x": 408,
+       "y": 826,
+       "w": 72,
+       "h": 166
       }
      }
     }
@@ -2194,7 +2221,7 @@
     "O12 (clock above it)"
    ],
    "easy": "Medium: a new source picture (props_prep2.py), then rebuild; the books are code (B01).",
-   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). A walnut ladder leans on it (B03).",
+   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). A walnut ladder leans on it (B03). Round 6 (2026-11-19): stands 18 px out from the wall (layout.json bookcase.warp.u), with a side panel; books and ladder follow.",
    "pics": [
     {
      "label": "bookcase",
@@ -2203,7 +2230,7 @@
        "plate": "dusk",
        "x": 0,
        "y": 232,
-       "w": 210,
+       "w": 240,
        "h": 908
       }
      },
@@ -2212,7 +2239,7 @@
        "plate": "night",
        "x": 0,
        "y": 232,
-       "w": 210,
+       "w": 240,
        "h": 908
       }
      }
@@ -2231,7 +2258,7 @@
     "K02"
    ],
    "easy": "Easy: colours, the board's words (scene.js WS).",
-   "notes": "Added 2026-11-12 (round 2) where the old kitchen's leftovers were. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). It now runs the whole left wall to the window corner; no return piece.",
+   "notes": "Added 2026-11-12 (round 2) where the old kitchen's leftovers were. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). It now runs the whole left wall to the window corner; no return piece. Round 6 (2026-11-19): ends at the coffee stand (WEND 236) with a lit edge trim; past it the painting's own window shows to the corner.",
    "pics": [
     {
      "label": "nook wall",
@@ -3092,7 +3119,7 @@
     "X07 (bag-r mask)",
     "layout.json lounge.bags"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Its cut-out is made from the same picture.",
+   "notes": "Redrawn 2026-11-12 (round 2). Its cut-out is made from the same picture. Round 6 (2026-11-19): leans back to the left, opening towards the table (scene.js TURN).",
    "id": "L01",
    "section": "L",
    "name": "Red bean bag",
@@ -3129,7 +3156,7 @@
     "X08 (bag-b mask)",
     "D05"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). A true blue now.",
+   "notes": "Redrawn 2026-11-12 (round 2). A true blue now. Round 6 (2026-11-19): unchanged: faces the front, across the table.",
    "id": "L02",
    "section": "L",
    "name": "Blue bean bag",
@@ -3165,7 +3192,7 @@
    "linked": [
     "X09 (bag-m mask)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Mustard orange.",
+   "notes": "Redrawn 2026-11-12 (round 2). Mustard orange. Round 6 (2026-11-19): mirrored and leaning back to the right, so it opens to the left towards the table (scene.js TURN).",
    "id": "L03",
    "section": "L",
    "name": "Mustard bean bag",
@@ -4960,7 +4987,7 @@
    "linked": [
     "changes together with L01"
    ],
-   "notes": "",
+   "notes": " Round 6 (2026-11-19): follows the turned bag.",
    "id": "X07",
    "section": "X",
    "name": "Red bean bag",
@@ -5002,7 +5029,7 @@
    "linked": [
     "changes together with L03"
    ],
-   "notes": "",
+   "notes": " Round 6 (2026-11-19): follows the mirrored bag.",
    "id": "X09",
    "section": "X",
    "name": "Mustard bean bag",

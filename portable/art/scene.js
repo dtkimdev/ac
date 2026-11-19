@@ -16,8 +16,12 @@ const VP = [640, 330], BOARD = 15;
 // screen x = VP.x (1 - 1/z); heights shrink by 1/z towards VP. The near edge (x 0) keeps its size; the wall meets the window wall at `corner`,
 // where its floor line (567 at the picture's edge) reaches the window wall's 470.
 export const WARP = { ds: 500, corner: 262 };
+// round 6 (David, 2026-11-19): how far the bookcase, fridge and stand stand out from the wall (u, plate px at the picture's edge), and where
+// the floor lamp stands. A face u out from the wall lands at screen x = VP.x - (VP.x - u) s, so the fronts move right and the side and top
+// faces between them and the wall show.
+export const DEPTH = { bookcase: 18, fridge: 36, stand: 30, lamp: 16 };
 const wS = x => 1 / (1 + x / WARP.ds);
-export const wFwd = (x, y) => { const s = wS(x); return [VP[0] * (1 - s), VP[1] + (y - VP[1]) * s]; };
+export const wFwd = (x, y, u = 0) => { const s = wS(x); return [VP[0] - (VP[0] - u) * s, VP[1] + (y - VP[1]) * s]; };
 const XC = WARP.ds * (VP[0] / (VP[0] - WARP.corner) - 1); // source x of the corner
 const wallFloor = px => VP[1] + (567 - VP[1]) * (1 - px / VP[0]); // the left wall's floor line on screen
 // desks: x0, x1; yb back edge of the top, yf its front edge, ye bottom of the front edge, yfl where the front legs meet the floor; leg width
@@ -66,13 +70,13 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   const keepPaint = g => { g.beginPath(); g.ellipse(RUG[0], RUG[1], RUG[2], RUG[3], 0, 0, 7); g.fill(); for (const m of ['bag-r', 'bag-b', 'bag-m', 'table']) drawMask(g, m); g.fillRect(LAMP_POLE[0], LAMP_POLE[1], LAMP_POLE[2] - LAMP_POLE[0], LAMP_POLE[3] - LAMP_POLE[1]); };
   const floorM = layer(g => { poly(g, FLOOR); g.fill(); }); // one floor everywhere: the rug, bean bags, table and floor lamp are drawn new on top (round 2)
   const log = [];
-  const warpLeft = src => { // the front-on nook layer onto the slanted left wall (WARP): each screen pixel left of the corner samples the
-    // layer where it came from, 2 x 2 samples per pixel (the far end is squeezed about 2:1)
+  const warpLeft = (src, u = 0) => { // the front-on nook layer onto the slanted left wall (WARP), or onto a plane u out from it: each screen
+    // pixel left of the corner samples the layer where it came from, 2 x 2 samples per pixel (the far end is squeezed about 2:1)
     const sd = ctx(src).getImageData(0, 0, W3, H3).data, XW = Math.ceil(WARP.corner * S) + 1, out = canvas(W3, H3), og = ctx(out), id = og.createImageData(XW, H3), D = id.data;
     const at = (x, y, acc) => { if (x < 0 || y < 0 || x >= W3 - 1 || y >= H3 - 1) return; const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0;
       for (const [dx, dy, f] of [[0, 0, (1 - fx) * (1 - fy)], [1, 0, fx * (1 - fy)], [0, 1, (1 - fx) * fy], [1, 1, fx * fy]]) { const o = ((y0 + dy) * W3 + x0 + dx) * 4, a = sd[o + 3] * f; acc[0] += sd[o] * a; acc[1] += sd[o + 1] * a; acc[2] += sd[o + 2] * a; acc[3] += a; } };
     for (let X = 0; X < XW; X++) for (const sx of [0.25, 0.75]) {
-      const s = 1 - (X + sx) / S / VP[0], xs = (WARP.ds * (1 / s - 1)) * S - 0.5;
+      const s = (VP[0] - (X + sx) / S) / (VP[0] - u); if (s > 1) continue; const xs = (WARP.ds * (1 / s - 1)) * S - 0.5;
       for (let Y = 0; Y < H3; Y++) { const o = (Y * XW + X) * 4; if (sx === 0.25) D[o] = D[o + 1] = D[o + 2] = D[o + 3] = 0;
         const acc = [0, 0, 0, 0]; for (const sy of [0.25, 0.75]) at(xs, (VP[1] + ((Y + sy) / S - VP[1]) / s) * S - 0.5, acc);
         if (acc[3] > 0) { const n = D[o + 3] + acc[3] / 4; for (let c = 0; c < 3; c++) D[o + c] = (D[o + c] * D[o + 3] + acc[c] / 4) / n; D[o + 3] = n; } }
@@ -116,8 +120,16 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   // the window. The snack shelf (coffee bags, mugs) is now the bookcase's lowest open shelf. ----
   const KP = await fetch(art + 'props2.json').then(r => r.json()), KS = KP.kitchenSpots, BC = KP.bookcase;
   const KL = { dusk: await img(art + 'kitchen2-dusk.png'), night: await img(art + 'kitchen2-night.png') }, BK = { dusk: await img(art + 'bookcase-dusk.png'), night: await img(art + 'bookcase-night.png') };
-  // round 5: the wainscot and panel run the whole left wall, from the picture's edge (behind the bookcase) to the window corner (XC)
-  const WS = { x0: 0, x1: XC, x2: XC, wall: 398, top: 464, sill: 469, base: 567 }; // the nook's back wall behind the kitchen: an upper panel with string lights and a menu board, then a wainscot
+  // round 5: the wainscot and panel run along the left wall from the picture's edge (behind the bookcase); round 6: they end at the coffee
+  // stand's far end (WEND), and the window shows on past it to the corner (XC)
+  const WEND = 236, WS = { x0: 0, x1: WEND, x2: WEND, wall: 398, top: 464, sill: 469, base: 567 };
+  // round 6: the parts that stand out from the wall: source boxes [x0, y0, x1, y1], the columns of the kitchen picture each one is cut from
+  // (image px), and the colour of its side faces (sampled from the pictures: dusk, night)
+  const PARTS = {
+    stand: { box: [141.4, 519.8, 234.7, 566.5], clip: [237, 518], u: DEPTH.stand, side: { dusk: [81, 42, 17], night: [72, 39, 17] } },
+    fridge: { box: [96.7, 484.5, 140.7, 566.5], clip: [0, 237], u: DEPTH.fridge, side: { dusk: [141, 105, 79], night: [124, 95, 78] } },
+    bookcase: { box: BC.rect, u: DEPTH.bookcase, side: { dusk: [102, 53, 22], night: [78, 44, 21] } } };
+  const LAMP = { x: 248, top: 466, sb: 491, floor: 566, rt: 7.5, rb: 11.5, u: DEPTH.lamp }; // the floor lamp, drawn round in code (source x, y) // the nook's back wall behind the kitchen: an upper panel with string lights and a menu board, then a wainscot
   const kitWin = [0, 100, 272, 572];
   const kpal = {}; // the painting's own wood colours (the old stand's front)
   for (const k of ['dusk', 'night']) { const D0 = od[k], avg = (x0, y0, x1, y1) => { let r = 0, g = 0, b = 0, n = 0; for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const o = ((y * S) * W3 + x * S) * 4; r += D0[o]; g += D0[o + 1]; b += D0[o + 2]; n++; } return [r / n, g / n, b / n]; };
@@ -146,18 +158,58 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
     g.fillStyle = nt ? 'rgba(220,220,210,.35)' : 'rgba(240,236,224,.5)'; for (let i = 0; i < 3; i++) { g.fillRect(mb[0] + 6, mb[1] + 14 + i * 5, 18 - i * 3, 0.8); g.fillRect(mb[0] + 29, mb[1] + 14 + i * 5, 5, 0.8); }
     g.strokeStyle = 'rgba(30,20,12,.8)'; g.lineWidth = 0.5; g.beginPath(); for (let x = WS.x0; x <= WS.x2; x += 1) { const y = WS.wall + 5 + 3.2 * Math.abs(Math.sin((x - WS.x0) / 26 * Math.PI)); x === WS.x0 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
     for (let x = WS.x0 + 13; x < WS.x2; x += 26) { const y = WS.wall + 8.2; const gl = g.createRadialGradient(x, y + 1, 0, x, y + 1, 9); gl.addColorStop(0, `rgba(255,190,110,${nt ? 0.5 : 0.35})`); gl.addColorStop(1, 'rgba(255,190,110,0)'); g.fillStyle = gl; g.fillRect(x - 9, y - 8, 18, 18); g.fillStyle = '#ffe2a8'; g.beginPath(); g.ellipse(x, y + 1.2, 1.3, 1.8, 0, 0, 7); g.fill(); g.fillStyle = '#3a2a1a'; g.fillRect(x - 0.8, y - 1.2, 1.6, 1.2); }
-    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(WS.x1 - 1.2, WS.top, 1.2, WS.base - WS.top); // the corner where the nook ends
+    // round 6: the wall's end by the stand: a walnut edge trim that catches the window light
+    g.fillStyle = krgb(p.top, 0.7); g.fillRect(WS.x1 - 2.4, WS.wall - 3, 2.4, WS.base - WS.wall + 3); g.fillStyle = nt ? 'rgba(170,185,235,.4)' : 'rgba(255,210,160,.5)'; g.fillRect(WS.x1 - 0.9, WS.wall - 3, 0.9, WS.base - WS.wall + 3);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(WS.x1 - 3.2, WS.wall - 3, 0.8, WS.base - WS.wall + 3);
     // contact shadows: the bookcase, the fridge, the stand and the lamp stand on the boards
     const sh = (x0, x1, y, d, a) => { g.fillStyle = lin(0, y - 2, 0, y + d, [[0, `rgba(6,3,2,${a})`], [1, 'rgba(6,3,2,0)']]); g.fillRect(x0, y - 2, x1 - x0, d + 2); };
-    sh(BC.rect[0], BC.rect[2] + 4, BC.rect[3], 12, 0.6); sh(96, 236, 567, 10, 0.5);
-    g.fillStyle = 'rgba(6,3,2,.4)'; g.beginPath(); g.ellipse(KS.pole[0] + 2, KS.pole[1] + 1, 11, 2.6, 0, 0, 7); g.fill();
+    sh(BC.rect[0], WEND, 567, 6, 0.45); // round 6: the parts' own shadows are drawn on the floor below (their footprints)
     // a shadow the bookcase casts on the wall beside it
     g.fillStyle = lin(BC.rect[2], 0, BC.rect[2] + 10, 0, [[0, 'rgba(6,3,2,.45)'], [1, 'rgba(6,3,2,0)']]); g.fillRect(BC.rect[2], BC.rect[1] + 6, 10, BC.rect[3] - BC.rect[1] - 6);
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.drawImage(BK[k], BC.rect[0] * S, BC.rect[1] * S);
-    g.drawImage(KL[k], Math.round(KP.kitchen.at[0] * S), Math.round(KP.kitchen.at[1] * S));
     g.restore();
-    wk[k] = warpLeft(nk);
+    // round 6: the parts in 3D. Each front is cut out on its own layer, shaded (darker to the floor and the near edge, lit edges on top and at
+    // the near corner) and warped onto its own plane u out from the wall; between it and the wall go its near side face (square to the
+    // view, so a plain rectangle in this projection), its top face (a sliver, seen from above when it is below the horizon) and its
+    // footprint shadow on the floor. Back to front: lamp, stand, fridge, bookcase.
+    const hl = nt ? 'rgba(175,190,240,.38)' : 'rgba(255,214,168,.5)', out = canvas(W3, H3), og = ctx(out);
+    og.drawImage(warpLeft(nk), 0, 0); og.save(); og.setTransform(S, 0, 0, S, 0, 0);
+    const quad = (pts, fs) => { og.fillStyle = fs; og.beginPath(); pts.forEach(([x, y], i) => i ? og.lineTo(x, y) : og.moveTo(x, y)); og.closePath(); og.fill(); };
+    for (const P of Object.values(PARTS)) { const [x0, , x1] = P.box, y = 567; og.filter = 'blur(2.5px)';
+      quad([wFwd(x0 - 2, y), wFwd(x1 + 3, y), wFwd(x1 + 3, y, P.u + 4), wFwd(x0 - 2, y, P.u + 5)], 'rgba(6,3,2,.55)'); og.filter = 'none'; }
+    { // the floor lamp: a round brass foot, a pole and a cloth shade lit from inside, all square to the view at its depth
+      const s = wS(LAMP.x), [cx] = wFwd(LAMP.x, 0, LAMP.u), Y = y => VP[1] + (y - VP[1]) * s, yt = Y(LAMP.top), yb = Y(LAMP.sb), yf = Y(LAMP.floor), rt = LAMP.rt * s * 1.5, rb = LAMP.rb * s * 1.5;
+      const tilt = yv => (yv - VP[1]) / 260; // how much of an ellipse's top shows (seen from above)
+      og.filter = 'blur(1.5px)'; og.fillStyle = 'rgba(6,3,2,.5)'; og.beginPath(); og.ellipse(cx + 1, yf + 0.5, 9 * s * 1.5, 2.6 * s * 1.5, 0, 0, 7); og.fill(); og.filter = 'none';
+      og.fillStyle = lin(cx - 6 * s, 0, cx + 6 * s, 0, [[0, '#4a3218'], [0.55, nt ? '#a98a58' : '#c9a065'], [1, '#5a3e1e']]); og.beginPath(); og.ellipse(cx, yf - 0.6, 6.5 * s, 6.5 * s * tilt(yf), 0, 0, 7); og.fill();
+      og.fillRect(cx - 6.5 * s, yf - 1.6, 13 * s, 1); og.beginPath(); og.ellipse(cx, yf - 1.6, 6.5 * s, 6.5 * s * tilt(yf), 0, 0, 7); og.fillStyle = nt ? '#8d7350' : '#b38b52'; og.fill();
+      og.fillStyle = lin(cx - 1, 0, cx + 1, 0, [[0, '#3c2812'], [0.6, nt ? '#b8955c' : '#e0b070'], [1, '#4a3218']]); og.fillRect(cx - 0.9, yb, 1.8, yf - yb - 1.4);
+      const sg = lin(cx - rb, 0, cx + rb, 0, [[0, nt ? '#b07a3c' : '#c98a45'], [0.45, nt ? '#ffe6b0' : '#ffe0a8'], [0.7, nt ? '#ffd890' : '#ffd38e'], [1, nt ? '#9a6430' : '#b5763a']]);
+      og.fillStyle = sg; og.beginPath(); og.moveTo(cx - rt, yt); og.lineTo(cx + rt, yt); og.lineTo(cx + rb, yb); og.ellipse(cx, yb, rb, rb * tilt(yb), 0, 0, Math.PI); og.lineTo(cx - rt, yt); og.fill();
+      og.fillStyle = 'rgba(255,248,225,.95)'; og.beginPath(); og.ellipse(cx, yt, rt, rt * tilt(yt) + 0.4, 0, 0, 7); og.fill(); // the open top, the bulb's light
+      og.strokeStyle = 'rgba(120,70,30,.55)'; og.lineWidth = 0.6; og.beginPath(); og.ellipse(cx, yb, rb, rb * tilt(yb), 0, 0, Math.PI); og.stroke();
+      og.strokeStyle = 'rgba(255,240,205,.7)'; og.beginPath(); og.ellipse(cx, yt, rt, rt * tilt(yt) + 0.4, 0, Math.PI, 2 * Math.PI); og.stroke(); }
+    for (const nm of ['stand', 'fridge', 'bookcase']) { const P = PARTS[nm], [x0, y0, x1, y1] = P.box, sc = P.side[k], s0 = wS(x0);
+      // the top face (only when it is below the eye), then the near side face
+      if (y0 > VP[1] + 4) { quad([wFwd(x0, y0), wFwd(x1, y0), wFwd(x1, y0, P.u), wFwd(x0, y0, P.u)], krgb(sc, 1.12));
+        og.strokeStyle = hl; og.lineWidth = 0.7; og.beginPath(); og.moveTo(...wFwd(x0, y0, P.u)); og.lineTo(...wFwd(x1, y0, P.u)); og.stroke();
+        og.strokeStyle = 'rgba(0,0,0,.35)'; og.beginPath(); og.moveTo(...wFwd(x0, y0)); og.lineTo(...wFwd(x1, y0)); og.stroke(); }
+      const [ax, ay] = wFwd(x0, y0), [, by] = wFwd(x0, y1), w = P.u * s0;
+      og.fillStyle = lin(0, ay, 0, by, [[0, krgb(sc, 0.78)], [1, krgb(sc, 0.5)]]); og.fillRect(ax, ay, w, by - ay);
+      og.fillStyle = lin(ax, 0, ax + w, 0, [[0, 'rgba(0,0,0,.35)'], [0.3, 'rgba(0,0,0,0)'], [1, 'rgba(255,220,180,.06)']]); og.fillRect(ax, ay, w, by - ay);
+      if (nm === 'bookcase') { og.fillStyle = 'rgba(0,0,0,.12)'; for (let i = 1; i < 6; i++) og.fillRect(ax + w * i / 6, ay, 0.5, by - ay); } // the side panel's grain
+      og.fillStyle = hl; og.fillRect(ax + w - 0.7, ay, 0.7, by - ay); if (y0 > VP[1]) og.fillRect(ax, ay, w, 0.6);
+      // the front, shaded on its own layer, then warped
+      const L1 = canvas(W3, H3), lg = ctx(L1);
+      if (nm === 'bookcase') lg.drawImage(BK[k], BC.rect[0] * S, BC.rect[1] * S);
+      else { const [c0, c1] = P.clip; lg.drawImage(KL[k], c0, 0, c1 - c0, KL[k].height, Math.round(KP.kitchen.at[0] * S) + c0, Math.round(KP.kitchen.at[1] * S), c1 - c0, KL[k].height); }
+      lg.setTransform(S, 0, 0, S, 0, 0); lg.globalCompositeOperation = 'source-atop';
+      const fy0 = nm === 'stand' ? y0 - 50 : y0; // the machine on the stand is shaded with it
+      lg.fillStyle = (gr => { [[0, 'rgba(255,225,190,.06)'], [0.55, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.26)']].forEach(([o, c]) => gr.addColorStop(o, c)); return gr; })(lg.createLinearGradient(0, fy0, 0, y1)); lg.fillRect(x0 - 2, fy0, x1 - x0 + 4, y1 - fy0 + 2);
+      lg.fillStyle = (gr => { [[0, 'rgba(0,0,0,.2)'], [0.22, 'rgba(0,0,0,0)'], [1, nt ? 'rgba(150,170,230,.07)' : 'rgba(255,205,150,.09)']].forEach(([o, c]) => gr.addColorStop(o, c)); return gr; })(lg.createLinearGradient(x0, 0, x1, 0)); lg.fillRect(x0 - 2, fy0, x1 - x0 + 4, y1 - fy0 + 2);
+      lg.fillStyle = hl; lg.fillRect(x0, y0, 1, y1 - y0); lg.fillRect(x0, y0, x1 - x0, 0.9); // the edges that catch the light
+      og.setTransform(1, 0, 0, 1, 0, 0); og.drawImage(warpLeft(L1, P.u), 0, 0); og.setTransform(S, 0, 0, S, 0, 0);
+    }
+    og.restore(); wk[k] = out;
   }
   { // the old fridge, stand, machine, jar and lamp: whatever the new wall does not cover is filled from the window, wall and floor round them
     const W = (kitWin[2] - kitWin[0]) * S, H = (kitWin[3] - kitWin[1]) * S;
@@ -166,9 +218,12 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
     const wa = ctx(wk.dusk).getImageData(kitWin[0] * S, kitWin[1] * S, W, H).data;
     let hole = bitmap(kitWin, g => { g.fillStyle = '#fff'; for (const q of OLD) { poly(g, q); g.fill(); } g.fillRect(200, 400, 58, 62); g.fillRect(216, 452, 24, 18); g.fillRect(0, 420, 92, 150);
       g.fillRect(BC.rect[0], BC.rect[1], BC.rect[2] - BC.rect[0] + 12, 300); }); // and the old upright bookcase above the slanted one
+    // round 6: past the wall's new end the painting's own window shows again (only its old lamp is filled)
     hole = dilate(hole, W, H, 4);
-    for (let i = 0; i < hole.length; i++) { const X = i % W, Y = (i / W) | 0, o = ((Y + kitWin[1] * S) * W3 + X + kitWin[0] * S) * 4; if (wa[i * 4 + 3] > 200 || floorM[o + 3] >= 128) hole[i] = 0; } // the new wall and the new floor stay
-    fill([hi.dusk, hi.night], kitWin, hole, hole.map(v => v ? 0 : 1)); }
+    const valid = new Uint8Array(hole.length), [xe] = wFwd(WEND, 0);
+    for (let i = 0; i < hole.length; i++) { const X = i % W, Y = (i / W) | 0, o = ((Y + kitWin[1] * S) * W3 + X + kitWin[0] * S) * 4, cov = wa[i * 4 + 3] > 200, fl = floorM[o + 3] >= 128;
+      if (cov || fl) hole[i] = 0; valid[i] = !hole[i] && (!cov || fl) && !(fl && X / S + kitWin[0] > xe - 6) ? 1 : 0; } // the new wall and the new floor stay; what the wall hides is not a source, nor the floor past the wall's end (the window comes down from above)
+    fill([hi.dusk, hi.night], kitWin, hole, valid); }
   for (const k of ['dusk', 'night']) ctx(hi[k]).drawImage(wk[k], 0, 0);
   log.push('kitchen');
 
@@ -331,7 +386,25 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   log.push('chairs');
   // ---- 5b. the lounge, round 2: a woven rug drawn new, then the coffee table and the three bean bags (red, blue, mustard: src/, props_prep.py
   // and props_prep2.py) standing on it, back to front. Their cut-outs (the viewer hides bots behind them) are made from the same pictures. ----
-  const LG = {}; for (const n of ['bag-b', 'bag-m', 'bag-r', 'table']) LG[n] = { dusk: await img(art + n + '-dusk.png'), night: await img(art + n + '-night.png'), rect: KP[n].rect };
+  // round 6 (David, 2026-11-19): the bags turn to face each other round the table (the red one leans back to the left and opens to the right,
+  // the mustard one is mirrored to open to the left, the blue one behind faces the front), and two dog beds lie under the table
+  const TURN = { 'bag-r': { flip: 1, lean: -0.07 }, 'bag-m': { flip: -1, lean: 0.07 } };
+  const turned = (nm, im) => { const t = TURN[nm]; if (!t) return im; const w = im.width, h = im.height, c = canvas(w, h), cg = ctx(c);
+    cg.setTransform(t.flip * 0.93, 0, -t.lean * w / h, 1, w / 2 * (1 - t.flip * 0.93) + t.lean * w, 0); cg.drawImage(im, 0, 0); return c; };
+  const LG = {}; for (const n of ['bag-b', 'bag-m', 'bag-r', 'table']) LG[n] = { dusk: turned(n, await img(art + n + '-dusk.png')), night: turned(n, await img(art + n + '-night.png')), rect: KP[n].rect };
+  const BEDS = [{ x: 283, y: 679, col: [104, 126, 96] }, { x: 337, y: 679, col: [92, 108, 146] }], BED = { rx: 26, ry: 8.5, rim: 5.5 }; // sage and slate, cream cushions
+  const drawBeds = (g, nt, L0) => { // two round dog beds: a padded rim (top and front band) round a cream cushion, under the table
+    const f = Math.max(0.6, Math.min(1.1, L0 * 1.3)) * (nt ? 0.85 : 1), col = (c, m, a = 1) => `rgba(${c.map(v => Math.max(0, Math.min(255, v * m * f)) | 0).join(',')},${a})`, cream = [214, 196, 170];
+    g.save(); g.setTransform(S, 0, 0, S, 0, 0);
+    for (const b of BEDS) { const { rx, ry, rim } = BED, cx = b.x, cy = b.y, lin = (y0, y1, a, c) => { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, a); gr.addColorStop(1, c); return gr; };
+      g.filter = 'blur(1.5px)'; g.fillStyle = 'rgba(6,3,2,.45)'; g.beginPath(); g.ellipse(cx + 1, cy + 1.5, rx + 2, ry + 2, 0, 0, 7); g.fill(); g.filter = 'none';
+      g.fillStyle = lin(cy - rim, cy + ry, col(b.col, 0.8), col(b.col, 0.5)); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI); g.lineTo(cx - rx, cy - rim); g.ellipse(cx, cy - rim, rx, ry, 0, Math.PI, 0, true); g.closePath(); g.fill(); // the rim's front band
+      g.fillStyle = lin(cy - rim - ry, cy - rim + ry, col(b.col, 1.15), col(b.col, 0.9)); g.beginPath(); g.ellipse(cx, cy - rim, rx, ry, 0, 0, 7); g.fill(); // the rim's top
+      g.fillStyle = col(b.col, 0.55); g.beginPath(); g.ellipse(cx, cy - rim + 0.8, rx * 0.7, ry * 0.58, 0, 0, 7); g.fill(); // the dip
+      g.fillStyle = lin(cy - rim - ry * 0.5, cy - rim + ry * 0.6, col(cream, 0.95), col(cream, 0.72)); g.beginPath(); g.ellipse(cx, cy - rim + 1.4, rx * 0.62, ry * 0.46, 0, 0, 7); g.fill(); // the cushion
+      g.strokeStyle = nt ? 'rgba(180,190,235,.3)' : 'rgba(255,214,168,.38)'; g.lineWidth = 0.7; g.beginPath(); g.ellipse(cx, cy - rim - 0.3, rx - 0.6, ry - 0.6, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); // light on the rim's back
+      g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 0.5; for (let i = -2; i <= 2; i++) { const a = Math.PI / 2 + i * 0.42; g.beginPath(); g.moveTo(cx + Math.cos(a) * rx * 0.98, cy - rim + Math.sin(a) * ry); g.lineTo(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry); g.stroke(); } } // the stitched seams
+    g.restore(); };
   const drawLounge = (g, k) => {
     const nt = k === 'night', D0 = od[k];
     let fr = [0, 0, 0], n = 0; for (let y = 600; y < 700; y += 3) for (let x = 140; x < 470; x += 3) { const o = ((y * S) * W3 + x * S) * 4; fr[0] += D0[o]; fr[1] += D0[o + 1]; fr[2] += D0[o + 2]; n++; } fr = fr.map(v => v / n);
@@ -347,7 +420,7 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
     for (let i = 0; i < 24; i++) { const an = i / 24 * Math.PI * 2; g.fillStyle = nt ? 'rgba(170,140,100,.3)' : 'rgba(232,180,110,.38)'; g.beginPath(); g.arc(Math.cos(an) * (ra - 15), Math.sin(an) * (ra - 15), 1.6, 0, 7); g.fill(); }
     g.restore();
     g.setTransform(1, 0, 0, 1, 0, 0);
-    for (const nm of ['bag-b', 'bag-m', 'bag-r', 'table']) { const q = LG[nm], [x0, y0] = q.rect;
+    for (const nm of ['bag-b', 'bag-m', 'bag-r', 'beds', 'table']) { if (nm === 'beds') { drawBeds(g, nt, L0); continue; } const q = LG[nm], [x0, y0] = q.rect;
       g.save(); g.setTransform(S, 0, 0, S, 0, 0); g.fillStyle = 'rgba(6,3,2,.38)'; const [a0, b0, a1, b1] = q.rect; g.beginPath(); g.ellipse((a0 + a1) / 2, b1 - (b1 - b0) * 0.06, (a1 - a0) * 0.46, (b1 - b0) * 0.08, 0, 0, 7); g.fill(); g.restore();
       if (nt) { const c2 = canvas(q.night.width, q.night.height), cg = ctx(c2); cg.drawImage(q.night, 0, 0); cg.globalCompositeOperation = 'multiply'; cg.fillStyle = 'rgb(200,198,215)'; cg.fillRect(0, 0, c2.width, c2.height); cg.globalCompositeOperation = 'destination-in'; cg.drawImage(q.night, 0, 0); g.drawImage(c2, Math.round(x0 * S), Math.round(y0 * S)); }
       else g.drawImage(q[k], Math.round(x0 * S), Math.round(y0 * S)); }
@@ -407,23 +480,27 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   // round 2: the kitchen moved right of the new bookcase. The floor lamp's glow, the machine's steam, the coffee and fridge spots follow it;
   // a new walking point in front of the bookcase (joined to the fridge spot) for Grok's book runs. Round 5: all of them through the left
   // wall's perspective (wFwd), and the ladder on the bookcase: two rails at source x LAD.x, tops under the case top, feet kicked out from the wall
-  const n4 = (x, y) => [+(x / PW).toFixed(4), +(y / PH).toFixed(4)], wN = (x, y) => n4(...wFwd(x, y));
-  { const ls = KS.lampShade, [lx, ly] = wFwd((ls[0] + ls[2]) / 2, (ls[1] + ls[3]) / 2); lay.lamps[0] = { ...lay.lamps[0], x: +(lx / PW).toFixed(4), y: +(ly / PH).toFixed(4), r: +(lay.lamps[0].r * wS(ls[0])).toFixed(4) }; }
-  const [spX] = wFwd(KS.spout[0], KS.tray);
-  lay.lounge.steam = wN(...KS.steam); lay.lounge.espresso = wN(KS.spout[0], KS.tray);
+  const n4 = (x, y) => [+(x / PW).toFixed(4), +(y / PH).toFixed(4)];
+  // round 6: the lamp, the stand and the fridge stand out from the wall (DEPTH), so their spots move out with their fronts
+  { const [lx, ly] = wFwd(LAMP.x, (LAMP.top + LAMP.sb) / 2, LAMP.u); lay.lamps[0] = { ...lay.lamps[0], x: +(lx / PW).toFixed(4), y: +(ly / PH).toFixed(4), r: +(lay.lamps[0].r * wS(KS.lampShade[0])).toFixed(4) }; }
+  const uS = DEPTH.stand, [spX] = wFwd(KS.spout[0], KS.tray, uS);
+  lay.lounge.steam = n4(...wFwd(...KS.steam, uS)); lay.lounge.espresso = n4(...wFwd(KS.spout[0], KS.tray, uS));
   lay.lounge.lamp = [lay.lamps[0].x, lay.lamps[0].y];
-  const sq = KS.screen, [q0x, q0y] = wFwd(sq[0], sq[1]), [q1x, q1y] = wFwd(sq[2], sq[3]);
-  lay.kitchen = { spout: wFwd(...KS.spout).map(v => +v.toFixed(1)), tray: +wFwd(KS.spout[0], KS.tray)[1].toFixed(1), screen: [q0x, q0y, q1x, q1y].map(v => +v.toFixed(1)), s: +wS(KS.spout[0]).toFixed(3), note: 'plate px; the coffee pour (KIT in main.js) on the slanted kitchen' };
+  const sq = KS.screen, [q0x, q0y] = wFwd(sq[0], sq[1], uS), [q1x, q1y] = wFwd(sq[2], sq[3], uS);
+  lay.kitchen = { spout: wFwd(...KS.spout, uS).map(v => +v.toFixed(1)), tray: +wFwd(KS.spout[0], KS.tray, uS)[1].toFixed(1), screen: [q0x, q0y, q1x, q1y].map(v => +v.toFixed(1)), s: +wS(KS.spout[0]).toFixed(3), note: 'plate px; the coffee pour (KIT in main.js) on the slanted kitchen' };
   const spot = id => lay.lounge.spots.find(q => q.id === id), nodes = lay.nav.nodes;
-  { const c = spot('coffee'), f = spot('fridge'); c.p = [+(spX / PW).toFixed(4), c.p[1]]; nodes[c.node] = c.p.slice(); f.p = [+(wFwd(KS.fridge[0], 567)[0] / PW).toFixed(4), f.p[1]]; nodes[f.node] = f.p.slice(); }
-  const LAD = { x: [30, 58], top: 126, kick: 24 }, ladTop = LAD.x.map(x => wFwd(x, LAD.top)), ladFoot = LAD.x.map(x => { const [fx, fy] = wFwd(x, 567); return [fx + LAD.kick * wS(x), fy]; });
+  { const c = spot('coffee'), f = spot('fridge'); c.p = [+(spX / PW).toFixed(4), c.p[1]]; nodes[c.node] = c.p.slice(); f.p = [+(wFwd(KS.fridge[0], 567, DEPTH.fridge)[0] / PW).toFixed(4), f.p[1]]; nodes[f.node] = f.p.slice(); }
+  const uB = DEPTH.bookcase, LAD = { x: [30, 58], top: 126, kick: 24 }, ladTop = LAD.x.map(x => wFwd(x, LAD.top, uB)), ladFoot = LAD.x.map(x => { const [fx, fy] = wFwd(x, 567, uB); return [fx + LAD.kick * wS(x), fy]; });
   const stand = [(ladFoot[0][0] + ladFoot[1][0]) / 2, Math.max(ladFoot[0][1], ladFoot[1][1]) + 6]; // where the climber stands, just in front of the ladder's feet
   const bookNode = nodes.length; nodes.push(n4(...stand)); lay.nav.edges.push([spot('fridge').node, bookNode]);
-  const bc = [[BC.rect[0], BC.rect[1]], [BC.rect[2], BC.rect[1]], [BC.rect[0], BC.rect[3]], [BC.rect[2], BC.rect[3]]].map(([x, y]) => wFwd(x, y));
+  // round 6: a walking point on each dog bed, joined to the nearest point of the floor graph (a dead end, so nobody walks through a bed)
+  const near = (x, y) => nodes.reduce((b, p, i) => Math.hypot(p[0] * PW - x, p[1] * PH - y) < Math.hypot(nodes[b][0] * PW - x, nodes[b][1] * PH - y) ? i : b, 0);
+  lay.lounge.beds = BEDS.map(b => { const at = near(b.x, b.y + 12), node = nodes.length; nodes.push(n4(b.x, b.y - 2)); lay.nav.edges.push([at, node]); return { p: nodes[node].slice(), node }; });
+  const bc = [[BC.rect[0], BC.rect[1]], [BC.rect[2], BC.rect[1]], [BC.rect[0], BC.rect[3]], [BC.rect[2], BC.rect[3]]].map(([x, y]) => wFwd(x, y, uB));
   lay.bookcase = { rect: BC.rect.map((v, i) => +(v / (i % 2 ? PH : PW)).toFixed(4)), inner: BC.inner.map(v => +(v / PW).toFixed(4)), shelves: BC.shelves.map(([a, b]) => [+(a / PH).toFixed(4), +(b / PH).toFixed(4)]), node: bookNode, spot: nodes[bookNode].slice(), slots: 4,
-    warp: { vp: n4(...VP), ds: +(WARP.ds / PW).toFixed(5) }, box: [...n4(Math.min(...bc.map(p => p[0])), Math.min(...bc.map(p => p[1]))), ...n4(Math.max(...bc.map(p => p[0])), Math.max(...bc.map(p => p[1])))],
+    warp: { vp: n4(...VP), ds: +(WARP.ds / PW).toFixed(5), u: +(uB / PW).toFixed(5) }, box: [...n4(Math.min(...bc.map(p => p[0])), Math.min(...bc.map(p => p[1]))), ...n4(Math.max(...bc.map(p => p[0])), Math.max(...bc.map(p => p[1])))],
     ladder: { top: ladTop.map(p => n4(...p)), foot: ladFoot.map(p => n4(...p)) },
-    note: 'portable/art/scene.js 1b: the case is in the room picture; the viewer draws the books (BOOKS in config.js), 4 to a shelf, top shelf first, and the ladder. rect, inner, shelves: front-on (source) coordinates; warp lays them onto the slanted left wall (screen = vp.x (1 - s), vp.y + (y - vp.y) s, s = 1 / (1 + x / ds)); box, ladder, spot: screen' };
+    note: 'portable/art/scene.js 1b: the case is in the room picture; the viewer draws the books (BOOKS in config.js), 4 to a shelf, top shelf first, and the ladder. rect, inner, shelves: front-on (source) coordinates; warp lays them onto the slanted left wall (screen = vp.x - (vp.x - u) s, vp.y + (y - vp.y) s, s = 1 / (1 + x / ds); u: how far the front of the case stands out from the wall); box, ladder, spot: screen' };
   lay.masks.boss = masksOut.boss.rect; lay.masks['desk-fr'] = masksOut['desk-fr'].rect; delete lay.masks['plant-l'];
   delete lay.masks['room-l']; delete lay.masks['room-r'];
   lay.masks.water = waterOut.rect; lay.nearGlass = [VB.x0 / PW, VB.x1 / PW, VB.sill / PH]; // the animated water reaches down into the window band
