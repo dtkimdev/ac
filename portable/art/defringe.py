@@ -39,31 +39,43 @@ def nearest_opaque_rgb(rgb: np.ndarray, alpha: np.ndarray, thresh: int = 250):
     _, inds = distance_transform_edt(inv, return_indices=True)
     return rgb[inds[0], inds[1]]
 
+def inward_rgb(rgb, alpha, steps=4, thresh=250):
+    """Colour a few pixels into the opaque interior, not just the (often light) silhouette rim."""
+    opaque = alpha >= thresh
+    if not opaque.any() or distance_transform_edt is None:
+        return nearest_opaque_rgb(rgb, alpha, thresh)
+    inside = opaque
+    if binary_dilation is not None:
+        trans = ~opaque
+        rim = binary_dilation(trans, iterations=steps)
+        inside = opaque & ~rim
+    if not inside.any():
+        return nearest_opaque_rgb(rgb, alpha, thresh)
+    inv = ~inside
+    _, inds = distance_transform_edt(inv, return_indices=True)
+    return rgb[inds[0], inds[1]]
+
+
 def defringe_arr(a: np.ndarray) -> tuple[np.ndarray, int]:
     rgb = a[..., :3].astype(np.float32)
     alpha = a[..., 3].astype(np.float32)
     if (alpha < 8).all() or (alpha >= 250).all():
         return a, 0
     near = nearest_opaque_rgb(rgb, alpha)
-    lum = rgb.mean(axis=2)
+    inward = inward_rgb(rgb, alpha, steps=4)
     near_lum = near.mean(axis=2)
+    in_lum = inward.mean(axis=2)
+    # only the soft edge: keep opaque pixels (highlights, flyaway hair) intact
     semi = (alpha > 0) & (alpha < 250)
-    # 1) semi-transparent pixels take the nearest opaque colour (drops a white/light matte)
     n = 0
     if semi.any():
-        rgb[semi] = near[semi]
+        pick = np.where((in_lum <= near_lum)[..., None], inward, near)
+        rgb[semi] = pick[semi]
         n += int(semi.sum())
-    # 2) silhouette rim that is lighter than the interior (white, cream or pink fringe on dark art)
-    if binary_dilation is not None:
-        trans = alpha < 8
-        rim = binary_dilation(trans, iterations=2) & (alpha >= 8)
-        too_light = rim & (lum > near_lum + 6)
-        if too_light.any():
-            rgb[too_light] = near[too_light]
-            n += int(too_light.sum())
     out = a.copy()
     out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
     return out, n
+
 
 def process(path: Path, dry=False) -> str:
     im = Image.open(path)

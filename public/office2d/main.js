@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=37'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=38'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -81,10 +81,11 @@ async function load() {
       seats.push({ ...s, x, ctop, base, ts, hsc: ts * 0.78, neckY: base - (T.floor - F0.neck) * ts, top: ctop - H * 0.5, h: H * 1.05, clip: ctop + H * 0.56, chair: px(s.chair), feet: [s.feet[0] * PW, s.feet[1] * PH], desk: d, idx: i, bot: null, self: false, nc: L.nochair[s.nc], ncP: null });
     });
     const kinds = THEME_KINDS[d.theme] || THEME_KINDS.default, cuts = d.cuts || [];
+    // just behind this desk's own chairs: screens paint over the row behind and over the desk-front occluder (so they stay running), while this desk's chairs and bots stay in front
+    const ownClips = seats.filter(s => s.desk === d && s.chair).map(s => s.clip), monK = ownClips.length ? Math.min(...ownClips) - 0.05 : null;
     d.monitors.forEach((m, i) => {
       const Q = px(m), c = mk(SW, SH);
-      // depth is the glass's lowest plate y (the foot of the screen): same rule as chairs (foot/clip) so a front desk's monitor is never painted behind a neighbouring chair
-      monitors.push({ q: Q, desk: d, idx: i, kind: kinds[i % kinds.length], c, g: c.getContext('2d'), cut: cuts[i] ? px(cuts[i]) : null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: Math.max(...Q.map(p => p[1])), cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] });
+      monitors.push({ q: Q, desk: d, idx: i, kind: kinds[i % kinds.length], c, g: c.getContext('2d'), cut: cuts[i] ? px(cuts[i]) : null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: monK != null ? monK : Math.max(...Q.map(p => p[1])), cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] });
     });
   }
   // right wall: slim monitors, behind everything that can walk (they hang far above the floor)
@@ -531,6 +532,10 @@ function hAt(f) { // one perspective scale for every standing or walking charact
   for (let i = 1; i < W.length; i++) if (f <= W[i][0] || i === W.length - 1) return W[i - 1][1] + (f - W[i - 1][0]) * (W[i][1] - W[i - 1][1]) / (W[i][0] - W[i - 1][0]);
   return W[W.length - 1][1];
 }
+function loungeHu(y) { // David, 2026-11-19: a bot in the lounge matches seated Grok, not the standing walk.h at that floor y
+  const boss = seats.find(s => s.desk && s.desk.id === 'boss'), target = boss ? boss.h : 140, y0 = boss ? boss.feet[1] : 0.995 * PH;
+  return target / 1.26 * (hAt(y) / hAt(y0));
+}
 function navPath(a, b, adj = navAdj()) { // Dijkstra on the floor graph -> node ids after a, up to and including b
   const n = nav.length, dist = new Array(n).fill(1e9), prev = new Array(n).fill(-1), done = new Array(n).fill(false); dist[a] = 0;
   for (;;) {
@@ -648,7 +653,7 @@ function drawSteam(t) {
 // ---------- wall clock: digital, in a walnut case like the kitchen shelves (David, 2026-11-10: digital, big, matching the room). The digits
 // are drawn as rounded amber segments, not a font, so they look the same on every screen and TV. Case and digits are two layers: at night
 // the case sits in the room's shade while the digits stay lit. ----------
-const CK = { x: 3, y: 36, w: 92, h: 50, c: null, d: null, m: -1, glow: glowSprite('255,170,90') };
+const CK = { x: 24, y: 72, w: 84, h: 46, c: null, d: null, m: -1, glow: glowSprite('255,170,90') }; // sits on the bookcase top (front edge ~y 121–153, slope 0.338)
 const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f]; // segments a..g per digit
 function segDigit(g, x, y, w, h, t, bits, on, off) { // one 7-segment digit, top-left x,y, stroke t, italic slant
   const sl = 0.1 * h, P = (u, v) => [x + u * w + (1 - v) * sl, y + v * h], hv = 0.5;
@@ -699,7 +704,7 @@ function drawClock(t) {
     D.clock = `${h12}:${String(mm).padStart(2, '0')}${pm ? 'pm' : 'am'}`;
   }
   const s = 1 / S, o = 20 * s;
-  P(); ctx.save(); ctx.translate(CK.x, CK.y); ctx.transform(1, 0.03, 0, 1, 0, 0); // follows the left wall a little
+  P(); ctx.save(); ctx.translate(CK.x, CK.y); ctx.transform(1, 0.338, 0, 1, 0, 0); // same isometric slant as the bookcase top / left wall
   ctx.drawImage(CK.c, -o, -o, CK.c.width * s, CK.c.height * s);
   if (env.n > 0) { ctx.globalAlpha = 0.5 * env.n; ctx.fillStyle = '#0d0a18'; ctx.beginPath(); ctx.roundRect(0, 0, CK.w, CK.h, 5); ctx.fill(); ctx.globalAlpha = 1; } // night: the case sits in the room's shade
   ctx.drawImage(CK.d, -o, -o, CK.d.width * s, CK.d.height * s); // the digits stay lit
@@ -1325,7 +1330,7 @@ function drawSeated(w, t) {
 }
 // a bean bag: front bust + sitting legs, sunk a little into the bag. `alpha` crossfades with the standing walker
 function drawOnBag(w, t, bag, alpha, lean) {
-  const im = fronts[w.sprite], sprite = L.sprites[w.sprite], hu = hAt(bag.y) * 0.98 * im.height / 216, ar = im.width / im.height, ww = hu * ar, hem = sprite.hemF, [x, seat] = bag.sit;
+  const im = fronts[w.sprite], sprite = L.sprites[w.sprite], hu = loungeHu(bag.y) * 0.98 * im.height / 216, ar = im.width / im.height, ww = hu * ar, hem = sprite.hemF, [x, seat] = bag.sit;
   const hip = seat - hu * 0.05 + Math.sin(t * 1.9 + w.ph) * hu * 0.006 + (1 - lean) * hu * 0.16;
   ctx.globalAlpha = alpha; P();
   drawLegSet('sit', 0, x, hip, hip + hu * 0.27, hu, ww, 1);
@@ -1335,7 +1340,7 @@ function drawOnBag(w, t, bag, alpha, lean) {
   if (alpha > 0.5) { w.box[0] = x - ww / 2; w.box[1] = top; w.box[2] = x + ww / 2; w.box[3] = hip + hu * 0.27; w.hx = x; w.hy = top; }
 }
 function drawDash(w, t) { // full-body art on her bean bag: laptop while working, mug when idle
-  const s = w.seat, working = busy(w), im = working ? dashImg.laptop : dashImg.mug, Hd = hAt(s.bag.y) * 1.18, Wd = Hd * im.width / im.height, x = s.x + (working ? -6 : 2), y = s.base + Hd * 0.3;
+  const s = w.seat, working = busy(w), im = working ? dashImg.laptop : dashImg.mug, Hd = loungeHu(s.bag.y) * 1.18, Wd = Hd * im.width / im.height, x = s.x + (working ? -6 : 2), y = s.base + Hd * 0.3;
   const bob = working ? Math.abs(Math.sin(t * 10.5 + w.ph)) * Hd * 0.004 : Math.sin(t * 1.5 + w.ph) * Hd * 0.006; // tiny typing bob, or breathing
   P(); ctx.globalAlpha = 0.34; ctx.drawImage(shadowSpr, x - Wd * 0.4, y - Hd * 0.09, Wd * 0.8, Hd * 0.13); ctx.globalAlpha = 1;
   ctx.drawImage(im, x - Wd / 2, y - Hd - bob, Wd, Hd);
@@ -1367,7 +1372,7 @@ function drawUpper(w, g, front, face, x, hip, hu0, sway, alpha, side) {
   return hip + hu0 * 0.035 - hu * hem[0];
 }
 function drawWalker(w, t, alpha = 1) {
-  const g = w.walk, moving = g.phase === 'go' || g.phase === 'back', front = g.front, x = g.x, lift = g.lift || 0, f = g.y - lift, hu = hAt(g.y), ww = hu * 0.64, cyc = g.stride / (Math.PI * 2); // lift: up the book ladder
+  const g = w.walk, moving = g.phase === 'go' || g.phase === 'back', front = g.front, x = g.x, lift = g.lift || 0, f = g.y - lift, hu = (g.phase === 'hang' || g.phase === 'petting' ? loungeHu : hAt)(g.y), ww = hu * 0.64, cyc = g.stride / (Math.PI * 2); // lift: up the book ladder
   const petting = g.phase === 'petting', crouch = petting ? 0.34 + Math.sin(t * 7) * 0.04 : 0, bag = g.trip?.spot?.bag && g.sitK > 0 ? g.trip.spot : null, sk = bag ? g.sitK * g.sitK * (3 - 2 * g.sitK) : 0;
   let set = front ? 'front' : 'back', i = 0;
   if (moving || g.climb) { set = moving ? g.legs : 'back'; const n = L.legs[set].length; i = ((cyc * n) % n + n) % n | 0; }
@@ -1404,7 +1409,7 @@ function drawWorker(w, t) {
   drawWalker(w, t);
 }
 function drawLoiter(w, t) { // a kitchen bot at its home spot between trips: the full standing body, breathing, now and then looking the other way
-  const s = w.seat, x = s.feet[0], f = s.feet[1], hu = hAt(f), ww = hu * 0.64, face = w.dogLook && dogs.some(d => d.by === w) ? w.dogLook : Math.sin(t * 0.11 + w.ph * 3) > 0 ? 1 : -1; // looks at a dog that came to say hi
+  const s = w.seat, x = s.feet[0], f = s.feet[1], hu = loungeHu(f), ww = hu * 0.64, face = w.dogLook && dogs.some(d => d.by === w) ? w.dogLook : Math.sin(t * 0.11 + w.ph * 3) > 0 ? 1 : -1; // looks at a dog that came to say hi
   const hip = f - hu * LEG_H + Math.sin(t * 2 + w.ph) * hu * 0.004;
   P(); ctx.globalAlpha = 0.42; ctx.drawImage(shadowSpr, x - ww * 0.42, f - hu * 0.05, ww * 0.84, hu * 0.11); ctx.globalAlpha = 1;
   drawLegSet('front', 0, x, hip, f, hu, ww, face);
@@ -1494,7 +1499,7 @@ function labelBitmap(w) {
   const col = b.status === 'error' ? [255, 122, 102] : b.status === 'working' ? [166, 214, 126] : hexRgb(acc);
   g.translate(sh, sh);
   g.shadowColor = 'rgba(8,4,14,.55)'; g.shadowBlur = sh; g.shadowOffsetY = sh * 0.3;
-  g.fillStyle = b.status === 'error' ? 'rgba(70,18,22,.86)' : 'rgba(20,16,32,.82)'; g.beginPath(); g.roundRect(0, 0, W, hgt, rad); g.fill();
+  g.fillStyle = b.status === 'error' ? 'rgba(70,18,22,.75)' : 'rgba(20,16,32,.75)'; g.beginPath(); g.roundRect(0, 0, W, hgt, rad); g.fill();
   g.shadowColor = 'transparent';
   const sheen = g.createLinearGradient(0, 0, 0, hgt); sheen.addColorStop(0, 'rgba(255,255,255,.16)'); sheen.addColorStop(0.5, 'rgba(255,255,255,.03)'); sheen.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = sheen; g.beginPath(); g.roundRect(0, 0, W, hgt, rad); g.fill();
@@ -1549,19 +1554,7 @@ function layoutLabels() {
     const bt = bubbleText(w); w.bh = bt ? bubbleBitmap(bt, !!w.walk || !!w.sayNow).height * 0.9 : 0; // the bubble sits on top of the tag
     order.push(w);
   }
-  // stagger: never overlap a neighbour's tag (push the later one up)
-  order.sort((a, b) => b.ly - a.ly || a.lx - b.lx);
-  for (let i = 0; i < order.length; i++) {
-    const a = order[i];
-    for (let pass = 0; pass < 4; pass++) {
-      let hit = false;
-      for (let j = 0; j < i; j++) {
-        const b = order[j];
-        if (a.lx < b.lx + b.lw + 4 && b.lx < a.lx + a.lw + 4 && a.ly - a.bh < b.ly + b.lh + 3 && b.ly - b.bh < a.ly + a.lh + 3) { a.ly = b.ly - b.bh - a.lh - 3; hit = true; }
-      }
-      if (!hit) break;
-    }
-  }
+  // David, 2026-11-19: tags stay where they are; overlapping pills just show through each other (0.75 alpha)
 }
 function drawLabel(w) {
   const bm = labelBitmap(w);

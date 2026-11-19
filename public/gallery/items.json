@@ -785,7 +785,7 @@
     "walk-side cell 11",
     "layout.json sprites[11] (size and hem)"
    ],
-   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Redesigned: curly auburn ponytail, gold hoops, freckles, cherry-red hoodie (no more green hoodie and hat). Has no desk; idles in the kitchen beside the floor lamp.  Round 7 (2026-11-19): front and back (and the shared atlases) were defringed to drop the light halo around the hair.",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Redesigned: curly auburn ponytail, gold hoops, freckles, cherry-red hoodie (no more green hoodie and hat). Has no desk; idles in the kitchen beside the floor lamp.  Round 7 (2026-11-19): front and back (and the shared atlases) were defringed to drop the light halo around the hair.  Round 8 (2026-11-19): hair fringe defringed again (soft-edge RGB pulled from the dark interior) so the cutout blends into the room. Kitchen/lounge scale now matches seated Grok.",
    "id": "C11",
    "section": "C",
    "name": "Shopper",
@@ -963,7 +963,7 @@
    "linked": [
     "every bot"
    ],
-   "notes": "",
+   "notes": "Round 8 (2026-11-19): pills are 0.75 alpha. Overlapping tags stay in place and show through each other; the old stagger/offset is gone. Drawn in main.js (not ui.js).",
    "id": "C15",
    "section": "C",
    "name": "Name tags",
@@ -2221,7 +2221,7 @@
     "O12 (clock above it)"
    ],
    "easy": "Medium: a new source picture (props_prep2.py), then rebuild; the books are code (B01).",
-   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). A walnut ladder leans on it (B03). Round 6 (2026-11-19): stands 18 px out from the wall (layout.json bookcase.warp.u), with a side panel; books and ladder follow.",
+   "notes": "Added 2026-11-12 (David): reaches to about two feet under the clock. Round 5 (2026-11-19): slanted onto the left wall to the right wall's vanishing point (scene.js WARP). A walnut ladder leans on it (B03). Round 6 (2026-11-19): stands 18 px out from the wall (layout.json bookcase.warp.u), with a side panel; books and ladder follow.  Round 8: the digital clock now sits on the top of the case, tilted with the wall.",
    "pics": [
     {
      "label": "bookcase",
@@ -2699,7 +2699,7 @@
     "M01–M14 (screens inside)",
     "layout.json desks[].monitors"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Drawn to fit the exact screen the viewer animates; no copied painted bezels.  Round 7 (2026-11-19): bezels made very thin (scene.js pasteMon).",
+   "notes": "Redrawn 2026-11-12 (round 2). Drawn to fit the exact screen the viewer animates; no copied painted bezels.  Round 7 (2026-11-19): bezels made very thin (scene.js pasteMon).  Round 8: monitor depth is just behind this desk’s chairs, so front-row screens sit in front of the desk-front occluder and run again (they had gone black in round 7).",
    "id": "O09",
    "section": "O",
    "name": "Monitor frames",
@@ -2794,7 +2794,7 @@
   },
   {
    "linked": [],
-   "notes": "",
+   "notes": "Round 8 (2026-11-19): moved onto the top of the bookcase and given the same isometric slant as the left wall / case top (shear 0.338).",
    "id": "O12",
    "section": "O",
    "name": "Wall clock",
@@ -3068,7 +3068,7 @@
     "C rows of turn-bodies"
    ],
    "easy": "Medium: comes from the turning sheet; change both together.",
-   "notes": "Added 2026-11-12 (round 2; David: the backs looked like black blobs).  Round 7: src/chair.png was defringed and the plates rebuilt so the light/pink rim on the cutout is gone.",
+   "notes": "Added 2026-11-12 (round 2; David: the backs looked like black blobs).  Round 7: src/chair.png was defringed and the plates rebuilt so the light/pink rim on the cutout is gone.  Round 8: another inward-dark defringe on chair.png and a plate rebuild, so remaining pink/white edge matte is pulled toward the dark chair body.",
    "pics": [
     {
      "label": "chair, back-right desk",

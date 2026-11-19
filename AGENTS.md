@@ -30,8 +30,11 @@ Two publishers, one build (`bin/pages-build.sh`): `.github/workflows/publish.yml
 ## Character scale, cutouts and monitors (David, 2026-11-19)
 
 - One perspective scale for every standing or walking character: `hAt()` in `public/office2d/main.js`, with heights in `walk.h` in `art/layout.json` (and written by `portable/art/scene.js`). A visitor at a row should match the seated bots there. Seated busts still use the chair-fitted `hsc`.
-- Sprite and prop cutouts: run `python3 portable/art/defringe.py` to remove light/white fringe on alpha edges. Then rebuild baked chairs/monitors with `node portable/art/run-scene.js <out> --install` if those sources changed.
-- Monitor depth is the lowest y of the glass quad (the foot of the screen), the same foot-y rule as chairs, so a front desk's monitor is not painted behind a neighbouring chair. Bezels are drawn thin in `pasteMon()` in `scene.js`.
+- Lounge and kitchen-idle bots use `loungeHu()` so they match seated Grok, not the standing `hAt` at that floor y.
+- Sprite and prop cutouts: run `python3 portable/art/defringe.py` to pull light/white fringe on soft (semi-transparent) edges toward the dark interior colour. Then rebuild baked chairs/monitors with `node portable/art/run-scene.js <out> --install` if those sources changed.
+- Monitor depth is just behind that desk's own chairs (`min(clip) - 0.05`), so the screens paint over the row behind and over the desk-front occluder (and stay running) while that desk's chairs and bots stay in front. Bezels are drawn thin in `pasteMon()` in `scene.js`.
+- The digital clock sits on the top of the bookcase, with the same isometric slant as the left wall (`drawClock` in `main.js`).
+- Name tags (`labelBitmap` / `layoutLabels` in `main.js`, not ui.js) are 0.75 alpha. Overlapping tags stay put and show through each other; do not stagger or offset them.
 
 ## Roster rules (David, 2026-11-19)
 
