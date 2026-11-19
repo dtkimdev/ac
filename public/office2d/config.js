@@ -8,6 +8,11 @@ export const REFRESH = { repo: 'dtkimdev/ac', workflow: 'refresh.yml', ref: 'mai
 export const BOTS = {
   // never shown in the office; the bots themselves are untouched (bot11 Notes; old 14, replaced by the new Dashboards, David 2026-11-12)
   hiddenIds: ['a80017dc-128b-4534-8cde-674d5b094b4f', 'fa5eb849-f363-4153-8c97-77a89556137f'],
+  // David, 2026-11-19: hide retired "old N" bots and dash/sub-number bots ("N-M. ...") by name; a replacement whose name (or live_name)
+  // starts with "N." takes seat N. hiddenIds and spriteByNum still apply.
+  retiredName: /^old /i,
+  subBotName: /^\d+-\d+\./,
+  seatPrefix: /^(\d+)\./,
   loungeBotIdPrefix: 'e0bf5277-',                      // this bot (bot14 Dashboards) wears the Dashboards art (bots/dash) and visits the blue bean bag
   // bot number -> fixed row in the sprite set (every current bot pinned, David 2026-11-12). A new bot draws a free row by its seed:
   // rows 12-15 are four different designs made for new bots (layout.json baseSprites = 16).

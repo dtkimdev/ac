@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=33'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=34'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -223,7 +223,7 @@ function demoize(bots) {
   return bots.map(b => b.num === 1 ? { ...b, status: 'working', task: 'routing a request' } : b.num === 3 ? { ...b, status: 'working', task: 'triaging inbox' } : b.num === 9 ? { ...b, status: 'error', error: 'heartbeat stale' } : b.num === 2 ? { ...b, status: 'working', task: 'market-desk brief' } : b.num === 14 ? { ...b, status: 'working', task: 'charting usage' } : b); // preview only
 }
 function assign(bots) {
-  const live = bots.filter(b => b.status !== 'moved_out' && !HIDDEN_IDS.has(b.id)).sort((a, b) => (a.num ?? 999) - (b.num ?? 999));
+  const live = roster(bots).filter(b => b.status !== 'moved_out').sort((a, b) => (a.num ?? 999) - (b.num ?? 999));
   // who may take breaks: the quieter part of the office by usage (WALK.quietShare; David, 2026-11-10: the bottom 50%, never the busy ones)
   const byUse = [...live].sort((a, b) => (a.usage_pct ?? 0) - (b.usage_pct ?? 0)); QUIET.clear(); for (const b of byUse.slice(0, Math.ceil(byUse.length * WALK.quietShare))) QUIET.add(b.id); D.quiet = byUse.filter(b => QUIET.has(b.id)).map(b => b.name);
   for (const s of [...seats, ...standing]) s.bot = null;
@@ -270,6 +270,19 @@ function newWorker(b) {
 // ---------- last-active suffix on the name tags: `Grok · 1d`, `2h`, `15m`, `now`, `—` (from bot.last_active; whole numbers only) ----------
 // display-only: bots hidden from the office by id (bot itself untouched). bot11 Notes removed from the office v8.
 const HIDDEN_IDS = new Set(BOTS.hiddenIds);
+// display-only: drop hidden ids, retired "old N" names, and dash/sub-number names ("N-M. ..."); seat by the "N." prefix when present (David, 2026-11-19)
+function roster(bots) {
+  const out = [];
+  for (const b of bots || []) {
+    if (HIDDEN_IDS.has(b.id)) continue;
+    const names = [b.live_name, b.name].map(n => String(n || ''));
+    if (names.some(n => BOTS.retiredName.test(n) || BOTS.subBotName.test(n))) continue;
+    let num = b.num;
+    for (const n of names) { const m = n.match(BOTS.seatPrefix); if (m) { num = +m[1]; break; } }
+    out.push(num === b.num ? b : { ...b, num });
+  }
+  return out;
+}
 const isDash = b => String(b.id).startsWith(BOTS.loungeBotIdPrefix); // bot14 Dashboards lives in the lounge
 // kitchen homes for bots without a desk: [x, floor y, nearest walking node], in plate px. A sixth bot reuses the first spot, shifted aside.
 const KITCHEN_HOMES = [[196, 600, 7], [290, 698, 12], [204, 656, 8], [170, 694, 11], [232, 578, 0]];
@@ -405,7 +418,7 @@ function apply(s) {
   }
   S = { ...(S || {}), ...s }; if (s.now) renderUpdated(s.now);
   if (D.loaded) { assign(S.bots || []); if (!D.labels.length) refreshLabels(); }
-  renderRoster({ ...S, bots: (S.bots || []).filter(b => !HIDDEN_IDS.has(b.id)) }, id => deskInfo(id)?.label);
+  renderRoster({ ...S, bots: roster(S.bots || []) }, id => deskInfo(id)?.label);
   if (cardOpen()) showCard(S, cardOpen(), null, deskInfo);
   D.workers = [...workers.values()].map(w => ({ id: w.bot.id, name: w.bot.name, num: w.bot.num, desk: w.seat.desk.label, seat: w.seat.idx, sprite: L.sprites[w.sprite].file, status: w.bot.status }));
   if (!DEMO && Array.isArray(s.interactions)) feed(s.interactions);
@@ -1387,7 +1400,7 @@ function drawMonitor(m, t, redraw) {
 }
 let liveBots = [];
 function refreshOccupants() {
-  liveBots = (S?.bots || []).filter(b => b.status !== 'moved_out' && !HIDDEN_IDS.has(b.id));
+  liveBots = roster(S?.bots || []).filter(b => b.status !== 'moved_out');
   for (const m of monitors) m.occ = seats.find(s => s.desk === m.desk && s.idx === m.idx)?.bot;
   for (const d of L.desks) d._boss = seats.find(s => s.desk === d && s.idx === 0)?.bot;
 }

@@ -27,7 +27,17 @@ Two publishers, one build (`bin/pages-build.sh`): `.github/workflows/publish.yml
 - Raise the `?v=` number in `public/office2d/main.js` when you change art, or browsers keep the old pictures for up to an hour.
 - Server code (`server.js`, `lib/`) also needs a server restart on the shared computer. The publisher logs a reminder.
 
+## Roster rules (David, 2026-11-19)
+
+Who appears in the painted office is decided in the viewer (`BOTS` in `public/office2d/config.js`, applied by `roster()` in `public/office2d/main.js`). The bots themselves and the registry (`/workspace/david-stack/BOTS.md`) are not changed.
+
+- A bot whose `name` or `live_name` starts with `old ` (for example `old 1`, `old 14`) is not shown. After a `c0` replace, the new bot keeps the number in its name (`N. ...`) and takes that seat, desk and sprite; the retired `old N` bot is hidden. Do not hard-code replacement ids for this: the name prefix is enough. `BOTS.hiddenIds` still hides specific ids (for example bot11 Notes) and `BOTS.spriteByNum` still pins sprite rows by number.
+- Dash/sub-number bots are not shown: a name like `N-M. ...` (for example `5-1. Watermark Lab`, `4-1. Studio Box`) matches `^\d+-\d+\.`.
+
+When a later bot is replaced or a new dash bot appears, these rules apply on the next data refresh; you should not need a code change.
+
 ## Claude on DPro has the last word
+
 
 David's decision, 2026-11-09: when Claude on DPro and another bot disagree, Claude's version wins.
 
