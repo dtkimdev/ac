@@ -27,6 +27,12 @@ Two publishers, one build (`bin/pages-build.sh`): `.github/workflows/publish.yml
 - Raise the `?v=` number in `public/office2d/main.js` when you change art, or browsers keep the old pictures for up to an hour.
 - Server code (`server.js`, `lib/`) also needs a server restart on the shared computer. The publisher logs a reminder.
 
+## Character scale, cutouts and monitors (David, 2026-11-19)
+
+- One perspective scale for every standing or walking character: `hAt()` in `public/office2d/main.js`, with heights in `walk.h` in `art/layout.json` (and written by `portable/art/scene.js`). A visitor at a row should match the seated bots there. Seated busts still use the chair-fitted `hsc`.
+- Sprite and prop cutouts: run `python3 portable/art/defringe.py` to remove light/white fringe on alpha edges. Then rebuild baked chairs/monitors with `node portable/art/run-scene.js <out> --install` if those sources changed.
+- Monitor depth is the lowest y of the glass quad (the foot of the screen), the same foot-y rule as chairs, so a front desk's monitor is not painted behind a neighbouring chair. Bezels are drawn thin in `pasteMon()` in `scene.js`.
+
 ## Roster rules (David, 2026-11-19)
 
 Who appears in the painted office is decided in the viewer (`BOTS` in `public/office2d/config.js`, applied by `roster()` in `public/office2d/main.js`). The bots themselves and the registry (`/workspace/david-stack/BOTS.md`) are not changed.

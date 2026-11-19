@@ -320,12 +320,12 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   const pasteMon = (k, q, dx, D) => {
     q = q.map(([x, y]) => [x + dx, y]);
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2, qb = Math.max(q[2][1], q[3][1]), wq = Math.max(...xs) - Math.min(...xs), p = pal[k], nt = k === 'night';
-    const c0 = [xs.reduce((s, v) => s + v, 0) / 4, ys.reduce((s, v) => s + v, 0) / 4], e = 1.6 + wq * 0.022;
+    const c0 = [xs.reduce((s, v) => s + v, 0) / 4, ys.reduce((s, v) => s + v, 0) / 4], e = 0.55 + wq * 0.008; // very thin bezel (David, 2026-11-19)
     const grow = (d) => q.map(([x, y]) => { const vx = x - c0[0], vy = y - c0[1], l = Math.hypot(vx, vy) || 1, sx = Math.sign(vx), sy = Math.sign(vy); return [x + sx * d, y + sy * d * 1.15]; });
     const outer = grow(e), back = grow(e + 0.6).map(([x, y]) => [x + (cx < VP[0] ? -0.9 : 0.9), y + 0.6]);
     const g = ctx(hi[k]); g.save(); g.setTransform(S, 0, 0, S, 0, 0); g.lineJoin = 'round';
     let foot = D.yb + (D.yf - D.yb) * 0.4; if (foot < qb + 2) foot = qb + 2;
-    const nw = Math.max(3, wq * 0.07);
+    const nw = Math.max(1.8, wq * 0.04);
     // neck and foot
     const ng = g.createLinearGradient(cx - nw / 2, 0, cx + nw / 2, 0); ng.addColorStop(0, rgb(p.leg, 1.25)); ng.addColorStop(1, rgb(p.leg, 0.75));
     g.fillStyle = ng; g.fillRect(cx - nw / 2, qb - 2, nw, foot - qb + 1.5);
@@ -335,7 +335,7 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
     // the shell behind, then the bezel
     g.fillStyle = 'rgba(4,4,6,.55)'; g.strokeStyle = 'rgba(4,4,6,.55)'; g.lineWidth = 1.4; poly(g, back); g.fill(); g.stroke();
     const bz = g.createLinearGradient(0, Math.min(...ys) - e, 0, qb + e); bz.addColorStop(0, nt ? '#1d1e25' : '#2a2a30'); bz.addColorStop(1, nt ? '#0d0e12' : '#151518');
-    g.fillStyle = bz; g.strokeStyle = bz; g.lineWidth = 1.2; poly(g, outer); g.fill(); g.stroke();
+    g.fillStyle = bz; g.strokeStyle = bz; g.lineWidth = 0.55; poly(g, outer); g.fill(); g.stroke();
     // a lit top edge and a faint inner lip
     g.strokeStyle = nt ? 'rgba(170,180,230,.16)' : 'rgba(255,214,180,.22)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(outer[0][0] + 1, outer[0][1] + 0.3); g.lineTo(outer[1][0] - 1, outer[1][1] + 0.3); g.stroke();
     g.fillStyle = '#06070a'; poly(g, q); g.fill();
@@ -466,6 +466,8 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   // ---- 8. the viewer's layout ----
   const lay = JSON.parse(JSON.stringify(L)), nav = L.nav.nodes.map(([x, y]) => [x * PW, y * PH]);
   { const cur = await fetch(assets + 'layout.json').then(r => r.json()).catch(() => null); if (cur && cur.sprites) { for (const key of ['sprites', 'walkSide', 'baseSprites', 'dash', 'turn']) if (cur[key] !== undefined) lay[key] = cur[key]; } } // the character art's measurements (run-chars.js, the redrawn characters) stay as installed
+  // round 7 (David, 2026-11-19): one perspective scale for standing/walking bots, fitted so a visitor matches the seated bots at that row
+  lay.walk = { y: 0.7861, h: [[0.7861, 0.1714], [0.8889, 0.2188], [0.995, 0.2196]] };
   // a back-row seat joins the walkway behind the desks at the walkway point nearest to it (the seats moved since the template's own)
   const AISLE = L.nav.nodes.map((p, i) => [i, p]).filter(([, p]) => Math.abs(p[1] - 0.7861) < 0.004);
   const seatNode = (t, x) => t.feet[1] > 0.78 && t.feet[1] < 0.8 ? AISLE.reduce((b, a) => Math.abs(a[1][0] * PW - x) < Math.abs(b[1][0] * PW - x) ? a : b)[0] : t.node;

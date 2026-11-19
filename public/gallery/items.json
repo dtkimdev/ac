@@ -785,7 +785,7 @@
     "walk-side cell 11",
     "layout.json sprites[11] (size and hem)"
    ],
-   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Redesigned: curly auburn ponytail, gold hoops, freckles, cherry-red hoodie (no more green hoodie and hat). Has no desk; idles in the kitchen beside the floor lamp.",
+   "notes": "Redrawn 2026-11-12 from one turnaround per bot, so front, back, turning and walking views match (hair whole in side and back views, face no longer cuts into the hair). Redesigned: curly auburn ponytail, gold hoops, freckles, cherry-red hoodie (no more green hoodie and hat). Has no desk; idles in the kitchen beside the floor lamp.  Round 7 (2026-11-19): front and back (and the shared atlases) were defringed to drop the light halo around the hair.",
    "id": "C11",
    "section": "C",
    "name": "Shopper",
@@ -2662,7 +2662,7 @@
     "M16 (screen glow)",
     "X04 (boss mask)"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.",
+   "notes": "Redrawn 2026-11-12 (round 2). Chairs: the turning sheet's office chair from behind (O21), not the dark painted backrest.  Round 7: thinner monitor bezels; monitor depth is the foot of the glass so the screens are not painted behind a neighbouring chair.",
    "id": "O08",
    "section": "O",
    "name": "Boss desk",
@@ -2699,7 +2699,7 @@
     "M01–M14 (screens inside)",
     "layout.json desks[].monitors"
    ],
-   "notes": "Redrawn 2026-11-12 (round 2). Drawn to fit the exact screen the viewer animates; no copied painted bezels.",
+   "notes": "Redrawn 2026-11-12 (round 2). Drawn to fit the exact screen the viewer animates; no copied painted bezels.  Round 7 (2026-11-19): bezels made very thin (scene.js pasteMon).",
    "id": "O09",
    "section": "O",
    "name": "Monitor frames",
@@ -3068,7 +3068,7 @@
     "C rows of turn-bodies"
    ],
    "easy": "Medium: comes from the turning sheet; change both together.",
-   "notes": "Added 2026-11-12 (round 2; David: the backs looked like black blobs).",
+   "notes": "Added 2026-11-12 (round 2; David: the backs looked like black blobs).  Round 7: src/chair.png was defringed and the plates rebuilt so the light/pink rim on the cutout is gone.",
    "pics": [
     {
      "label": "chair, back-right desk",
@@ -3770,7 +3770,7 @@
     "layout.json desks[].monitors",
     "O09"
    ],
-   "notes": "",
+   "notes": "Round 7: screens still map onto the same quads; only the drawn bezel around them is thinner.",
    "id": "M17",
    "section": "M",
    "name": "Fitting the screens onto the monitors",

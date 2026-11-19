@@ -10,7 +10,7 @@ import { makeFx, glowSprite, px, polyPath } from './fx.js';
 import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS } from './config.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=36'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=37'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -80,10 +80,11 @@ async function load() {
       const x = s.x * PW, ctop = s.ctop * PH, base = s.base * PH, H = base - ctop, ts = H / T.chairH; // ts: plate px per turn-atlas px, from the chair in the plate
       seats.push({ ...s, x, ctop, base, ts, hsc: ts * 0.78, neckY: base - (T.floor - F0.neck) * ts, top: ctop - H * 0.5, h: H * 1.05, clip: ctop + H * 0.56, chair: px(s.chair), feet: [s.feet[0] * PW, s.feet[1] * PH], desk: d, idx: i, bot: null, self: false, nc: L.nochair[s.nc], ncP: null });
     });
-    const kinds = THEME_KINDS[d.theme] || THEME_KINDS.default, ow = { boss: 0, numbers: 1 }[d.id], cuts = d.cuts || [];
+    const kinds = THEME_KINDS[d.theme] || THEME_KINDS.default, cuts = d.cuts || [];
     d.monitors.forEach((m, i) => {
       const Q = px(m), c = mk(SW, SH);
-      monitors.push({ q: Q, desk: d, idx: i, kind: kinds[i % kinds.length], c, g: c.getContext('2d'), cut: cuts[i] ? px(cuts[i]) : null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: ow != null ? occluders[ow].depth + 1 : Math.max(...Q.map(p => p[1])), cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] });
+      // depth is the glass's lowest plate y (the foot of the screen): same rule as chairs (foot/clip) so a front desk's monitor is never painted behind a neighbouring chair
+      monitors.push({ q: Q, desk: d, idx: i, kind: kinds[i % kinds.length], c, g: c.getContext('2d'), cut: cuts[i] ? px(cuts[i]) : null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: Math.max(...Q.map(p => p[1])), cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] });
     });
   }
   // right wall: slim monitors, behind everything that can walk (they hang far above the floor)
@@ -525,7 +526,7 @@ const freeWalkers = () => { let n = 0; for (let i = 0; i < wl.length; i++) if (w
 const visiting = w => { for (let i = 0; i < wl.length; i++) if (wl[i].walk && wl[i].walk.to === w) return true; return false; };
 
 // ---------- walking: stand up, walk the walkway to the other desk, talk, walk back, sit ----------
-function hAt(f) { // upper-body sprite height for a floor y (piecewise fit of the measured seats)
+function hAt(f) { // one perspective scale for every standing or walking character: upper-body height for a floor y (walk.h is fitted so a visitor matches the seated bots at that row)
   const W = walkH; if (f <= W[0][0]) return W[0][1] + (f - W[0][0]) * (W[1][1] - W[0][1]) / (W[1][0] - W[0][0]);
   for (let i = 1; i < W.length; i++) if (f <= W[i][0] || i === W.length - 1) return W[i - 1][1] + (f - W[i - 1][0]) * (W[i][1] - W[i - 1][1]) / (W[i][0] - W[i - 1][0]);
   return W[W.length - 1][1];
