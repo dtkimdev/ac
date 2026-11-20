@@ -46,17 +46,12 @@ refresh_requested() {
   echo "$id" > logs/refresh-last
   [ -n "$last" ] || return 1
   log "refresh button pressed (run $id), publishing now"
-  # at most once an hour: Claude ping (Haiku) + usage and the Grok usage webhook (lib/pages-refresh.js, never logs URL/key).
-  # The stamp is written even if a step failed, so a failing step cannot spend calls every minute. Presses inside the hour still publish.
-  local now stamp
-  now=$(date +%s); stamp=$(cat logs/usage-refresh-last 2>/dev/null || echo 0)
-  case "$stamp" in ''|*[!0-9]*) stamp=0 ;; esac
-  if [ $((now-stamp)) -ge 3600 ]; then
-    node lib/pages-refresh.js --usage-only "$PWD" 2>&1 | while IFS= read -r l; do log "$l"; done
-    date +%s > logs/usage-refresh-last
-  else
-    log "pages-refresh: usage cooldown, publishing without a new reading"
-  fi
+  # every press: the newest portfolio snapshot (write_agent_city.py: local files only, no broker calls; its output carries
+  # values, so it is never logged), then Claude ping (Haiku) + usage and the Grok usage webhook (lib/pages-refresh.js, never
+  # logs URL/key). No cooldown on this path; the server's POST /api/pages-refresh keeps its own hourly one.
+  if python3 /workspace/david-stack/write_agent_city.py >/dev/null 2>&1; then log "pages-refresh: portfolio refreshed"
+  else log "pages-refresh: portfolio refresh failed (keeping the last snapshot)"; fi
+  node lib/pages-refresh.js --usage-only "$PWD" 2>&1 | while IFS= read -r l; do log "$l"; done
   # fresh Claude usage for the bars: the collector reads local files only (no model calls); the server re-reads its output by mtime
   node bin/claude-usage.js >/dev/null 2>&1 || log "claude-usage collector failed (bars keep the last reading)"
   return 0

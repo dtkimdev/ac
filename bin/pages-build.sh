@@ -44,6 +44,12 @@ trap 'rm -f "$tmp"' EXIT
 if [ -n "${AC_STATE_FILE:-}" ]; then cp "$AC_STATE_FILE" "$tmp"
 else curl -sf -m 10 "http://127.0.0.1:$PORT/api/state" -o "$tmp" || { echo "state export failed (server down?)"; exit 1; }; fi
 python3 -c "import json,sys;d=json.load(open(sys.argv[1]));assert d['now']>0 and d['bots']" "$tmp" 2>/dev/null || { echo "state export invalid"; exit 1; }
+# the server caches the portfolio for a minute: a data/portfolio.json just written by the ↻ refresh goes in directly
+# (same shape as the server's, via lib/city.js). Values are never printed; a missing or invalid file leaves the server's copy.
+if [ -f data/portfolio.json ]; then
+  node -e 'const fs=require("fs"),f=process.argv[1],p=require("./lib/city").portfolio();if(!p.available||p.source!=="data/portfolio.json")process.exit(1);const d=JSON.parse(fs.readFileSync(f,"utf8"));d.portfolio=p;fs.writeFileSync(f,JSON.stringify(d))' "$tmp" 2>/dev/null \
+    || echo "portfolio overlay skipped (data/portfolio.json missing or invalid)"
+fi
 chmod 644 "$tmp"; mv "$tmp" "$OUT/state.json"
 # the Bears banner: the next games, fresh on every publish (↻, a Grok refresh, a push); never fails the build (bin/bears.js)
 node bin/bears.js "$OUT/bears.json" || true
