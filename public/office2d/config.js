@@ -99,6 +99,10 @@ export const BOOKS = {
 // Example: { file: 'plant-new.png', x: 600, y: 560, w: 60, h: 90, depth: 650 },
 export const PROPS = [];
 
+// The Bears' next game, written on the kitchen menu board (David, 2026-11-20; banner.js, data from bin/bears.js -> bears.json). The board's
+// place and size come from the room pictures (portable/art/scene.js BOARD_RECT -> layout.json kitchen.board). show: false hides it.
+export const BANNER = { show: true };
+
 // ---------- speed ----------
 // Levels 0-3 are the full picture, for PCs and phones. Level 4 is lite: same scene, far fewer drawing operations. Force one with ?q=0 .. ?q=4
 // The full picture is drawn at most this many pixels wide, and the browser scales it up to the screen (David, 2026-11-11: on large

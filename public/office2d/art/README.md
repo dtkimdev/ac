@@ -309,6 +309,7 @@ Find the function named in the "code" column (search for it); "tune" is a settin
 | item | code | tune |
 |---|---|---|
 | Wall clock (digital, walnut case) | `main.js#drawClock` |  |
+| Bears next game on the kitchen menu board (logos, date, kickoff time in Bangkok) | `banner.js#makeBanner` | config.js BANNER.show; the board: portable/art/scene.js BOARD_RECT -> layout.json kitchen.board; data: bin/bears.js writes bears.json on every publish |
 | Coffee steam | `main.js#drawSteam`, `main.js#curl` | positions: layout.json steam |
 | Bean bag visits (lounge) | `main.js#initLounge`, `main.js#drawLounge` | seats: layout.json lounge |
 | Lamp glow | `fx.js#lamps` | positions: layout.json lamps |

@@ -681,6 +681,12 @@
   },
   {
    "group": "Room life",
+   "label": "Bears next game on the kitchen menu board (logos, date, kickoff time in Bangkok)",
+   "code": "banner.js#makeBanner",
+   "tune": "config.js BANNER.show; the board: portable/art/scene.js BOARD_RECT -> layout.json kitchen.board; data: bin/bears.js writes bears.json on every publish"
+  },
+  {
+   "group": "Room life",
    "label": "Coffee steam",
    "code": [
     "main.js#drawSteam",

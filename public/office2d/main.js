@@ -7,7 +7,8 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS } from './config.js';
+import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS, BANNER } from './config.js';
+import { makeBanner } from './banner.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
 const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=38'; // V: cache version for local servers; the published site stamps each file itself
@@ -42,6 +43,13 @@ D.memory = () => { // rough estimate of picture memory, in MB: canvases still al
   return { totalMB: MB(cb + ib), canvasesMB: MB(cb), canvases: n, bigCanvases: bigC, picturesMB: MB(ib), bigPictures: bigI };
 };
 const SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans').trim() || 'system-ui, sans-serif';
+// the Bears' next game on the kitchen menu board (banner.js): its data, bears.json, is written on every publish; read at start, every 5 minutes and after ↻
+const banner = makeBanner(BANNER, SANS); let bearsN = 0;
+function loadBears(force) {
+  if (!BANNER.show || (!force && bearsN++ % 5)) return;
+  fetch((STATIC ? './bears.json' : '/bears.json') + '?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(d => { if (d) banner.set(d); }).catch(() => {});
+}
+D.bears = { set: d => banner.set(d), get data() { return banner.data; }, text: () => banner.T, bitmap: () => banner.bitmap }; // check aid: __office2d.bears.set({...})
 
 // ---------- assets ----------
 // ATL: pose-sheet scale (0.5 once lite shrinks them)
@@ -464,7 +472,7 @@ function setupPagesRefresh() {
       for (const end = Date.now() + REFRESH.waitSeconds * 1000; Date.now() < end;) {
         await wait(15000);
         const now = await builtAt();
-        if (now && now !== before) { poll(); tip('Updated ✓'); return; }
+        if (now && now !== before) { poll(true); tip('Updated ✓'); return; }
       }
       tip('Still waiting: the publishing computer may be asleep. The site updates when it wakes.', 8000);
     } catch {
@@ -475,10 +483,12 @@ function setupPagesRefresh() {
     }
   };
 }
-function poll() {
+function poll(force) {
+  loadBears(force);
   fetch(stateUrl()).then(r => r.ok ? r.json() : null).then(s => { if (s) apply(s); }).catch(() => {});
 }
 function connect() {
+  loadBears(true);
   if (STATIC) {
     setInterval(poll, POLL_MS);
     setupPagesRefresh();
@@ -860,6 +870,7 @@ const BK = { slots: [], stacks: new Map(), run: null, runT: 0, clock: 0, checkT:
 function initBooks() {
   const B = L.bookcase; BK.slots = []; BK.box = null; if (!B) return;
   const wv = B.warp && { vx: B.warp.vp[0] * PW, vy: B.warp.vp[1] * PH, ds: B.warp.ds * PW, u: (B.warp.u || 0) * PW }; // u: round 6, the case's front stands out from the wall
+  banner.place(wv && { vx: wv.vx, vy: wv.vy, ds: wv.ds }, L.kitchen && L.kitchen.board && L.kitchen.board.rect); // the Bears' next game, on the kitchen menu board on the same wall
   BK.wp = wv ? (x, y) => { const s = 1 / (1 + x / wv.ds); return [wv.vx - (wv.vx - wv.u) * s, wv.vy + (y - wv.vy) * s]; } : (x, y) => [x, y];
   BK.lad = B.ladder ? { top: B.ladder.top.map(([x, y]) => [x * PW, y * PH]), foot: B.ladder.foot.map(([x, y]) => [x * PW, y * PH]) } : null;
   const [x0] = B.inner.map(v => v * PW), per = B.slots || 4, W = [15, 13, 16, 14, 12];
@@ -1263,6 +1274,7 @@ function buildItems() {
   // round 5: the case and its ladder stand against the slanted wall, so they sort just behind the ladder's feet: a climber is drawn over them
   if (BK.box) { items.push({ k: BK.lad ? Math.min(BK.lad.foot[0][1], BK.lad.foot[1][1]) - 2 : BK.box[3] - 1, t: 11, r: 'books' }); for (const w of workers.values()) items.push({ k: 0, t: 12, r: w }); } // the books on the shelves, and any left on a desk
   items.push({ k: 590, t: 10, r: 'kitchen' }); // the coffee pour: over the painted kitchen, behind the bots standing there
+  if (BANNER.show) items.push({ k: 0.3, t: 13, r: 'banner' }); // written on the kitchen menu board, behind everything standing in the room
   items.push({ k: 0.5, t: 7, r: 'lounge' }, { k: occluders[0].depth + 1.5, t: 6, r: 'bossfx' });
   for (const d of dogs) items.push({ k: 0, t: 5, r: d });
   PROPS.forEach((p, i) => items.push({ k: p.depth, t: 9, r: { ...p, im: propImgs[i] } })); // extra pictures from config.js
@@ -1616,6 +1628,7 @@ function drawItem(it, t, redraw) {
     case 10: drawKitchen(t); break;
     case 11: drawShelfBooks(); break;
     case 12: drawDeskBooks(it.r); break;
+    case 13: P(); banner.draw(ctx, env.n, Date.now()); break;
   }
 }
 function drawErrorGlows(t, R) {
@@ -1673,6 +1686,7 @@ function staticBox(it) {
     case 10: return dev(150, 462, 215, 525);
     case 11: return dev(...BK.box);
     case 12: { const p = deskBooksAt(r.seat); return dev(p.x - 15, p.y - 18, p.x + 15, p.y + 3); }
+    case 13: { const b = banner.box(); return b && dev(...b); }
     default: return null; // steam and monitor shimmer are left out of lite
   }
 }
@@ -1758,6 +1772,7 @@ function renderLite(t, dt) {
     KIT.live -= dt; const k = kitTask();
     if (!k || k.t < 0.3) dirty.push(dev(90, 420, 275, 640)); else dirty.push(dev(Math.min(KIT.screen[0], KIT.spout[0]) - 16, Math.min(KIT.screen[1], KIT.spout[1]) - 12, Math.max(KIT.screen[2], KIT.spout[0]) + 18, KIT.tray + 8)); // round 5: the box follows the machine on the slanted wall
   }
+  if (BANNER.show && banner.tick(Date.now())) { const b = banner.box(); if (b) dirty.push(dev(...b)); } // new data, a logo arrived, or the countdown moved on
   cityDt += dt;
   if ((cityT -= dt) <= 0) { cityT = LITE.cityEvery; renderCity(t, cityDt); cityDt = 0; dirty.push(cityBox); }
   if ((sliceT -= dt) <= 0 && slices.length) {

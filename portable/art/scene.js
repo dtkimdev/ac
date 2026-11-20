@@ -122,6 +122,7 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   const KL = { dusk: await img(art + 'kitchen2-dusk.png'), night: await img(art + 'kitchen2-night.png') }, BK = { dusk: await img(art + 'bookcase-dusk.png'), night: await img(art + 'bookcase-night.png') };
   // round 5: the wainscot and panel run along the left wall from the picture's edge (behind the bookcase); round 6: they end at the coffee
   // stand's far end (WEND), and the window shows on past it to the corner (XC)
+  const BOARD_RECT = [118, 411, 104, 49]; // the kitchen menu board, front-on (source) px: x, y, w, h
   const WEND = 236, WS = { x0: 0, x1: WEND, x2: WEND, wall: 398, top: 464, sill: 469, base: 567 };
   // round 6: the parts that stand out from the wall: source boxes [x0, y0, x1, y1], the columns of the kitchen picture each one is cut from
   // (image px), and the colour of its side faces (sampled from the pictures: dusk, night)
@@ -153,9 +154,11 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
     g.fillStyle = krgb(p.top, 0.85); g.fillRect(WS.x0, WS.wall - 3, WS.x2 - WS.x0, 4); g.fillStyle = nt ? 'rgba(170,180,230,.2)' : 'rgba(255,200,150,.32)'; g.fillRect(WS.x0, WS.wall - 3, WS.x2 - WS.x0, 0.8);
     g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(WS.x0, WS.wall + 1, WS.x2 - WS.x0, 2.5);
     g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(WS.x2 - 1, WS.wall - 3, 1, 470 - WS.wall + 3);
-    const mb = [104, 412, 40, 30]; g.fillStyle = krgb(Wd, 0.35); g.fillRect(mb[0] - 2, mb[1] - 2, mb[2] + 4, mb[3] + 4); g.fillStyle = '#1d211f'; g.fillRect(mb[0], mb[1], mb[2], mb[3]);
-    g.fillStyle = nt ? 'rgba(220,220,210,.55)' : 'rgba(240,236,224,.8)'; g.font = '600 6px sans-serif'; g.textAlign = 'center'; g.fillText('COFFEE', mb[0] + mb[2] / 2, mb[1] + 9);
-    g.fillStyle = nt ? 'rgba(220,220,210,.35)' : 'rgba(240,236,224,.5)'; for (let i = 0; i < 3; i++) { g.fillRect(mb[0] + 6, mb[1] + 14 + i * 5, 18 - i * 3, 0.8); g.fillRect(mb[0] + 29, mb[1] + 14 + i * 5, 5, 0.8); }
+    // the menu board (David, 2026-11-20): made much bigger (40 x 30 -> 104 x 49, to read from across the room) and moved clear of the bookcase's side; its face is left as plain chalkboard,
+    // because the viewer writes the Bears' next game on it (main.js + banner.js, from layout.json kitchen.board)
+    const mb = BOARD_RECT; g.fillStyle = krgb(Wd, 0.35); g.fillRect(mb[0] - 2, mb[1] - 2, mb[2] + 4, mb[3] + 4); g.fillStyle = '#1d211f'; g.fillRect(mb[0], mb[1], mb[2], mb[3]);
+    g.fillStyle = 'rgba(240,236,224,.035)'; g.fillRect(mb[0] + 3, mb[1] + 4, mb[2] - 9, mb[3] - 10); // old chalk, wiped
+    g.fillStyle = krgb(Wd, 0.5); g.fillRect(mb[0] - 2, mb[1] + mb[3] + 1, mb[2] + 4, 1.4); // chalk ledge
     g.strokeStyle = 'rgba(30,20,12,.8)'; g.lineWidth = 0.5; g.beginPath(); for (let x = WS.x0; x <= WS.x2; x += 1) { const y = WS.wall + 5 + 3.2 * Math.abs(Math.sin((x - WS.x0) / 26 * Math.PI)); x === WS.x0 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
     for (let x = WS.x0 + 13; x < WS.x2; x += 26) { const y = WS.wall + 8.2; const gl = g.createRadialGradient(x, y + 1, 0, x, y + 1, 9); gl.addColorStop(0, `rgba(255,190,110,${nt ? 0.5 : 0.35})`); gl.addColorStop(1, 'rgba(255,190,110,0)'); g.fillStyle = gl; g.fillRect(x - 9, y - 8, 18, 18); g.fillStyle = '#ffe2a8'; g.beginPath(); g.ellipse(x, y + 1.2, 1.3, 1.8, 0, 0, 7); g.fill(); g.fillStyle = '#3a2a1a'; g.fillRect(x - 0.8, y - 1.2, 1.6, 1.2); }
     // round 6: the wall's end by the stand: a walnut edge trim that catches the window light
@@ -490,6 +493,7 @@ export async function run(base, orig, assets, src = assets, art = '/scene-art/')
   lay.lounge.lamp = [lay.lamps[0].x, lay.lamps[0].y];
   const sq = KS.screen, [q0x, q0y] = wFwd(sq[0], sq[1], uS), [q1x, q1y] = wFwd(sq[2], sq[3], uS);
   lay.kitchen = { spout: wFwd(...KS.spout, uS).map(v => +v.toFixed(1)), tray: +wFwd(KS.spout[0], KS.tray, uS)[1].toFixed(1), screen: [q0x, q0y, q1x, q1y].map(v => +v.toFixed(1)), s: +wS(KS.spout[0]).toFixed(3), note: 'plate px; the coffee pour (KIT in main.js) on the slanted kitchen' };
+  lay.kitchen.board = { rect: BOARD_RECT, note: 'front-on px on the slanted left wall (bookcase.warp, u 0): the menu board, where the viewer writes the Bears next game (banner.js)' };
   const spot = id => lay.lounge.spots.find(q => q.id === id), nodes = lay.nav.nodes;
   { const c = spot('coffee'), f = spot('fridge'); c.p = [+(spX / PW).toFixed(4), c.p[1]]; nodes[c.node] = c.p.slice(); f.p = [+(wFwd(KS.fridge[0], 567, DEPTH.fridge)[0] / PW).toFixed(4), f.p[1]]; nodes[f.node] = f.p.slice(); }
   const uB = DEPTH.bookcase, LAD = { x: [30, 58], top: 126, kick: 24 }, ladTop = LAD.x.map(x => wFwd(x, LAD.top, uB)), ladFoot = LAD.x.map(x => { const [fx, fy] = wFwd(x, 567, uB); return [fx + LAD.kick * wS(x), fy]; });

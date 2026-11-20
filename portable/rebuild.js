@@ -54,6 +54,8 @@ for (const p of Object.keys(pack.files(pack.load()))) cpFile(path.join(ART_OUT, 
 // the art gallery (public/gallery), served at /gallery/ in the preview as on the live site
 if (fs.existsSync(path.join(SRC, 'gallery'))) cpDir(path.join(SRC, 'gallery'), path.join(OUT, 'gallery'));
 cpFile(SNAP, path.join(OUT, 'state.json'));
+// the Bears banner's data, as the publish writes it (bin/bears.js; needs the internet, and the banner just stays away without it)
+try { require('child_process').execFileSync(process.execPath, [path.join(ROOT, 'bin', 'bears.js'), path.join(OUT, 'bears.json')], { stdio: 'inherit', timeout: 30000 }); } catch {}
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
 let html = fs.readFileSync(path.join(SRC, 'office2d', 'index.html'), 'utf8');
