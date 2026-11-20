@@ -41,6 +41,10 @@ export const behaviorOf = num => ({ ...BEHAVIOR.default, ...(BEHAVIOR.byBot[num]
 // Bots with no desk (not listed on any desk in layout.json, for example Shopper and future bots) live in the kitchen. Between trips to
 // the coffee machine, fridge, bean bags, table and the dogs they idle at a kitchen spot. These override BEHAVIOR for them.
 export const LOITER = { tripEvery: [12, 45], tripStay: [10, 32] };
+// Coffee runs (David, 2026-11-20): now and then one desk bot (any of them, not just the quiet ones) walks to the kitchen, pulls a coffee at
+// the machine and carries the mug back to its desk. every: seconds between runs (a run waits while the coffee spot or the walking limit is taken).
+// at: where the bot stands while it makes the coffee (plate px): beside Shopper, clear of the red bean bag, which hides the old coffee spot.
+export const COFFEE = { every: [120, 300], at: [230, 589] };
 // Desk neighbours turning to chat: how often a pair starts, in seconds (David, 2026-11-11: rarely).
 export const CHAT = { every: [150, 400] };
 // Speech bubbles over the bots: 1 = the old size (David, 2026-11-12: 20% smaller). Text, padding and tail all scale with it.

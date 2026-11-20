@@ -7,7 +7,7 @@ import { bkkHour, envAt, skyAt } from './time.js';
 import { renderUpdated, renderRoster, showCard, hideCard, cardOpen } from './ui.js';
 import { SW, SH, WW, WH, THEME_KINDS, drawScreen, drawWall } from './screens.js';
 import { makeFx, glowSprite, px, polyPath } from './fx.js';
-import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS, BANNER } from './config.js';
+import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PROPS, QUALITY, LITE, REFRESH, BOOKS, BANNER, COFFEE } from './config.js';
 import { makeBanner } from './banner.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
@@ -824,7 +824,19 @@ function stepHang(w, g, dt) {
   } else say(g, pick(w.b.snacks), 2.2);
 }
 const dogNear = g => dogs.filter(d => d.pose !== 'curl' && d.y > 590 && d.x > 60 && d.x < 480).sort((a, b) => Math.hypot(a.x - g.x, a.y - g.y) - Math.hypot(b.x - g.x, b.y - g.y))[0];
-let ambT = 0;
+let ambT = 0, coffeeT = 25 + rnd() * 45; // coffeeT: the first coffee run comes within about a minute of opening the page
+// a coffee run: one desk bot, chosen at random (not only the quiet ones), walks to the machine, pulls a coffee and carries it back (COFFEE)
+function coffeeRun() {
+  const spot = lng && lng.spots.find(s => s.id === 'coffee'); if (!spot || spotTaken(spot) || kitTask() || !freeWalkers()) return false;
+  const carrier = BK.box && bookCarrier();
+  const ok = wl.filter(w => !w.walk && !w.seat.stand && !w.seat.bag && !w.seat.roam && !isDash(w.bot) && !w.chatting && w !== carrier && w.bot.status !== 'error' && !visiting(w) && w.pose.b === 0 && w.pose.dur === 0);
+  if (!ok.length) return false;
+  const w = ok[(rnd() * ok.length) | 0];
+  if (!startTrip(w, false, 'coffee')) return false;
+  const g = w.walk, n = g.pts.length - 1; // stand where the whole bot shows (COFFEE.at), not on the spot behind the red bean bag
+  if (COFFEE.at) { g.pts[n] = COFFEE.at.slice(); g.len[n - 1] = Math.hypot(g.pts[n][0] - g.pts[n - 1][0], g.pts[n][1] - g.pts[n - 1][1]) || 1; }
+  g.trip.coffee = true; return true;
+}
 function dashVisit(w) { // Dashboards leaves the bean bag to check in at a desk, then walks back
   const targets = wl.filter(o => o !== w && !o.seat.stand && !o.seat.bag && !o.walk && !visiting(o) && !busy(o) && !o.chatting);
   if (!targets.length || !freeWalkers()) return false;
@@ -836,7 +848,7 @@ function stepAmbient(dt) {
   for (let i = 0; i < wl.length; i++) {
     const w = wl[i], g = w.walk;
     // Dashboards keeps roaming even while her status is working (laptop life in the kitchen)
-    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if ((busy(w) && !isDash(w.bot) && !w.seat.roam || !QUIET.has(w.bot.id)) && !g.force && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || (g.phase === 'hang' || g.phase === 'petting') && freeWalkers())) recall(w); }
+    if (g && g.trip) { if (!isDash(w.bot) && !w.seat.roam) away++; if ((busy(w) && !isDash(w.bot) && !w.seat.roam || !QUIET.has(w.bot.id)) && !g.force && !g.trip.coffee && (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'go' || (g.phase === 'hang' || g.phase === 'petting') && freeWalkers())) recall(w); }
   }
   const carrier = BK.box && bookCarrier();
   for (let i = 0; i < wl.length; i++) {
@@ -851,12 +863,14 @@ function stepAmbient(dt) {
     } else if (w.seat.roam) startTrip(w); // kitchen bots are always out and about; they do not count against the desk bots' break limit
     else if (away < Math.min(3, wl.length - 1) && startTrip(w)) away++;
   }
+  if ((coffeeT -= dt) <= 0) { coffeeT = span(...COFFEE.every); if (!coffeeRun()) coffeeT = 15 + rnd() * 20; } // a run that cannot start now tries again soon
   if ((ambT -= dt) <= 0) {
     ambT = 0.25;
     D.ambient = { away: wl.filter(w => w.walk?.trip).map(w => w.bot.name), lounge: wl.filter(w => w.walk?.phase === 'hang' || w.walk?.phase === 'petting').map(w => w.bot.name), onBag: wl.filter(w => w.walk?.sitK > 0.9).map(w => w.bot.name) };
   }
 }
 D.visit = (a, b) => { const w = findWorker(a), o = findWorker(b); if (!w || !o || w.walk || w.seat.bag || w.seat.roam) return false; startWalk(w, o, 'hi', false); return true; }; // test aid: walk a desk bot over to another
+D.coffeeRun = () => coffeeRun(); // test aid: start a coffee run now
 D.loungeTrip = (i, spot) => { const w = typeof i === 'number' ? wl[i] : findWorker(i); return startTrip(w, true, spot); };
 
 // ---------- skill books (David, 2026-11-12): the tall case under the clock holds one book per skill (BOOKS.labels in config.js), drawn here
@@ -1628,7 +1642,7 @@ function drawItem(it, t, redraw) {
     case 10: drawKitchen(t); break;
     case 11: drawShelfBooks(); break;
     case 12: drawDeskBooks(it.r); break;
-    case 13: P(); banner.draw(ctx, env.n, Date.now()); break;
+    case 13: banner.draw(ctx, env.n, Date.now(), { k, ox: offX, oy: offY }); break; // drawn at the canvas's own pixels
   }
 }
 function drawErrorGlows(t, R) {

@@ -236,8 +236,11 @@ export function makeFx(L, rnd, img) {
   const band = [L.skyBand[0] * PH, L.skyBand[1] * PH];
   const sea = px(L.sea);
   const glints = []; for (let i = 0; i < 40; i++) glints.push({ u: rnd(), v: rnd(), ph: rnd() * 7, w: 3 + rnd() * 8 });
-  const motes = []; for (let i = 0; i < 64; i++) { const s = shafts[i % shafts.length]; let x, y; do { x = 100 + rnd() * 1080; y = 60 + rnd() * 620; } while (!inPoly(s, x, y)); motes.push({ x, y, s, vx: (rnd() - 0.5) * 4, vy: -1 - rnd() * 3, ph: rnd() * 7, r: 0.6 + rnd() * 1.2 }); }
-  const flies = []; for (let i = 0; i < 18; i++) flies.push({ x: rnd() < 0.5 ? 20 + rnd() * 200 : 1060 + rnd() * 200, y: 420 + rnd() * 280, ph: rnd() * 7, sp: 0.3 + rnd() * 0.5 });
+  // dust drifts only in the light shafts clear of the kitchen corner: in the left one it sparkled in front of the kitchen board (David, 2026-11-20)
+  const dusty = shafts.filter(s => Math.min(...s.map(p => p[0])) > 200), mshafts = dusty.length ? dusty : shafts;
+  const motes = []; for (let i = 0; i < 64; i++) { const s = mshafts[i % mshafts.length]; let x, y; do { x = 100 + rnd() * 1080; y = 60 + rnd() * 620; } while (!inPoly(s, x, y)); motes.push({ x, y, s, vx: (rnd() - 0.5) * 4, vy: -1 - rnd() * 3, ph: rnd() * 7, r: 0.6 + rnd() * 1.2 }); }
+  const flies = []; for (let i = 0; i < 18; i++) flies.push({ x: 1060 + rnd() * 200, // night fireflies on the right only: on the left they glittered over the kitchen (David, 2026-11-20)
+  y: 420 + rnd() * 280, ph: rnd() * 7, sp: 0.3 + rnd() * 0.5 });
 
   // pools
   const cars = []; for (let i = 0; i < 64; i++) cars.push({ lane: i % 2, s: 0, dir: 1, v: 0, ph: 0, on: false, col: 0, len: 1 });
