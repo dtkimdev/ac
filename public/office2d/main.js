@@ -11,7 +11,7 @@ import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PRO
 import { makeBanner } from './banner.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=38'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=39'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -557,7 +557,24 @@ function navPath(a, b, adj = navAdj()) { // Dijkstra on the floor graph -> node 
 }
 let adjC = null; const navAdj = () => { if (adjC) return adjC; adjC = nav.map(() => []); for (const [a, b] of L.nav.edges) { const d = Math.hypot(nav[a][0] - nav[b][0], nav[a][1] - nav[b][1]); adjC[a].push([b, d]); adjC[b].push([a, d]); } return adjC; };
 function pathPts(P) { const out = []; for (const p of P) { const l = out[out.length - 1]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) > 1) out.push(p); } return out; }
-const visitOf = s => s.bag || s.roam ? s.feet : [s.x + (s.idx ? 36 : -36) * (s.desk.seats.length > 1 ? 1 : 0.9), s.feet[1]];
+// a visitor (Grok on a book run too) stands beside the seat, clear of the chair, the seated bust and neighbouring bots (a fixed ±36 px overlapped them)
+const visitOf = s => {
+  if (s.bag || s.roam) return s.feet;
+  const half = Math.max((s.W || 0) * PW / 2, ...(s.chair || []).map(p => Math.abs(p[0] - s.x)));
+  const vis = hAt(s.feet[1]) * 0.32, rad = half + vis + 8, pref = s.idx ? 1 : -1, sc = s.desk.seats.length > 1 ? 1 : 0.9;
+  const others = seats.filter(o => o !== s && !o.bag && !o.roam);
+  const ok = (x, y) => x >= 36 && x <= PW - 36 && y <= PH - 8 && others.every(o => {
+    const oh = Math.max((o.W || 0) * PW / 2, ...(o.chair || []).map(p => Math.abs(p[0] - o.x)));
+    return Math.hypot(x - o.x, y - o.feet[1]) >= oh + vis + 10;
+  }) && Math.hypot(x - s.x, y - s.feet[1]) >= rad * 0.85;
+  for (const dy of [0, vis * 0.28, vis * 0.48]) {
+    for (const dir of [pref, -pref]) {
+      const p = [s.x + dir * rad * sc, s.feet[1] + dy]; if (ok(...p)) return p;
+      if (dy) { const q = [s.x + dir * (half + 18), s.feet[1] + dy]; if (ok(...q)) return q; }
+    }
+  }
+  return [Math.max(36, Math.min(PW - 36, s.x + pref * rad * sc)), s.feet[1]];
+};
 const route = (a, b) => pathPts([a.feet, ...navPath(a.node, b.node).map(n => nav[n]), visitOf(b)]);
 const DEMO_NOTES = ['handoff ✓', 'got a sec?', 'PR is up', 'numbers look good', 'synced the inbox', 'backup done', 'new clip ready', 'shield check passed'];
 function leave(w, g) { // rise: turn out of the chair towards the way out, then stand up (phase `stand`); the bean bag has no chair to turn
@@ -1030,13 +1047,17 @@ function stepErrand(w, g, dt) {
       g.prev = { front: g.front, face: g.face }; g.fade = FADE; g.front = false;
       const put = st.kind === 'shelve' ? st.books : st.put || [], take = st.kind === 'take' ? st.books : [], all = [...put, ...take], hu = hAt(g.y);
       const high = all.length ? Math.min(...all.map(b => b.cy)) : g.y, topY = BK.lad ? Math.max(...BK.lad.top.map(p => p[1])) : g.y;
-      const lift = BK.lad ? Math.max(0, Math.min(g.y - topY - hu * 0.45, g.y - hu * BOOKS.reach - high)) : 0, up = lift / BOOKS.climb;
-      R.cl = { x0: g.x, lift, up, put, take, t1: 0.3 + up, t2: 0.3 + up + 0.25 + all.length * 0.42 + 0.3 };
+      const lift = BK.lad ? Math.max(0, Math.min(g.y - topY - hu * 0.45, g.y - hu * BOOKS.reach - high)) : 0, ease = Math.min(0.25, lift / BOOKS.climb), up = lift / BOOKS.climb + ease;
+      // one leg cycle per two rungs, rounded so he arrives (top and bottom) on the cycle's first frame: no pose jump when he stops
+      const rung = BK.lad ? Math.abs(lerp2(...BK.lad.foot, 0.5)[1] - lerp2(...BK.lad.top, 0.5)[1]) / 15 : 20, cyc = Math.max(1, Math.round(lift / (2 * rung)));
+      R.cl = { x0: g.x, lift, up, k: up > 0 ? ease / up : 0, cyc, s0: Math.round(g.stride / (Math.PI * 2)) * Math.PI * 2, put, take, t1: 0.3 + up, t2: 0.3 + up + 0.25 + all.length * 0.42 + 0.3 };
     }
     const C = R.cl, n = C.put.length + C.take.length;
-    const u = R.t < 0.3 ? 0 : R.t < C.t1 ? (R.t - 0.3) / C.up : R.t < C.t2 ? 1 : Math.max(0, 1 - (R.t - C.t2) / C.up), e = u * u * (3 - 2 * u);
-    const prevLift = g.lift || 0; g.lift = C.lift * e; g.climb = R.t >= 0.3 && (R.t < C.t1 || R.t >= C.t2) && C.lift > 0;
-    if (g.climb) g.stride += Math.abs(g.lift - prevLift) / Math.max(20, hAt(g.y) * 0.3) * Math.PI;
+    // steady climbing speed; it eases in and out only over the first and last `ease` seconds
+    const glide = s => { const k = C.k, v = 1 / (1 - k); return k <= 0 ? s : s < k ? v * s * s / (2 * k) : s > 1 - k ? 1 - v * (1 - s) * (1 - s) / (2 * k) : v * (s - k / 2); };
+    const u = R.t < 0.3 ? 0 : R.t < C.t1 ? glide((R.t - 0.3) / C.up) : R.t < C.t2 ? 1 : glide(Math.max(0, 1 - (R.t - C.t2) / C.up));
+    g.lift = C.lift * u; g.climb = R.t >= 0.3 && (R.t < C.t1 || R.t >= C.t2) && C.lift > 0;
+    if (C.lift > 0 && R.t >= 0.3) g.stride = C.s0 + u * C.cyc * Math.PI * 2; // feet follow the rungs, up and down alike
     if (BK.lad) g.x = C.x0 + (ladX(g.y - g.lift) - ladX(g.y)) * 0.9; // lean in with the ladder
     while (R.done < n && R.t >= C.t1 + 0.25 + R.done * 0.42) {
       const b = R.done < C.put.length ? C.put[R.done] : C.take[R.done - C.put.length]; R.done++;
@@ -1318,9 +1339,12 @@ function drawBust(w, t) { // the default pose at the desk: the back bust behind 
 }
 // The body pictures have an open neck hole under the hood: facing round, it showed whatever was behind the bot (the dark chair and desk) as a
 // black band under the chin (David, 2026-11-10). A neck is drawn behind the body, so the hole shows skin, shaded under the chin.
-function neck(T, i, f, chatIn, alpha, row) {
-  const FR = T.frames, a = FR[i], b = FR[Math.min(5, i + 1)], m = win(f, 0.42, 0.58), lerp = (p, q, u) => p + (q - p) * u;
-  const hx = lerp(lerp(a.head[0], b.head[0], m), FR[5].head[0], chatIn) - T.cx, nk = lerp(lerp(a.neck, b.neck, m), FR[5].neck, chatIn), face = Math.min(1, Math.max(0, (i + f - 1.3) / 1.2) + chatIn);
+// The frame whose body is on show: the wipe from frame i to i + 1 is opaque over the old one by f = 0.5 (and the talking pose by chat = 0.5).
+// Neck and head sit on that frame's own collar. Blending the neck Y of two frames left the head floating above the collar mid-turn (the frames'
+// necks differ by up to 12 atlas px), so a long skin neck showed (David, round 9).
+const onShow = (T, i, f, chat) => chat >= 0.5 ? T.frames[5] : T.frames[f < 0.5 ? i : Math.min(5, i + 1)];
+function neck(T, i, f, chatIn, alpha, row, F) {
+  const hx = F.head[0] - T.cx, nk = F.neck, face = Math.min(1, Math.max(0, (i + f - 1.3) / 1.2) + chatIn);
   if (face <= 0.02 || row >= T.sprites.length) return;
   const g = ctx.createLinearGradient(0, nk - 18, 0, nk + 20); g.addColorStop(0, '#9c6a52'); g.addColorStop(0.35, '#c4896a'); g.addColorStop(1, '#d9a080');
   ctx.globalAlpha = alpha * face; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(hx - 13, nk - 18, 26, 40, 9); ctx.fill(); ctx.globalAlpha = alpha;
@@ -1333,14 +1357,15 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   ctx.translate(0, T.floor * 0.5); ctx.rotate(swing * 0.03 * sign); ctx.translate(0, -T.floor * 0.5); // the weight shifts with the turn
   const stepIn = win(f, 0.4, 0.52), stepOut = win(f, 0.5, 0.62), chatIn = win(P2.chat, 0.44, 0.5), chatOut = win(P2.chat, 0.5, 0.56), sx = j => j * cw, sy = row * ch;
   const body = (j, a) => { if (a > 0.004) { ctx.globalAlpha = alpha * a; ctx.drawImage(turnB, sx(j) * ATL, sy * ATL, cw * ATL, ch * ATL, -T.cx, 0, cw, ch); } };
-  neck(T, i, f, chatIn, alpha, w.sprite);
+  const F = onShow(T, i, f, P2.chat || 0);
+  neck(T, i, f, chatIn, alpha, w.sprite, F);
   body(i, (1 - stepOut) * (1 - chatOut)); body(i + 1, stepIn * (1 - chatOut)); body(5, chatIn);
   // the talking pose (5) steps in like the turn frames: it is fully drawn over an opaque old pose before the old one fades. It used to
   // cross-fade (both half see-through), so the desk screen showed through faces and caps whenever a bot started or stopped talking.
-  // head: anchored on the neck of the frame on show; the leading angle picks the painted head
-  const FR = T.frames, Fa = FR[i], Fb = FR[i + 1], Fc = FR[5], lerp = (a, b, q) => a + (b - a) * q, m = win(f, 0.42, 0.58), hxB = lerp(Fa.head[0], Fb.head[0], m), nkB = lerp(Fa.neck, Fb.neck, m), hx = lerp(hxB, Fc.head[0], chatIn), nk = lerp(nkB, Fc.neck, chatIn) - 2;
+  // head: anchored on the neck of the body frame on show (not the leading head's frame); the leading angle only picks the painted head
+  const hx = F.head[0], nk = F.neck - 2;
   const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * (T.sprites[row] || T.sprites[0]).sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
-  ctx.save(); ctx.translate(hx - T.cx, nk); ctx.rotate(hr); ctx.translate(0, nod * 18);
+  ctx.save(); ctx.translate(hx - T.cx, nk); ctx.rotate(hr); ctx.translate(0, Math.max(0, nod) * 18); // the nod dips the chin, never lifts the head off the collar
   const dw = hw * hk, dh = hh * hk, [ax, ay] = T.anchor, ox = -ax * hk, oy = -ay * hk;
   const head = (j, a) => { if (a <= 0.004) return; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw * ATL, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side
   head(hi, (1 - hOut) * (1 - chatOut)); head(hi + 1, hIn * (1 - chatOut)); head(5, chatIn);
@@ -1402,10 +1427,11 @@ function drawWalker(w, t, alpha = 1) {
   const petting = g.phase === 'petting', crouch = petting ? 0.34 + Math.sin(t * 7) * 0.04 : 0, bag = g.trip?.spot?.bag && g.sitK > 0 ? g.trip.spot : null, sk = bag ? g.sitK * g.sitK * (3 - 2 * g.sitK) : 0;
   let set = front ? 'front' : 'back', i = 0;
   if (moving || g.climb) { set = moving ? g.legs : 'back'; const n = L.legs[set].length; i = ((cyc * n) % n + n) % n | 0; }
-  const bob = moving ? Math.sin(g.stride * 2) * hu * 0.006 : g.phase === 'hang' ? Math.sin(t * 2.3 + w.ph) * hu * 0.005 : Math.sin(t * 2 + w.ph) * hu * 0.004;
+  // on the ladder: a small push on every rung (zero at each cycle's first frame) and the body leans to the reaching hand; still on the ladder, no idle bob
+  const bob = g.climb ? -Math.abs(Math.sin(g.stride)) * hu * 0.012 : lift > 0 ? 0 : moving ? Math.sin(g.stride * 2) * hu * 0.006 : g.phase === 'hang' ? Math.sin(t * 2.3 + w.ph) * hu * 0.005 : Math.sin(t * 2 + w.ph) * hu * 0.004;
   const foot = L.legs[set + 'Foot'][i], ref = L.legs[set === 'side' ? 'sideFoot' : set + 'Foot'][0]; // side frames carry their own hip drop
   const hip = f - hu * LEG_H * (1 - crouch) * (foot - L.legs.hip) / (ref - L.legs.hip) + bob;
-  const sway = moving ? Math.sin(g.stride) * 0.03 : g.phase === 'talk' ? Math.sin(t * 3.2) * 0.03 : petting ? 0.16 * g.face + Math.sin(t * 7) * 0.03 : 0;
+  const sway = g.climb ? Math.sin(g.stride) * 0.035 : moving ? Math.sin(g.stride) * 0.03 : g.phase === 'talk' ? Math.sin(t * 3.2) * 0.03 : petting ? 0.16 * g.face + Math.sin(t * 7) * 0.03 : 0;
   if (sk < 1) {
     P(); ctx.globalAlpha = 0.42 * alpha * (1 - sk) * Math.max(0.25, 1 - lift / 80); ctx.drawImage(shadowSpr, x - ww * 0.42, g.y - hu * 0.05, ww * 0.84, hu * 0.11);
     ctx.globalAlpha = alpha * (1 - sk); drawLegSet(set, i, x, hip, f, hu, ww, g.face);
@@ -1510,12 +1536,13 @@ function fontSize() {
   const vs = Math.min(innerWidth / 1280, innerHeight / 800);
   return EMBED ? Math.max(11, Math.min(20, 12 * vs)) : Math.max(13, Math.min(26, 15.5 * vs));
 }
+const TAG_SCALE = 0.85; // name tags (name, time, %) 15% smaller than fontSize(); the bubbles keep fontSize() (David, round 9)
 const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 function labelBitmap(w) {
   const b = w.bot, acc = w.seat.desk.accent, mx = labelMax, key = `${w.label}|${b.status}|${acc}|${mx}`;
   let c = labelCache.get(key); if (c) return c;
   // two rows: name on top, `1.4d · 18%` underneath in a smaller font (about half the width of one row)
-  const f = labelFont, S2 = dpr * qual.scale, fp = f * S2, fs = fp * 0.7, pad = fp * 0.55, dot = fp * 0.42, r1 = fp * 1.12, r2 = fs * 1.2, hgt = Math.round(r1 + r2 + fp * 0.28);
+  const f = labelFont * TAG_SCALE, S2 = dpr * qual.scale, fp = f * S2, fs = fp * 0.7, pad = fp * 0.55, dot = fp * 0.42, r1 = fp * 1.12, r2 = fs * 1.2, hgt = Math.round(r1 + r2 + fp * 0.28);
   const m = mk(1, 1).getContext('2d');
   const name = b.name, rest = w.label.slice(name.length + 3), k = rest.indexOf(' · '), tm = k < 0 ? rest : rest.slice(0, k), pc = k < 0 ? '' : rest.slice(k);
   m.font = `700 ${fp}px ${SANS}`; const nw = m.measureText(name).width;

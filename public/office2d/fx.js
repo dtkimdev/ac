@@ -159,7 +159,6 @@ export function makeFx(L, rnd, img) {
   const red = glowSprite('255,62,48'), green = glowSprite('90,255,150'), strobe = glowSprite('255,255,255', 32, 0.15), magenta = glowSprite('255,110,200'), teal = glowSprite('110,235,230');
   const head = glowSprite('255,238,205', 32, 0.3), tail = glowSprite('255,50,40', 32, 0.3);
   const trailW = streakSprite('255,236,200'), trailR = streakSprite('255,60,45'), foam = streakSprite('255,245,235', 96, 12);
-  const fly = glowSprite('220,255,150', 32);
 
   // ---------- fireworks over the river at night (David, 2026-11-10): now and then a short show of one to three shells. Soft glowing
   // sparks in the city's own colours (warm gold, rose, cyan, violet), drawn behind the skyline so buildings stand in front, with a faint
@@ -239,8 +238,7 @@ export function makeFx(L, rnd, img) {
   // dust drifts only in the light shafts clear of the kitchen corner: in the left one it sparkled in front of the kitchen board (David, 2026-11-20)
   const dusty = shafts.filter(s => Math.min(...s.map(p => p[0])) > 200), mshafts = dusty.length ? dusty : shafts;
   const motes = []; for (let i = 0; i < 64; i++) { const s = mshafts[i % mshafts.length]; let x, y; do { x = 100 + rnd() * 1080; y = 60 + rnd() * 620; } while (!inPoly(s, x, y)); motes.push({ x, y, s, vx: (rnd() - 0.5) * 4, vy: -1 - rnd() * 3, ph: rnd() * 7, r: 0.6 + rnd() * 1.2 }); }
-  const flies = []; for (let i = 0; i < 18; i++) flies.push({ x: 1060 + rnd() * 200, // night fireflies on the right only: on the left they glittered over the kitchen (David, 2026-11-20)
-  y: 420 + rnd() * 280, ph: rnd() * 7, sp: 0.3 + rnd() * 0.5 });
+  // no night fireflies (David, round 9)
 
   // pools
   const cars = []; for (let i = 0; i < 64; i++) cars.push({ lane: i % 2, s: 0, dir: 1, v: 0, ph: 0, on: false, col: 0, len: 1 });
@@ -589,10 +587,6 @@ export function makeFx(L, rnd, img) {
         if (m.y < 50 || !inPoly(m.s, m.x, m.y)) { m.y = 640 + rnd() * 40; m.x = m.s[3][0] + rnd() * (m.s[2][0] - m.s[3][0]); }
         ctx.globalAlpha = a * (0.4 + 0.6 * Math.sin(t * 0.8 + m.ph) ** 2); const r = m.r * 3;
         ctx.drawImage(warm, m.x - r, m.y - r, r * 2, r * 2);
-      }
-      if (env.n > 0.3) for (const f of flies) {
-        const x = f.x + Math.sin(t * f.sp + f.ph) * 22, y = f.y + Math.cos(t * f.sp * 1.3 + f.ph) * 14;
-        ctx.globalAlpha = (env.n - 0.3) * Math.max(0, Math.sin(t * 1.7 + f.ph)); ctx.drawImage(fly, x - 5, y - 5, 10, 10);
       }
       ctx.restore();
     },
