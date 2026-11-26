@@ -235,10 +235,7 @@ export function makeFx(L, rnd, img) {
   const band = [L.skyBand[0] * PH, L.skyBand[1] * PH];
   const sea = px(L.sea);
   const glints = []; for (let i = 0; i < 40; i++) glints.push({ u: rnd(), v: rnd(), ph: rnd() * 7, w: 3 + rnd() * 8 });
-  // dust drifts only in the light shafts clear of the kitchen corner: in the left one it sparkled in front of the kitchen board (David, 2026-11-20)
-  const dusty = shafts.filter(s => Math.min(...s.map(p => p[0])) > 200), mshafts = dusty.length ? dusty : shafts;
-  const motes = []; for (let i = 0; i < 64; i++) { const s = mshafts[i % mshafts.length]; let x, y; do { x = 100 + rnd() * 1080; y = 60 + rnd() * 620; } while (!inPoly(s, x, y)); motes.push({ x, y, s, vx: (rnd() - 0.5) * 4, vy: -1 - rnd() * 3, ph: rnd() * 7, r: 0.6 + rnd() * 1.2 }); }
-  // no night fireflies (David, round 9)
+  // no shaft dust motes: they were the last flashing dots in front of the room (David, round 10); no night fireflies (David, round 9)
 
   // pools
   const cars = []; for (let i = 0; i < 64; i++) cars.push({ lane: i % 2, s: 0, dir: 1, v: 0, ph: 0, on: false, col: 0, len: 1 });
@@ -575,18 +572,6 @@ export function makeFx(L, rnd, img) {
         const l = L.lamps[i], r = l.r * PW * (1 + 0.06 * Math.sin(t * 1.1 + i * 1.7));
         ctx.globalAlpha = (0.22 + 0.1 * Math.sin(t * 0.9 + i)) * (0.5 + 0.65 * env.dark);
         ctx.drawImage(lampTint(l) || warm, l.x * PW - r, l.y * PH - r, r * 2, r * 2);
-      }
-      ctx.restore();
-    },
-    motes(ctx, t, dt, env) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const a = 0.18 + 0.3 * (1 - env.n), nm = Math.round(motes.length * (0.4 + 0.6 * fxq));
-      for (let i = 0; i < nm; i++) {
-        const m = motes[i];
-        m.x += (m.vx + Math.sin(t * 0.5 + m.ph) * 2) * dt; m.y += m.vy * dt;
-        if (m.y < 50 || !inPoly(m.s, m.x, m.y)) { m.y = 640 + rnd() * 40; m.x = m.s[3][0] + rnd() * (m.s[2][0] - m.s[3][0]); }
-        ctx.globalAlpha = a * (0.4 + 0.6 * Math.sin(t * 0.8 + m.ph) ** 2); const r = m.r * 3;
-        ctx.drawImage(warm, m.x - r, m.y - r, r * 2, r * 2);
       }
       ctx.restore();
     },

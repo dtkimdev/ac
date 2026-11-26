@@ -11,7 +11,7 @@ import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PRO
 import { makeBanner } from './banner.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=39'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=40'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -96,6 +96,9 @@ async function load() {
       monitors.push({ q: Q, desk: d, idx: i, kind: kinds[i % kinds.length], c, g: c.getContext('2d'), cut: cuts[i] ? px(cuts[i]) : null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: monK != null ? monK : Math.max(...Q.map(p => p[1])), cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] });
     });
   }
+  // a zone's back edge: the foot line of the desk row behind it (round 10: the sbp row at y 566 sat inside desk-fr's zone and took its key, 586,
+  // so a walker there painted over that row's chairs, monitors and bots). At or behind that line a walker sorts by its own foot y.
+  for (const z of zones) z.y0 = Math.max(-1e9, ...seats.filter(s => s.chair && s.feet[1] < z.key && s.x + (s.W || 0) * PW / 2 > z.x0 && s.x - (s.W || 0) * PW / 2 < z.x1).map(s => s.feet[1] + 4));
   // right wall: slim monitors, behind everything that can walk (they hang far above the floor)
   for (const w of L.wall) { const Q = px(w.q), c = mk(WW, WH); monitors.push({ q: Q, desk: { id: 'wall', accent: '#7a78ff' }, idx: monitors.length, wall: w.id, c, g: c.getContext('2d'), cut: null, wc: null, wg: null, mask: null, bx: 0, by: 0, depth: 1, cx: (Q[0][0] + Q[2][0]) / 2, cy: (Q[0][1] + Q[2][1]) / 2, w: Q[1][0] - Q[0][0] }); }
   // Dashboards (bot14) has no desk: her seat is the blue bean bag
@@ -557,25 +560,38 @@ function navPath(a, b, adj = navAdj()) { // Dijkstra on the floor graph -> node 
 }
 let adjC = null; const navAdj = () => { if (adjC) return adjC; adjC = nav.map(() => []); for (const [a, b] of L.nav.edges) { const d = Math.hypot(nav[a][0] - nav[b][0], nav[a][1] - nav[b][1]); adjC[a].push([b, d]); adjC[b].push([a, d]); } return adjC; };
 function pathPts(P) { const out = []; for (const p of P) { const l = out[out.length - 1]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) > 1) out.push(p); } return out; }
-// a visitor (Grok on a book run too) stands beside the seat, clear of the chair, the seated bust and neighbouring bots (a fixed ±36 px overlapped them)
+// a visitor (Grok on a book run too) parks on the walkable aisle beside the receiver's desk (David, round 10).
+// Prefer a nearby nav node or a desk-end; never a chair polygon, another bot's feet, or a spot hidden behind a closer desk.
+const seatHalf = o => Math.max((o.W || 0) * PW / 2, ...(o.chair || []).map(p => Math.abs(p[0] - o.x)));
+const inPoly = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+const nearNode = (x, y) => { let b = 0, bd = 1e9; for (let i = 0; i < nav.length; i++) { const d = Math.hypot(nav[i][0] - x, nav[i][1] - y); if (d < bd) { bd = d; b = i; } } return b; };
+const visitC = new Map();
 const visitOf = s => {
   if (s.bag || s.roam) return s.feet;
-  const half = Math.max((s.W || 0) * PW / 2, ...(s.chair || []).map(p => Math.abs(p[0] - s.x)));
-  const vis = hAt(s.feet[1]) * 0.32, rad = half + vis + 8, pref = s.idx ? 1 : -1, sc = s.desk.seats.length > 1 ? 1 : 0.9;
-  const others = seats.filter(o => o !== s && !o.bag && !o.roam);
-  const ok = (x, y) => x >= 36 && x <= PW - 36 && y <= PH - 8 && others.every(o => {
-    const oh = Math.max((o.W || 0) * PW / 2, ...(o.chair || []).map(p => Math.abs(p[0] - o.x)));
-    return Math.hypot(x - o.x, y - o.feet[1]) >= oh + vis + 10;
-  }) && Math.hypot(x - s.x, y - s.feet[1]) >= rad * 0.85;
-  for (const dy of [0, vis * 0.28, vis * 0.48]) {
-    for (const dir of [pref, -pref]) {
-      const p = [s.x + dir * rad * sc, s.feet[1] + dy]; if (ok(...p)) return p;
-      if (dy) { const q = [s.x + dir * (half + 18), s.feet[1] + dy]; if (ok(...q)) return q; }
-    }
-  }
-  return [Math.max(36, Math.min(PW - 36, s.x + pref * rad * sc)), s.feet[1]];
+  if (visitC.has(s)) return visitC.get(s);
+  const y = s.feet[1], vis0 = hAt(y) * 0.32, desk = seats.filter(o => o.desk === s.desk && !o.bag && !o.roam);
+  const x0 = Math.min(...desk.map(o => o.x - seatHalf(o))), x1 = Math.max(...desk.map(o => o.x + seatHalf(o)));
+  const chairs = seats.filter(o => o.chair && o.chair.length > 2), bodies = seats.filter(o => !o.bag && !o.roam && o !== s);
+  const visAt = fy => hAt(fy) * 0.32;
+  const ok = (x, fy) => {
+    const vis = visAt(fy);
+    if (x < 36 || x > PW - 36 || fy > PH - 8 || fy < y - 8) return false;
+    if (Math.abs(fy - y) <= 30 && Math.abs(x - s.x) < seatHalf(s) + vis + 8) return false; // not on the receiver
+    if (chairs.some(o => [x - vis * 0.7, x, x + vis * 0.7].some(u => inPoly(o.chair, u, fy)))) return false;
+    if (bodies.some(o => { const dx = Math.abs(x - o.x), dy = fy - o.feet[1]; return Math.abs(dy) <= 30 ? dx < seatHalf(o) + vis + 8 : false; })) return false;
+    if (bodies.some(o => o.feet[1] > fy + 12 && Math.abs(o.x - x) < seatHalf(o) + vis * 0.7)) return false; // hidden behind a closer desk
+    return true;
+  };
+  const cand = [];
+  for (const dir of [-1, 1]) for (let i = 1; i <= 8; i++) cand.push({ x: (dir < 0 ? x0 : x1) + dir * (vis0 + 6 + (i - 1) * 12), y, n: false });
+  for (const dx of [-vis0 - 8, -vis0 - 24, vis0 + 8, vis0 + 24]) for (const dy of [36, 56, 76]) cand.push({ x: s.x + dx, y: y + dy, n: false }); // aisle in front of the desk, so a front row does not hide him
+  for (const p of nav) if (Math.hypot(p[0] - s.x, p[1] - y) <= 150 && p[1] >= y - 8) cand.push({ x: p[0], y: p[1], n: true });
+  cand.sort((a, b) => (Math.hypot(a.x - s.x, a.y - y) - (a.n ? 15 : 0)) - (Math.hypot(b.x - s.x, b.y - y) - (b.n ? 15 : 0)));
+  const c = cand.find(c => ok(c.x, c.y)) || { x: Math.max(36, Math.min(PW - 36, s.x - vis0 - 16)), y: Math.min(PH - 8, y + 56) };
+  const p = [c.x, c.y]; p.node = nearNode(c.x, c.y); visitC.set(s, p); return p;
 };
-const route = (a, b) => pathPts([a.feet, ...navPath(a.node, b.node).map(n => nav[n]), visitOf(b)]);
+const visitAt = o => { const p = visitOf(o.seat); return { node: p.node ?? o.seat.node, pos: p, to: o }; };
+const route = (a, b) => { const p = visitOf(b); return pathPts([a.feet, ...navPath(a.node, p.node ?? b.node).map(n => nav[n]), p]); };
 const DEMO_NOTES = ['handoff ✓', 'got a sec?', 'PR is up', 'numbers look good', 'synced the inbox', 'backup done', 'new clip ready', 'shield check passed'];
 function leave(w, g) { // rise: turn out of the chair towards the way out, then stand up (phase `stand`); the bean bag has no chair to turn
   w.fid = null; if (w.chatting) endChat(w.chatting);
@@ -981,7 +997,7 @@ const bookCarrier = () => findWorker(BOOKS.carrier);
 const deskBot = o => !o.seat.bag && !o.seat.roam && !o.seat.stand && !o.walk && !visiting(o) && !o.chatting;
 // a run is a list of stops: take (at the case, up the ladder), collect (at a desk), talk (leave the books at a desk), shelve (at the case); then home
 function planRun(w, toRef) { // one handoff: the ladder, then a random desk bot (one whose books are due, or any with books when the shelf runs low, first)
-  const B = L.bookcase, cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = o => ({ node: o.seat.node, pos: visitOf(o.seat), to: o });
+  const B = L.bookcase, cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = visitAt;
   const held = [...BK.stacks].filter(([o]) => o !== w && wl.includes(o) && !visiting(o)), free = BK.slots.filter(b => !b.at);
   const named = toRef && findWorker(toRef);
   let pool = named ? [named] : wl.filter(o => o !== w && deskBot(o));
@@ -1005,7 +1021,7 @@ function bookRun(force, toRef, retOnly) {
   const w = bookCarrier(), B = L.bookcase;
   const late = BK.clock - BK.last > BOOKS.every[1]; // overdue: the walking cap no longer holds him back
   if (!w || !B || BK.run || w.walk || w.seat.bag || w.seat.stand || (!force && (!late && !freeWalkers() || w.chatting || w.pose.dur > 0))) return false;
-  const cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = o => ({ node: o.seat.node, pos: visitOf(o.seat), to: o });
+  const cs = { node: B.node, pos: [B.spot[0] * PW, B.spot[1] * PH] }, at = visitAt;
   let stops = null;
   if (retOnly) { const held = [...BK.stacks].filter(([o]) => o !== w && wl.includes(o) && !visiting(o)), [o, st] = held.sort((a, b) => a[1].due - b[1].due)[0] || []; if (o) stops = [{ ...at(o), kind: 'collect', books: st.books }, { ...cs, kind: 'shelve', books: st.books }]; }
   else stops = planRun(w, toRef);
@@ -1137,7 +1153,7 @@ function stepFidget(w, dt) {
 }
 // behind a big desk: its monitors and body hide them. hw = half the body width: a walker counts as behind while any part of it overlaps
 // the desk, so it no longer pops in front when its centre crosses the desk's edge
-const zoneKey = (x, y, hw = 0) => { for (let i = 0; i < zones.length; i++) { const z = zones[i]; if (x + hw > z.x0 && x - hw < z.x1 && y < z.y) return z.key; } return y; };
+const zoneKey = (x, y, hw = 0) => { for (let i = 0; i < zones.length; i++) { const z = zones[i]; if (x + hw > z.x0 && x - hw < z.x1 && y < z.y && y > z.y0) return z.key; } return y; };
 
 // ---------- corgi: mood state machine on the floor graph (layout.dog): weighted random moods, variable durations, eased
 // starts and stops, smooth turns; poses come from the painted atlas; depth-sorted by its feet ----------
@@ -1646,7 +1662,7 @@ function sortItems() { // painter's order by plate depth; returns how many are o
       const b = g.trip?.spot?.bag ? g.trip.spot : null;
       if (g.phase === 'rise' || g.phase === 'stand' || g.phase === 'sit' || g.phase === 'settle') it.k = s.clip + 0.1;
       else if (b && g.phase === 'hang') it.k = b.depth + 1;
-      else it.k = zoneKey(g.x, g.y, hAt(g.y) * 0.32);
+      else it.k = zoneKey(g.x, g.y, hAt(g.y) * 0.32); // by foot y (and a desk zone only between its back and front edges)
     }
   }
   D.walking = walking;
@@ -1700,7 +1716,6 @@ function render(t, dt) {
   for (let i = 0; i < items.length; i++) drawItem(items[i], t, redraw);
   drawErrorGlows(t);
   fx.lamps(ctx, t, env, lampTint);
-  fx.motes(ctx, t, dt, env);
   if (layoutDirty || walking) { layoutLabels(); layoutDirty = false; }
   if (!NOTAGS) drawLabels();
 }
