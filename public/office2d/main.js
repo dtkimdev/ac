@@ -11,7 +11,7 @@ import { VIEW, BUBBLE, BOTS, behaviorOf, LOITER, CHAT, DOG_MOODS, DOG, WALK, PRO
 import { makeBanner } from './banner.js';
 
 const STATIC = !!window.AC_STATIC; // GitHub Pages build (bin/pages-build.sh): relative URLs, state.json polled instead of /api/*
-const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=40'; // V: cache version for local servers; the published site stamps each file itself
+const PW = 1280, PH = 720, A = (STATIC ? '' : '/') + 'office2d/art/', V = '?v=41'; // V: cache version for local servers; the published site stamps each file itself
 // the art pack (art/pack.json): pictures are asked for by file name and found in their folder here. On the published site every file
 // carries its own content stamp, so a browser fetches again exactly the pictures that changed (bin/art-pack.js stamp).
 const BID = new URL(import.meta.url).searchParams.get('b');
@@ -1358,12 +1358,35 @@ function drawBust(w, t) { // the default pose at the desk: the back bust behind 
 // The frame whose body is on show: the wipe from frame i to i + 1 is opaque over the old one by f = 0.5 (and the talking pose by chat = 0.5).
 // Neck and head sit on that frame's own collar. Blending the neck Y of two frames left the head floating above the collar mid-turn (the frames'
 // necks differ by up to 12 atlas px), so a long skin neck showed (David, round 9).
+const HEAD_SINK = 4; // body px below the collar so the scarf/chin overlaps the hoodie
+// Per sprite row, per yaw (0=back .. 4=front, 5=talk): Y in the head cell that sits on the body collar.
+// One shared anchor[1] (168) left scarves and chins floating on some angles and buried on others (David, round 11).
+const HEAD_JOIN = [
+  [157, 173, 164, 175, 176, 175],
+  [156, 160, 159, 180, 181, 180],
+  [156, 156, 160, 171, 172, 171],
+  [159, 164, 166, 182, 180, 182],
+  [174, 174, 175, 174, 172, 174],
+  [154, 164, 159, 176, 175, 176],
+  [174, 176, 174, 173, 171, 173],
+  [177, 159, 156, 182, 184, 182],
+  [172, 170, 170, 172, 171, 172],
+  [176, 176, 176, 176, 173, 176],
+  [158, 158, 160, 169, 172, 169],
+  [168, 170, 170, 166, 171, 166],
+  [154, 156, 158, 167, 172, 167],
+  [167, 170, 175, 190, 191, 190],
+  [156, 159, 162, 176, 175, 176],
+  [168, 166, 162, 171, 171, 171],
+  [169, 173, 175, 174, 171, 174]
+];
 const onShow = (T, i, f, chat) => chat >= 0.5 ? T.frames[5] : T.frames[f < 0.5 ? i : Math.min(5, i + 1)];
 function neck(T, i, f, chatIn, alpha, row, F) {
   const hx = F.head[0] - T.cx, nk = F.neck, face = Math.min(1, Math.max(0, (i + f - 1.3) / 1.2) + chatIn);
   if (face <= 0.02 || row >= T.sprites.length) return;
-  const g = ctx.createLinearGradient(0, nk - 18, 0, nk + 20); g.addColorStop(0, '#9c6a52'); g.addColorStop(0.35, '#c4896a'); g.addColorStop(1, '#d9a080');
-  ctx.globalAlpha = alpha * face; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(hx - 13, nk - 18, 26, 40, 9); ctx.fill(); ctx.globalAlpha = alpha;
+  // a short sliver under the scarf only (round 11): the body atlas now fills the hoodie opening, and a 16–40 px skin bar showed as a patch on the chest
+  const g = ctx.createLinearGradient(0, nk - 6, 0, nk + 2); g.addColorStop(0, '#8e5e48'); g.addColorStop(1, '#b97f62');
+  ctx.globalAlpha = alpha * face; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(hx - 9, nk - 6, 18, 8, 5); ctx.fill(); ctx.globalAlpha = alpha;
 }
 const win = (v, a, b) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
 function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atlas; the head is its own layer so it can lead the turn. Poses step (a quick wipe of opaque art over opaque art), they never dissolve through each other
@@ -1378,16 +1401,17 @@ function drawFrame(w, t, alpha) { // whole body + swivel chair from the turn atl
   body(i, (1 - stepOut) * (1 - chatOut)); body(i + 1, stepIn * (1 - chatOut)); body(5, chatIn);
   // the talking pose (5) steps in like the turn frames: it is fully drawn over an opaque old pose before the old one fades. It used to
   // cross-fade (both half see-through), so the desk screen showed through faces and caps whenever a bot started or stopped talking.
-  // head: anchored on the neck of the body frame on show (not the leading head's frame); the leading angle only picks the painted head
-  const hx = F.head[0], nk = F.neck - 2;
+  // head: anchored on the neck of the body frame on show (not the leading head's frame); the leading angle only picks the painted head.
+  // Round 11: attach sinks HEAD_SINK below the collar, and each head uses its own join Y (HEAD_JOIN) so the scarf/chin sits on the hoodie at every angle. No vertical lead, no clip (a fixed clip cut through scarves and long hair). Leftover torso in the head cells was cleared in the atlas; the body opening was filled with hoodie color so a skin bar no longer shows on the chest.
+  const hx = F.head[0], nk = F.neck + HEAD_SINK;
   const hB = Math.min(4, P2.hb), hi = Math.min(3, hB | 0), hf = hB - hi, hIn = win(hf, 0.4, 0.52), hOut = win(hf, 0.5, 0.62), hk = T.headScale * (T.sprites[row] || T.sprites[0]).sc, hr = w.tilt * 0.06 + nod * P2.dir + swing * 0.05 * sign;
   ctx.save(); ctx.translate(hx - T.cx, nk); ctx.rotate(hr); ctx.translate(0, Math.max(0, nod) * 18); // the nod dips the chin, never lifts the head off the collar
-  const dw = hw * hk, dh = hh * hk, [ax, ay] = T.anchor, ox = -ax * hk, oy = -ay * hk;
-  const head = (j, a) => { if (a <= 0.004) return; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw * ATL, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side
+  const dw = hw * hk, dh = hh * hk, ax = T.anchor[0], ox = -ax * hk, join = (j) => ((HEAD_JOIN[row] && HEAD_JOIN[row][j]) || T.anchor[1]);
+  const head = (j, a) => { if (a <= 0.004) return; const oy = -join(j) * hk; ctx.globalAlpha = alpha * a; if (j === 0 && up < 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(turnH, 0, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); ctx.restore(); } else ctx.drawImage(turnH, j * hw * ATL, row * hh * ATL, hw * ATL, hh * ATL, ox, oy, dw, dh); }; // the back head stays as the bust painted it, on either side
   head(hi, (1 - hOut) * (1 - chatOut)); head(hi + 1, hIn * (1 - chatOut)); head(5, chatIn);
   ctx.restore(); ctx.globalAlpha = 1;
   P();
-  w.box[0] = s.x - cw * ts / 2; w.box[1] = s.base + (nk - T.floor - ay * hk) * ts; w.box[2] = s.x + cw * ts / 2; w.box[3] = s.base;
+  w.box[0] = s.x - cw * ts / 2; w.box[1] = s.base + (nk - T.floor - join(Math.min(5, Math.round(hB))) * hk) * ts; w.box[2] = s.x + cw * ts / 2; w.box[3] = s.base;
   w.hx = s.x; w.hy = w.box[1];
 }
 function drawSeated(w, t) {

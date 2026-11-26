@@ -270,6 +270,17 @@ The music button's track: David's own file, used with the creator's permission. 
 |---|---|---|
 | `ac-music.mp3` | Lofi Trance Mix by Velvet Vinyl (background music) |  |
 
+### props/ — Extra room items
+
+Pictures placed on the room floor by config.js PROPS (x, y, w, h in plate pixels; depth = foot y).
+
+**To change:** Replace the file and keep its name, or add a file here and a line in config.js PROPS.
+
+| file | what it is | size |
+|---|---|---|
+| `plant-front-left.png` | Potted plant, terracotta pot, front-left floor by the red bean bag (round 11) |  |
+| `plant-front-right.png` | Potted plant, cream ceramic pot, front-right floor corner (round 11) |  |
+
 ### Drawn in code (no picture file)
 
 Find the function named in the "code" column (search for it); "tune" is a setting you can change without touching drawing code.

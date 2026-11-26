@@ -558,6 +558,20 @@
      "title": "Lofi Trance Mix · Velvet Vinyl"
     }
    }
+  },
+  {
+   "path": "props",
+   "label": "Extra room items",
+   "about": "Pictures placed on the room floor by config.js PROPS (x, y, w, h in plate pixels; depth = foot y).",
+   "edit": "Replace the file and keep its name, or add a file here and a line in config.js PROPS.",
+   "files": {
+    "plant-front-left.png": {
+     "label": "Potted plant, terracotta pot, front-left floor by the red bean bag (round 11)"
+    },
+    "plant-front-right.png": {
+     "label": "Potted plant, cream ceramic pot, front-right floor corner (round 11)"
+    }
+   }
   }
  ],
  "drawn": [

@@ -101,7 +101,10 @@ export const BOOKS = {
 // Extra pictures placed in the room. Put the image in art/props/ and list it in art/pack.json, then add a line here. x, y, w, h are in plate pixels (the room is 1280 x 720).
 // depth is the floor line: things lower on screen (bigger y) draw in front. Use the item's bottom edge, y + h, unless it should sit behind something.
 // Example: { file: 'plant-new.png', x: 600, y: 560, w: 60, h: 90, depth: 650 },
-export const PROPS = [];
+export const PROPS = [
+  { file: 'plant-front-left.png', x: 86, y: 576, w: 70, h: 140, depth: 716 }, // front-left floor, left of the red bean bag (round 11)
+  { file: 'plant-front-right.png', x: 1138, y: 578, w: 76, h: 136, depth: 716 }, // front-right corner, right of the front chairs, clear of the book aisle
+];
 
 // The Bears' next game, written on the kitchen menu board (David, 2026-11-20; banner.js, data from bin/bears.js -> bears.json). The board's
 // place and size come from the room pictures (portable/art/scene.js BOARD_RECT -> layout.json kitchen.board). show: false hides it.
